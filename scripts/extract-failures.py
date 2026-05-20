@@ -28,12 +28,18 @@ LTM_OUT = ROOT / "long-term-memory" / "failures.md"
 THEMES: list[tuple[str, str, re.Pattern]] = [
     ("build-tooling",       "Build / TypeScript / Tooling",
      re.compile(r"tsc|rootDir|dist[ /]|nest build|webpack|tsconfig|prisma generate|postbuild", re.I)),
+    ("deploy-coordination", "Deploy / commit / push coordination",
+     re.compile(r"\bdeploy\b|不用 build|現在不用|該不該|commit ↔|push 沒先|build 嗎|該 deploy|是否需要 deploy", re.I)),
     ("prod-side-effects",   "Production side-effects (Kafka / email / SFTP)",
      re.compile(r"prod\b|production|kafka|email send|SFTP|fire-and-forget|HL7 sent|垃圾 HL7", re.I)),
     ("db-migration",        "DB / migration / backfill",
-     re.compile(r"migration|backfill|schema\b|psql|prisma migrate|calendar_dev|dirty data|320", re.I)),
+     re.compile(r"migration|backfill|schema\b|psql|prisma migrate|calendar_dev|dirty data|INSERT|duplicate|constraint|transaction.*rollback|customer_id|clinic_id|column", re.I)),
     ("scope-communication", "Scope / requirement / PM communication",
-     re.compile(r"scope|誤解|否定句|implicit|過去 event|expand|擴大|PM (確認|溝通)|requirement", re.I)),
+     re.compile(r"scope|誤解|否定句|implicit|過去 event|expand|擴大|PM (確認|溝通)|requirement|assumption|first.pass|schema change|YAML|pattern detection|wrong pattern", re.I)),
+    ("error-handling",      "Error handling / throw vs log",
+     re.compile(r"throw new Error|try.catch|catch|error.message|報錯|沒新 data 不報錯|silent", re.I)),
+    ("tool-usage",          "Tool / cwd / branch / repo confusion",
+     re.compile(r"cwd|persistence|wrong repo|wrong branch|cross-repo|git switch|git checkout.*wrong", re.I)),
     ("auth-permission",     "Auth / permission / role",
      re.compile(r"role|permission|admin|clinic user|Forbidden|gate|isClinic|isAdmin", re.I)),
     ("redis-cache",         "Redis / cache / pending list",
@@ -48,6 +54,13 @@ THEMES: list[tuple[str, str, re.Pattern]] = [
      re.compile(r"GraphQL|graphql|resolver|@Args|@Mutation|@Query", re.I)),
 ]
 DEFAULT_THEME = ("other", "Other / uncategorized")
+
+# Body content is treated as empty/placeholder if it matches any of these.
+PLACEHOLDER_RE = re.compile(
+    r"^\s*(?:[（(]?\s*(?:無|none|N/A|pending|尚未 execute|尚未執行)\s*[)）]?|_+\s*\([^)]+\)\s*_+)\s*$",
+    re.I,
+)
+MIN_ENTRY_BODY_LEN = 20  # below this we treat as not-an-entry
 
 FAILURES_RE = re.compile(
     r"^##\s+Failures\s*$\n(.*?)(?=^##\s|\Z)", re.MULTILINE | re.DOTALL
@@ -92,6 +105,22 @@ def split_entries(body: str) -> list[tuple[str, str, str]]:
     return entries
 
 
+def _is_placeholder_entry(title: str, body: str) -> bool:
+    """Treat as placeholder if there's no meaningful content."""
+    body_stripped = body.strip()
+    if not body_stripped and not title.strip():
+        return True
+    # Body is empty or just a placeholder marker
+    if not body_stripped or PLACEHOLDER_RE.match(body_stripped):
+        # …and there's no informative title either
+        if not title.strip() or PLACEHOLDER_RE.match(title.strip()):
+            return True
+        # Title exists but body is empty/placeholder and the title is too short
+        if len(title.strip()) < MIN_ENTRY_BODY_LEN:
+            return True
+    return False
+
+
 def gather() -> dict[tuple[str, str], list[dict]]:
     grouped: dict[tuple[str, str], list[dict]] = defaultdict(list)
     if not STM_DIR.exists():
@@ -105,7 +134,9 @@ def gather() -> dict[tuple[str, str], list[dict]]:
             continue
         ticket = stm.stem
         for entry_date, title, entry_body in split_entries(body):
-            key = classify(entry_body or title)
+            if _is_placeholder_entry(title, entry_body):
+                continue
+            key = classify(f"{title}\n{entry_body}")
             grouped[key].append({
                 "ticket": ticket,
                 "date": entry_date.strip(),
@@ -119,6 +150,20 @@ def render(grouped: dict[tuple[str, str], list[dict]]) -> str:
     today = date.today().isoformat()
     total = sum(len(v) for v in grouped.values())
 
+    # Collect outbound links: every ticket that contributed an entry, plus
+    # any [[xxx]] reference inside an entry body. Ordered, deduped.
+    seen: set[str] = set()
+    ordered_links: list[str] = []
+    body_link_re = re.compile(r"\[\[([\w\-]+)\]\]")
+    for entries in grouped.values():
+        for e in entries:
+            for tid in [e["ticket"], *body_link_re.findall(e["body"])]:
+                if tid and tid not in seen and tid != "failures":
+                    seen.add(tid)
+                    ordered_links.append(tid)
+
+    links_yaml = "\n".join(f"- {tid}" for tid in ordered_links) if ordered_links else ""
+
     out = [
         "---",
         "id: failures",
@@ -130,7 +175,11 @@ def render(grouped: dict[tuple[str, str], list[dict]]) -> str:
         "urgency: 3",
         f"created: {today}",
         f"updated: {today}",
-        "links: []",
+        "links:" if ordered_links else "links: []",
+    ]
+    if ordered_links:
+        out.append(links_yaml)
+    out += [
         "tags:",
         "- failures",
         "- root-cause",

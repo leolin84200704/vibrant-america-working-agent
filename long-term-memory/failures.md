@@ -8,12 +8,34 @@ base_weight: 0.9
 urgency: 3
 created: 2026-05-20
 updated: 2026-05-20
-links: []
+links:
+- INCIDENT-20260518
+- VP-15460
+- VP-16337
+- VP-16410
+- LBS-1487
+- VP-16165
+- VP-16424
+- VP-16474
+- VP-16476
+- VP-16251
+- VP-16280
+- VP-16289
+- VP-16423
+- VP-16463
+- VP-16502
+- VP-16154
+- VP-16612
+- VP-16193
+- VP-16232
+- VP-16329
+- VP-16664
+- VP-16617
 tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 39 entries across STM
+summary: Auto-aggregated failure index from 36 entries across STM
 ---
 
 
@@ -21,52 +43,25 @@ summary: Auto-aggregated failure index from 39 entries across STM
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-05-20 — total 39 entries
+> Last updated: 2026-05-20 — total 36 entries
 
 ## Themes
 
-- [Other / uncategorized](#other) — 17 entries
-- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 8 entries
+- [DB / migration / backfill](#db-migration) — 8 entries
+- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 7 entries
 - [Build / TypeScript / Tooling](#build-tooling) — 5 entries
-- [Auth / permission / role](#auth-permission) — 3 entries
+- [Other / uncategorized](#other) — 5 entries
 - [Redis / cache / pending list](#redis-cache) — 2 entries
+- [Deploy / commit / push coordination](#deploy-coordination) — 2 entries
 - [Test / mock / spec](#test-mocking) — 2 entries
-- [DB / migration / backfill](#db-migration) — 2 entries
+- [Scope / requirement / PM communication](#scope-communication) — 2 entries
+- [Tool / cwd / branch / repo confusion](#tool-usage) — 1 entries
+- [Error handling / throw vs log](#error-handling) — 1 entries
+- [Auth / permission / role](#auth-permission) — 1 entries
 
 ---
 
-## Other / uncategorized <a id='other'></a>
-
-### **[[INCIDENT-20260518]]** — `2026-05-19` — 寫 logging 跟 timeout 但沒先說「現在不用 build」
-
-Leo 急著補發、不想 build。我多次 commit + push 沒先問是否需要 deploy。後來 Leo 主動講「現在不用 build」才停下。
-**Preventable**：是。緊急 incident 過程中 commit ↔ deploy 是兩個分離決策，要先確認再做。
-
-### **[[LBS-1487]]**
-
-無。
-
-### **[[VP-15460]]** — [2026-04-27 → 28] Cwd persistence in Bash tool calls
-
-After `cd /Users/hung.l/src/EMR-Backend && gh pr view 156`, subsequent Bash calls without explicit `cd` defaulted to EMR-Backend. Created `bugfix/leo/VP-15460-redlock-import` in the wrong repo, had to clean up. Lesson: always explicit `cd` in cross-repo flows.
-
-### **[[VP-16154]]** — `2026-05-11 19:15` — - 第一次 helper 用 `throw new Error('...')` 對 missing header — Leo 要求「沒新 data 不報錯」後改成 try/catch + log.warn + return undefined。
-
-
-
-### **[[VP-16165]]**
-
-_(尚未 execute)_
-
----
-
-### **[[VP-16168]]**
-
-N/A
-
-### **[[VP-16172]]**
-
-N/A
+## DB / migration / backfill <a id='db-migration'></a>
 
 ### **[[VP-16193]]** — `2026-04-17 18:30` — **insert-order-client.ts script bug: customer_id 設為 clinic_id 值**
 
@@ -75,11 +70,48 @@ N/A
 - 修正: 手動 SQL `UPDATE order_clients SET customer_id = 5408 WHERE id = 2278`
 - 可預防: 是。未來執行 insert-order-client.ts 後必須驗證 customer_id 是否正確
 
+### **[[VP-16232]]** — `2026-04-20 14:30` — **Failure 1: 用 crm.contacts 而非 gRPC**
+
+- Error: 4,480 筆在 crm.contacts 找不到
+- Assumption: crm.contacts 有所有 customer 資料
+- Root cause: crm.contacts 只有部分 customer（可能只有 sales contacts），不是權威資料源
+- Fix: 改用 gRPC GetCustomer
+
+**Failure 2: 命名格式錯誤**
+- Error: 把 patient calendar 改成 "{name}'s Provider Calendar"
+- Assumption: 沒有確認現有命名慣例
+- Root cause: 沒有先查看已存在的 patient calendar 命名格式（應為 "{NAME}'s Patient Calendar"）
+
+**Failure 3: gRPC endpoint 錯誤**
+- Error: CORE_SAMPLE_V2_RPC (10.224.0.53:8084) → ECONNREFUSED
+- Assumption: .env 裡的值可以直接用
+- Root cause: 沒有先讀 lis-code-agent/knowledge/emr-integration.md，那裡明確記載 gRPC endpoint 是 192.168.60.6:30276
+- Fix: 用 knowledge 裡記載的 endpoint
+
+**Failure 4: NestJS createApplicationContext + gRPC**
+- Error: gRPC @Client decorator 在 CLI 模式不初始化，且 PublicBookingService.onModuleInit crash
+- Assumption: 可以用 NestJS context 跑 gRPC migration
+- Root cause: createApplicationContext 不啟動 microservice transport
+- Fix: 改用 @grpc/grpc-js + proto-loader 直接建立 gRPC client
+
+**Failure 5: 沒有使用 lis-code-agent knowledge**
+- Error: 整個過程都沒有查 knowledge 目錄
+- Assumption: 可以靠 .env 和 codebase 自己找到答案
+- Root cause: 不知道/忽略了 lis-code-agent 的知識庫系統
+- Fix: 任何 gRPC/migration 任務先讀 knowledge/
+
 ### **[[VP-16329]]** — `2026-04-27 23:00` — **Failure: 第二次重跑 36816 INSERT 觸發 duplicate constraint error。**
 
 Root cause: 第一次跑時我用 `tail -50` 截取 output，後段顯示 record 資料但沒看到「✅ Successfully inserted」字樣（卡在 record dump），誤判沒成功就重跑。
 影響: 無實質影響（script 在 unique check 時擋下，沒 partial insert）。
 教訓: 確認 INSERT 成敗應 grep `Successfully|Error|❌` 而非看 record dump。後續 4 個 INSERT 都用 grep 過濾，順利完成。
+
+### **[[VP-16410]]** — `2026-05-06 02:50` — 誤解 Leo「過去的 event 無需更動」為「rollback backfill」
+
+- **錯誤推理**：Leo 說「過去 event 無需更動」我誤解為「backfill 不應該存在」，提議 DELETE 2350 claim + 2670 audit
+- **正確意思**：「不要 update / delete 既有 v2_event row」— backfill 進 claim 表的 row 是新表新資料、不是 update 既有 event
+- **Leo 糾正**：「未來如果有 accession_id 已經在 claim table 的還要創建 event 需要擋下來」— 暗示 claim table 的歷史資料是必要的（沒 backfill 就沒資料可擋）
+- **教訓**：「過去的 event 無需更動」= 不動 v2_event 表本身，**跟 claim table 是否要 backfill 無關**。下次遇到否定句指令要拆「動什麼 / 不動什麼」維度，不要把 scope 自動擴到無關的 table
 
 ### **[[VP-16423]]** — `2026-05-04` — insert-ehr-integration.ts 對 25467 的 transaction 全 rollback
 
@@ -89,37 +121,20 @@ Root cause: 第一次跑時我用 `tail -50` 截取 output，後段顯示 record
 - 處理：Phase 2 raw SQL 繞過 check，ehr_integrations 用 cuid library 自生 ID，order_clients 直接 INSERT。
 - 預防：未來 ticket 若 provider list 有 same-NPI 重複，先警告 script 對 25467 case 的 order_clients 必失敗，預備 raw SQL fallback
 
-### **[[VP-16424]]**
+### **[[VP-16502]]** — `2026-05-07` — 抽 helper 沒做（合理 trade-off）
 
-（無實作層失敗）
+- 5 個 send method cross-recipient loop 結構幾乎一樣（差 templateModel build），原本想抽 helper 集中
+- 但每個 method 的 templateModel fields 不同（PRD 7 種 scenario × 2 個 recipient role 的 fields 不互通），抽 helper 要 switch by `(notificationType, recipientType)` 變得 ugly
+- 採 in-place duplicate（5 個 method 各加 ~30-50 行）— 雖然 DRY 不滿足但 readability 更高
+- 沒算失敗，但記下「複雜 templateModel build 的 cross-cutting helper 抽得不乾淨時，in-place 直白比 helper 好」
 
-**記憶層 failure**：Step 4 呈報時引 VP-16423 STM line 173「kit_delivery_option=BOTH_BLOOD_AND_NON_BLOOD（follow 17412 既有值）」當作 same-practice follow 範例 — 但實際 DB query 17412 與其他 6 provider 全部都是 NO_DELIVERY。Root cause：VP-16423 STM Decisions 區段是早期決策草稿，最終 Leo 在 Step 6 review 時把全部 7 筆改 NO_DELIVERY 但 STM Decisions 沒同步 update（LTM `emr-integration.md` line 436 反而有寫對）。教訓：**引 STM 的決策內容前先用 DB 實際值 cross-check**，特別是時間久的 STM。
+### **[[VP-16612]]** — `2026-05-18` — Initial proposed spec was wider than necessary
 
-### **[[VP-16474]]**
-
-_None._
-
-### **[[VP-16476]]**
-
-_(無 execution failure。Mistakes 在 Retrospective)_
-
----
-
-### **[[VP-16617]]** — `2026-05-14` — First categorization of 87 dup combos used wrong pattern detection
-
-SQL `COUNT(DISTINCT emr_name)` ignores NULL, so combos with `[NULL, 'PF']` looked like "same emr_name" in audit. Re-wrote categorization with JS `new Set` (treats null as distinct) → revealed 84 combos in "diff emr (one NULL)" pattern previously misclassified as "diff kits".
-
-### **[[VP-16629]]**
-
-N/A
+At Step 4 I proposed `role === 'provider'` (strict). Leo refined to "exclude (clinic_id=150105 AND clinicadmin)". My version would have silently changed patient-role behavior; Leo's preserves it. Lesson: when translating PM natural language ("only X, not Y") into code, prefer narrow exclusion of Y over broad inclusion of X — the former preserves the unconstrained set.
 
 ### **[[VP-16664]]** — `2026-05-18` — First-pass YAML schema change
 
 I added `*_timezone` paired fields to both YAML files at Step 5 start, planning to use them in templateModel. Leo immediately reverted with "不能改 yaml file 啊". Root cause: I conflated "BE config describing template variables" with "Postmark template body in Postmark cloud" — Leo treats the YAML AS the template-end contract; adding fields there is an API change even if Postmark template body doesn't reference them. Lesson: when spec says "embed timezone", default to enriching existing values, NOT adding paired fields.
-
-### **[[VP-16664]]** — `2026-05-18` — Initial date-also-with-TZ assumption
-
-At Step 6 review I included `consult_date: "05/12/2026 PDT"`. Leo corrected to "date does not need TZ; only time-bearing strings do". My reasoning was "dates cross midnight differently in different TZs so date should carry TZ" — technically true but display-copy convention does not write dates with TZ. Lesson: distinguish display-copy convention from technical correctness; the latter does not always require the former.
 
 ---
 
@@ -128,10 +143,6 @@ At Step 6 review I included `consult_date: "05/12/2026 PDT"`. Leo corrected to "
 ### **[[VP-15460]]** — `2026-04-28` — redlock Lock API confusion (#90)
 
 Picked `lock.release()` from redlock@5 docs while installing redlock@4. The two versions have different Lock prototypes (`unlock` vs `release`). Cosmetic in production (TTL covered the leak) but log noise + would have been a real bug if TTL was raised.
-
-### **[[VP-15460]]** — `2026-04-28` — Migration not applied automatically
-
-Agent committed migration SQL to repo and assumed release pipeline would `prisma migrate deploy` it. Leo had to remind: "你 sftp_folder_mapping 的改動還沒真的上傳到 database". Then `prisma migrate deploy` failed with P3005 (DB never baselined for prisma migrations) → fell back to `prisma db execute --file <sql>` (raw SQL apply). Then "192.168.60.11:3306 也要 apply" — second DB. Lesson: this repo has two MySQL instances + Prisma is not the migration source-of-truth in prod.
 
 ### **[[VP-16251]]** — `2026-04-21 21:50` — Script 產出的資料有 3 個問題需手動修正:
 
@@ -234,24 +245,33 @@ Production NestFactory crash at startup: `TypeError: redlock_1.default is not a 
 
 ---
 
-## Auth / permission / role <a id='auth-permission'></a>
+## Other / uncategorized <a id='other'></a>
 
-### **[[VP-16502]]** — `2026-05-07` — 抽 helper 沒做（合理 trade-off）
+### **[[LBS-1487]]**
 
-- 5 個 send method cross-recipient loop 結構幾乎一樣（差 templateModel build），原本想抽 helper 集中
-- 但每個 method 的 templateModel fields 不同（PRD 7 種 scenario × 2 個 recipient role 的 fields 不互通），抽 helper 要 switch by `(notificationType, recipientType)` 變得 ugly
-- 採 in-place duplicate（5 個 method 各加 ~30-50 行）— 雖然 DRY 不滿足但 readability 更高
-- 沒算失敗，但記下「複雜 templateModel build 的 cross-cutting helper 抽得不乾淨時，in-place 直白比 helper 好」
+無。
 
-### **[[VP-16612]]** — `2026-05-18` — Initial proposed spec was wider than necessary
+### **[[VP-16165]]**
 
-At Step 4 I proposed `role === 'provider'` (strict). Leo refined to "exclude (clinic_id=150105 AND clinicadmin)". My version would have silently changed patient-role behavior; Leo's preserves it. Lesson: when translating PM natural language ("only X, not Y") into code, prefer narrow exclusion of Y over broad inclusion of X — the former preserves the unconstrained set.
+_(尚未 execute)_
 
-### **[[VP-16617]]** — `2026-05-14` — kit_delivery_option mis-set on first finalize
+---
 
-Set `kit_delivery_option=NO_DELIVERY` + `kits_options=0` following LTM line 454 and `_apply-vp16424-finalize.ts` template. Both sources were wrong (LTM bug + VP-16424 template propagated the same bug). Caught only after live-applied via cross-check with ParseHL7.java source.
+### **[[VP-16424]]**
 
-Root cause: LTM had two conflicting statements (mapping table at line 173-176 correct, stub finalize default at line 454 wrong). I followed line 454 without spotting the conflict. Lesson: when LTM has two statements that should agree, verify against authoritative source (Java code here).
+（無實作層失敗）
+
+**記憶層 failure**：Step 4 呈報時引 VP-16423 STM line 173「kit_delivery_option=BOTH_BLOOD_AND_NON_BLOOD（follow 17412 既有值）」當作 same-practice follow 範例 — 但實際 DB query 17412 與其他 6 provider 全部都是 NO_DELIVERY。Root cause：VP-16423 STM Decisions 區段是早期決策草稿，最終 Leo 在 Step 6 review 時把全部 7 筆改 NO_DELIVERY 但 STM Decisions 沒同步 update（LTM `emr-integration.md` line 436 反而有寫對）。教訓：**引 STM 的決策內容前先用 DB 實際值 cross-check**，特別是時間久的 STM。
+
+### **[[VP-16474]]**
+
+_None._
+
+### **[[VP-16476]]**
+
+_(無 execution failure。Mistakes 在 Retrospective)_
+
+---
 
 ---
 
@@ -273,6 +293,19 @@ Root cause: LTM had two conflicting statements (mapping table at line 173-176 co
 
 ---
 
+## Deploy / commit / push coordination <a id='deploy-coordination'></a>
+
+### **[[INCIDENT-20260518]]** — `2026-05-19` — 寫 logging 跟 timeout 但沒先說「現在不用 build」
+
+Leo 急著補發、不想 build。我多次 commit + push 沒先問是否需要 deploy。後來 Leo 主動講「現在不用 build」才停下。
+**Preventable**：是。緊急 incident 過程中 commit ↔ deploy 是兩個分離決策，要先確認再做。
+
+### **[[VP-15460]]** — `2026-04-28` — Migration not applied automatically
+
+Agent committed migration SQL to repo and assumed release pipeline would `prisma migrate deploy` it. Leo had to remind: "你 sftp_folder_mapping 的改動還沒真的上傳到 database". Then `prisma migrate deploy` failed with P3005 (DB never baselined for prisma migrations) → fell back to `prisma db execute --file <sql>` (raw SQL apply). Then "192.168.60.11:3306 也要 apply" — second DB. Lesson: this repo has two MySQL instances + Prisma is not the migration source-of-truth in prod.
+
+---
+
 ## Test / mock / spec <a id='test-mocking'></a>
 
 ### **[[VP-16154]]** — `2026-05-11 19:00` — - `event.service.spec.ts` 跟 `meeting-request.service.spec.ts` 用 `new ServiceClass(...)` 直接 instantiate（不走 DI），baseline 上已經缺一個 arg（pre-existing），加 settingTool inject 後 spec compile error 浮現。修法：spec 補 mock arg。
@@ -287,43 +320,40 @@ Root cause: VP-16391's test was written assuming `process.env.platform_type` und
 
 ---
 
-## DB / migration / backfill <a id='db-migration'></a>
+## Scope / requirement / PM communication <a id='scope-communication'></a>
 
-### **[[VP-16232]]** — `2026-04-20 14:30` — **Failure 1: 用 crm.contacts 而非 gRPC**
+### **[[VP-16617]]** — `2026-05-14` — First categorization of 87 dup combos used wrong pattern detection
 
-- Error: 4,480 筆在 crm.contacts 找不到
-- Assumption: crm.contacts 有所有 customer 資料
-- Root cause: crm.contacts 只有部分 customer（可能只有 sales contacts），不是權威資料源
-- Fix: 改用 gRPC GetCustomer
+SQL `COUNT(DISTINCT emr_name)` ignores NULL, so combos with `[NULL, 'PF']` looked like "same emr_name" in audit. Re-wrote categorization with JS `new Set` (treats null as distinct) → revealed 84 combos in "diff emr (one NULL)" pattern previously misclassified as "diff kits".
 
-**Failure 2: 命名格式錯誤**
-- Error: 把 patient calendar 改成 "{name}'s Provider Calendar"
-- Assumption: 沒有確認現有命名慣例
-- Root cause: 沒有先查看已存在的 patient calendar 命名格式（應為 "{NAME}'s Patient Calendar"）
+### **[[VP-16664]]** — `2026-05-18` — Initial date-also-with-TZ assumption
 
-**Failure 3: gRPC endpoint 錯誤**
-- Error: CORE_SAMPLE_V2_RPC (10.224.0.53:8084) → ECONNREFUSED
-- Assumption: .env 裡的值可以直接用
-- Root cause: 沒有先讀 lis-code-agent/knowledge/emr-integration.md，那裡明確記載 gRPC endpoint 是 192.168.60.6:30276
-- Fix: 用 knowledge 裡記載的 endpoint
+At Step 6 review I included `consult_date: "05/12/2026 PDT"`. Leo corrected to "date does not need TZ; only time-bearing strings do". My reasoning was "dates cross midnight differently in different TZs so date should carry TZ" — technically true but display-copy convention does not write dates with TZ. Lesson: distinguish display-copy convention from technical correctness; the latter does not always require the former.
 
-**Failure 4: NestJS createApplicationContext + gRPC**
-- Error: gRPC @Client decorator 在 CLI 模式不初始化，且 PublicBookingService.onModuleInit crash
-- Assumption: 可以用 NestJS context 跑 gRPC migration
-- Root cause: createApplicationContext 不啟動 microservice transport
-- Fix: 改用 @grpc/grpc-js + proto-loader 直接建立 gRPC client
+---
 
-**Failure 5: 沒有使用 lis-code-agent knowledge**
-- Error: 整個過程都沒有查 knowledge 目錄
-- Assumption: 可以靠 .env 和 codebase 自己找到答案
-- Root cause: 不知道/忽略了 lis-code-agent 的知識庫系統
-- Fix: 任何 gRPC/migration 任務先讀 knowledge/
+## Tool / cwd / branch / repo confusion <a id='tool-usage'></a>
 
-### **[[VP-16410]]** — `2026-05-06 02:50` — 誤解 Leo「過去的 event 無需更動」為「rollback backfill」
+### **[[VP-15460]]** — [2026-04-27 → 28] Cwd persistence in Bash tool calls
 
-- **錯誤推理**：Leo 說「過去 event 無需更動」我誤解為「backfill 不應該存在」，提議 DELETE 2350 claim + 2670 audit
-- **正確意思**：「不要 update / delete 既有 v2_event row」— backfill 進 claim 表的 row 是新表新資料、不是 update 既有 event
-- **Leo 糾正**：「未來如果有 accession_id 已經在 claim table 的還要創建 event 需要擋下來」— 暗示 claim table 的歷史資料是必要的（沒 backfill 就沒資料可擋）
-- **教訓**：「過去的 event 無需更動」= 不動 v2_event 表本身，**跟 claim table 是否要 backfill 無關**。下次遇到否定句指令要拆「動什麼 / 不動什麼」維度，不要把 scope 自動擴到無關的 table
+After `cd /Users/hung.l/src/EMR-Backend && gh pr view 156`, subsequent Bash calls without explicit `cd` defaulted to EMR-Backend. Created `bugfix/leo/VP-15460-redlock-import` in the wrong repo, had to clean up. Lesson: always explicit `cd` in cross-repo flows.
+
+---
+
+## Error handling / throw vs log <a id='error-handling'></a>
+
+### **[[VP-16154]]** — `2026-05-11 19:15` — - 第一次 helper 用 `throw new Error('...')` 對 missing header — Leo 要求「沒新 data 不報錯」後改成 try/catch + log.warn + return undefined。
+
+
+
+---
+
+## Auth / permission / role <a id='auth-permission'></a>
+
+### **[[VP-16617]]** — `2026-05-14` — kit_delivery_option mis-set on first finalize
+
+Set `kit_delivery_option=NO_DELIVERY` + `kits_options=0` following LTM line 454 and `_apply-vp16424-finalize.ts` template. Both sources were wrong (LTM bug + VP-16424 template propagated the same bug). Caught only after live-applied via cross-check with ParseHL7.java source.
+
+Root cause: LTM had two conflicting statements (mapping table at line 173-176 correct, stub finalize default at line 454 wrong). I followed line 454 without spotting the conflict. Lesson: when LTM has two statements that should agree, verify against authoritative source (Java code here).
 
 ---
