@@ -1,14 +1,18 @@
 """
 Memory Scorer - Deterministic importance scoring for all memory files.
 
-Formula: score = (base_weight * recency_factor * reference_boost) / normalization
+Formula: score = (base_weight * recency_factor * reference_boost * urgency_boost) / normalization
 
 Where:
-  base_weight    from YAML frontmatter (0.6 - 1.0)
-  recency_factor e^(-days_since_update / half_life)
-                 half_life = 30 (STM) | 180 (LTM)
+  base_weight     from YAML frontmatter (0.6 - 1.0)
+  recency_factor  e^(-days_since_update / half_life)
+                  half_life = 30 (STM) | 180 (LTM)
   reference_boost 1.0 + (0.1 * incoming_link_count)
-  normalization  8.0
+  urgency_boost   1.0 + 0.15 * (urgency - 1)   # urgency frontmatter 1-5, default 1
+                  → urgency=1 → 1.0, urgency=5 → 1.6
+                  Set urgency=5 on incidents / urgent prod fixes so they outrank
+                  ordinary tickets even after recency decay.
+  normalization   8.0
 
 Thresholds:
   active:  score >= 0.1
@@ -30,6 +34,9 @@ logger = get_logger("memory.scorer")
 HALF_LIFE = {"stm": 30, "archive": 180}
 LTM_FIXED_RECENCY = 0.99  # LTM knowledge/patterns barely decay — scored by base_weight x links
 NORMALIZATION = 8.0
+URGENCY_BOOST_PER_LEVEL = 0.15  # urgency=5 -> 1.6x; urgency=1 -> 1.0x (no boost)
+URGENCY_MIN = 1
+URGENCY_MAX = 5
 ARCHIVE_SCORE_THRESHOLD = 0.1
 ARCHIVE_AGE_DAYS = 90
 FORGET_SCORE_THRESHOLD = 0.05
@@ -153,7 +160,14 @@ class MemoryScorer:
             incoming = 0
         boost = 1.0 + (0.1 * incoming)
 
-        score = round((base_weight * recency * boost) / NORMALIZATION, 4)
+        urgency_raw = meta.get("urgency", URGENCY_MIN)
+        try:
+            urgency = max(URGENCY_MIN, min(URGENCY_MAX, int(urgency_raw)))
+        except (TypeError, ValueError):
+            urgency = URGENCY_MIN
+        urgency_boost = 1.0 + URGENCY_BOOST_PER_LEVEL * (urgency - 1)
+
+        score = round((base_weight * recency * boost * urgency_boost) / NORMALIZATION, 4)
 
         return ScoredFile(
             path=path,
