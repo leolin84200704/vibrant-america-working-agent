@@ -70,10 +70,20 @@ summary: Build/deploy patterns, investigation flows, DB connections, known issue
 - 大部分專案 `strictNullChecks: false`, `noImplicitAny: false`
 - 不要主動引入 strict typing
 
+### VA Jira：關閉 Bug 前必填 Root Cause + Root Cause Category（VP-16954 教訓）
+- VA Jira 的 **Bug** issue 要走到 **Done**（transition id=15）會被 issue-level validator 擋：**"Root Cause and Root Cause Category must be completed before closing this bug."**
+- 這兩個欄位**不在** Done 的 transition screen（`hasScreen=false`），也**不在**當前狀態的 `editmeta` / `transition.fields` 暴露 → 用 MCP `transitionJiraIssue` 直接打會失敗、且抓不到 field id。
+- 要關 VP Bug 前：先用 `editJiraIssue` 備妥 Root Cause + Root Cause Category 兩欄（或請 Leo 在 UI 填），再 transition。非 Bug 類型（Task/Story）無此限制。
+
 ### class-validator `@IsOptional` 不跳過空字串（VP-16955 教訓）
 - `@IsOptional()` **只**在值為 `null` / `undefined` 時跳過後續驗證；空字串 `""` 視為「有提供值」仍會跑 `@Length` / `@Matches` 等 → 前端送 `field: ""` 會炸 400。
 - 修法（最小改動）：欄位加 `@Transform(({ value }) => typeof value === 'string' && value.trim() === '' ? undefined : value)`（class-transformer，NestJS ValidationPipe 在 plainToInstance 階段即執行，驗證前生效），非空值仍受格式驗證保護。
 - 條件式驗證（某 vendor/type 才必填）若判斷依據需查 DB（DTO 只有 id），**不要**在 DTO 塞 async custom validator——留在已載入該 record 的 service 層，DTO 只負責放行空值。
+
+### NestJS 11 ValidationPipe nested-DTO 錯誤前綴 + scoped 清理只能用 filter（VP-17077）
+- NestJS 11 預設 ValidationPipe 對 `@ValidateNested()` 子 DTO 的錯誤訊息會**加 property-path 前綴**，例如 `clinicInfo.Customer NPI must be exactly 10 digits`（top-level 欄位無前綴）。回傳 body 為 `{statusCode, message: string[], error}`。前端若把 `message` 陣列原樣 render 會變 `{"..."}`（那是前端問題，非後端）。
+- **要 scoped（單 controller）清掉前綴：用 controller-scoped exception filter（`@Catch(BadRequestException)` + `@UseFilters`），不要用 scoped `ValidationPipe`+`exceptionFactory`**——因為全域 ValidationPipe（main.ts）**先**跑先 throw，route/controller 級的 pipe 永遠輪不到。filter 才攔得到全域 pipe 丟的例外。範例 `integration-management/auto-integrate/filters/validation-error-cleanup.filter.ts`：strip `^(?:[A-Za-z_$][\w$]*\.)+`，非陣列 message / 一般 BadRequest 原樣放行、保留 response shape。
+- 驗證這類「filter 是否攔到 global pipe 例外」務必用 **HTTP 整合測試**（`Test.createNestApplication` + `app.useGlobalPipes(同 main.ts)` + supertest），單元測 filter 邏輯不足以證明攔截鏈。`supertest` 用 `import * as request`；spec 命名 `.spec.ts`（`.e2e-spec.ts` 不被預設 jest config 收）。
 
 ### Environment Variables
 - 各專案用不同的 env var 名稱：`NODE_ENV` / `SERVER_ENVIRONMENT` / `DEPLOY_ENVIRONMENT` / `platform_type`
@@ -445,6 +455,8 @@ Pre-INCIDENT-20260604 的 log 是 `Disconnecting from SFTP server` 後可能跟 
 - `Scope.TRANSIENT` per-caller instance — handshake 成本換 isolation
 - 手刻 connection pool keyed by `host:port` + acquire/release semantics
 - 至少：每個 method 帶 per-op timeout（不只 connect/disconnect，list/put/get/stat 全部）
+
+**狀態更新（2026-06-25 查證）— POD_ROLE 分流 fix 寫好了但「從未部署」到 on-prem prod**：症狀重現——「result 在跑時 order(-fetch) cron 一觸發就卡住」。根因鏈：`SftpConnectionService` singleton 共用 `this.client`、`connect()` 第一行無條件 `safeDisconnect()`（`sftp-connection.service.ts:47-48`）+ 無 mutex；`Hl7OrderFetchService` `@Cron('0 */15 * * * *')` 每 15min 逐 folder `connect()`（line 269）→ 把正在 `put()` 的 result 上傳那條 socket 砍掉 → 上傳等不到 ACK 卡到 10min timeout / 噴 `Unexpected end event`（單日 6000+ 次）。`config/pod-role.ts` 的 intake/pusher 分流就是為此而寫，但**兩個 on-prem pod（`lis-emr-v2-deployment` app=lis-emr-v2、`lis-emr-v2-deployment-prod` app=lis-emr-v2-prod）spec 都沒設 `POD_ROLE` → 全 fallback `all` → 分流從沒生效**。**且不能直接設 env 分流**：兩 pod 都 `REDIS_HOST=localhost`（各自 redis sidecar，不共用），而分流設計靠**共用 Redis** 當 intake→pusher 的 result-gen job 橋樑（kafka 自動路徑）→ 直接分流會斷掉自動 result 路徑。**故 connection pool（上方 line 456）才是較可行的正解**，而非 POD_ROLE 分流（後者還要先補共用 Redis + 第二個 prod deployment + result-gen gRPC Service `lis-emr-v2-internal-prod`/`-nodeport-prod` :5000 確認指向 pusher）。prod result-gen 走同步 gRPC `GenerateBatchResultsHl7`（inline 不經 queue，`isPusher` gate）；自動結果才走 kafka→queue。
 
 **衍生規則 — 操作症狀重複出現要 escalate 到 code 層**：INCIDENT-20260528（5/28 同症狀 SFTP fetch hang）只記「rollout restart 解決」，沒追到 singleton 層 root cause；6/1 同樣 hang 再現、阻塞 157-sample batch retry。**第二次出現相同症狀的 incident，retrospective 必須有 code-level analysis section**，不只記 mitigation。
 
@@ -1086,3 +1098,19 @@ LIS-transformer-v2 calendar：customer 預約「能不能 book」要與「getLab
 - 還原**被刪 event 的 id**:`v2_event_accession_audit_log`(不隨主表 cascade 消失,記 claim/release + event_id + reason)+ Postmark email body 重建 lifecycle。
 
 **止血手法**:在出事的 cluster `kubectl scale deploy <transv2> --replicas=0`,或改其 `Azure_notification_topic`/`Azure_kafka_notification_url` 為非 prod,或設 `platform_type=local`。**根因治理**:非 prod 環境不得持有 prod notification Event Hub 連線字串;reminder cron 在非 prod 一律 gate;test calendar DB 定期 refresh 或標記禁止對外寄信。
+
+---
+
+## 改一個「不變量」的語意 → 必同步同 scope 內所有它的衍生點;測試別 mock 掉相依路徑 (VP-17260, Bugbot 連抓 2 次)
+
+**症狀通則**:一個概念/邊界在同一函式或 flow 裡常有**多處表達**(顯示值、驗證 cutoff、查詢窗、forward/backward search 上下界、下游計算)。只改其中一處的語意、沒同步其他處 → 它們開始不一致。`getBookingRules` 的「max-advance 預約上限」就被連抓兩次:
+1. VP-17260 原始改動:`validateBookingTime` 改用 `maxAdvanceCutoff`(第 N 天結束/per-day),但 `getBookingRules.latest_bookable_time` 還是 rolling `now + N*24h` → **顯示 ≠ 驗證**。
+2. 修 (1) 時:把 `latest_bookable_time` 對齊了 `maxAdvanceCutoff`,卻漏掉**同一函式上方約 10 行**的 schedule-exception 查詢窗仍用 rolling `maxDate` → 美國(UTC 負偏移)時區 cutoff 日可能晚一天,**最後一天的 closure 沒載入** → `calculateEarliestBookableTime` 可能漏看。
+
+**根因**:只修「被指出的那一行」、在改動點做局部推理,沒先列出同 scope 內所有「表達同一概念」的點一起改。這是「migrate all readers, no mirror」/「audit callers when adding fallback」的同類,但範圍更小——**連同一個函式內**都漏。
+
+**為何測試沒擋住(關鍵)**:Finding-1 的測試把 `v2_schedule_exception.findMany` mock 成 `[]`,等於把會出問題的相依路徑 mock 掉 → 綠燈是**假信心**。只測了輸出值(`latest_bookable_time`),沒測內部資料抓取窗口的一致性。
+
+**做法**:
+1. 改某值/邊界的**語意**前,grep/讀**整個函式 + flow**,列出所有「衍生自它」或「必須跟它一致」的點(顯示、驗證、查詢窗、search 上下界),同一 PR 一起改,並用**同一個 single source** 算(本例:`const latestBookable = maxAdvanceCutoff(...)` 算一次,顯示值與查詢窗都用它)。
+2. 測試**不要 mock 掉與該不變量共用的程式路徑**;挑一個會真的踩到相依點的案例(如 rolling 日 ≠ cutoff 日的特定時刻),確認**舊碼 fail、新碼 pass**。
