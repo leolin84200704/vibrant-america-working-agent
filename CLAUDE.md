@@ -26,8 +26,9 @@
 - Branch: `feature/leo/{ticket_id}` 或 `bugfix/leo/{ticket_id}`
 - Commit: `[{ticket_id}] {簡要描述}`
 - 允許: checkout -b, commit, push（僅自己的 branch）
-- 禁止: push --force, reset --hard, push to main/master/staging
-- Agent 不 merge — Leo 決定
+- 禁止: push --force, reset --hard, push to master/staging（LIS 工作 repo 亦禁 push main）
+- 例外（僅本 personal repo `lis-code-agent`）: 允許 push 到 `main`（daily-digest / knowledge 直接進 main）；仍禁 force-push、reset --hard、push master/staging
+- Agent 不 merge — Leo 決定（此例外不適用於 LIS 工作 repo）
 
 ## 回報格式
 ```

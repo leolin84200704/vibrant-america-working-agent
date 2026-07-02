@@ -11,9 +11,12 @@ if echo "$COMMAND" | grep -qE '\-\-force|\-f '; then
   exit 2
 fi
 
-# Block push to protected branches
-if echo "$COMMAND" | grep -qE 'push\s+\S+\s+(main|master|staging)(\s|$)'; then
-  echo "BLOCKED: 不能直接 push 到 main/master/staging。" >&2
+# Block push to protected branches.
+# NOTE: this is the personal lis-code-agent repo — pushing to `main` is allowed
+# here (the daily-digest job and manual knowledge consolidation land on main).
+# master/staging stay protected; force-push is blocked above.
+if echo "$COMMAND" | grep -qE 'push\s+\S+\s+(master|staging)(\s|$)'; then
+  echo "BLOCKED: 不能直接 push 到 master/staging。" >&2
   exit 2
 fi
 
