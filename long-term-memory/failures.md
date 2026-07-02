@@ -6,8 +6,8 @@ status: active
 score: 0.0
 base_weight: 0.9
 urgency: 3
-created: 2026-06-10
-updated: 2026-06-10
+created: 2026-07-02
+updated: 2026-07-02
 links:
 - INCIDENT-20260518
 - INCIDENT-20260601-sftp-hang
@@ -21,28 +21,31 @@ links:
 - INCIDENT-20260528
 - LBS-1487
 - LBS-1541
-- VP-16165
 - VP-16424
-- VP-16474
 - VP-16476
 - VP-16766
 - VP-16784-87
+- VP-17217
+- VP-17283
 - INCIDENT-20260604-mdhq-stale-connections
 - VP-16164
 - VP-16251
 - VP-16280
-- VP-16289
 - VP-16423
 - VP-16463
-- VP-16713
 - VP-16720
 - VP-16921
+- VP-16968
+- VP-16987
 - VP-16193
 - VP-16232
 - VP-16329
 - VP-16612
 - VP-16664
 - VP-16734
+- VP-17076
+- feedback_batch_db_verify
+- feedback_join_scope_reverse_audit
 - INCIDENT-2604156666
 - VP-16154
 - VP-16617
@@ -50,29 +53,30 @@ tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 60 entries across STM
+summary: Auto-aggregated failure index from 66 entries across STM
 ---
 
 # Failure Index
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-06-10 — total 60 entries
+> Last updated: 2026-07-02 — total 66 entries
 
 ## Themes
 
 - [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 14 entries
+- [DB / migration / backfill](#db-migration) — 12 entries
 - [Other / uncategorized](#other) — 11 entries
-- [DB / migration / backfill](#db-migration) — 10 entries
 - [Build / TypeScript / Tooling](#build-tooling) — 9 entries
+- [Test / mock / spec](#test-mocking) — 4 entries
 - [Redis / cache / pending list](#redis-cache) — 3 entries
 - [Deploy / commit / push coordination](#deploy-coordination) — 3 entries
-- [Test / mock / spec](#test-mocking) — 3 entries
+- [Scope / requirement / PM communication](#scope-communication) — 3 entries
 - [Auth / permission / role](#auth-permission) — 2 entries
-- [Scope / requirement / PM communication](#scope-communication) — 2 entries
+- [Error handling / throw vs log](#error-handling) — 2 entries
 - [Tool / cwd / branch / repo confusion](#tool-usage) — 1 entries
-- [Error handling / throw vs log](#error-handling) — 1 entries
 - [gRPC / network / timeout](#grpc-network) — 1 entries
+- [GraphQL / API design](#graphql-api) — 1 entries
 
 ---
 
@@ -118,10 +122,6 @@ Picked `lock.release()` from redlock@5 docs while installing redlock@4. The two 
 - 沒查 `order_clients.old_clinic_id` → 新 record null，既有皆 1002859
 Root cause: Step 5c 只查了 integration-level 欄位（report_option / integration_type / sftp paths），沒把 `kit_delivery_option` 和 order_clients 的 `old_clinic_id` 納入 same-practice-follow-existing 檢查清單。
 
-### **[[VP-16289]]** — `2026-04-23` — - insert-ehr-integration.ts 第一次用錯參數格式 → 看 usage 後修正
-
-- MDHQ 已知問題: sftp_archive_path 缺尾部 `/`、emr_name 小寫 → 手動 SQL 修正
-
 ### **[[VP-16423]]** — `2026-05-04` — kit_delivery_option 錯誤對齊 PENDING stub
 
 - 錯誤決定：Phase 2 把 7 筆 ehr_integrations.kit_delivery_option 對齊 17412 PENDING stub 的 BOTH_BLOOD_AND_NON_BLOOD
@@ -156,21 +156,6 @@ Two post-expansion files stuck on v2 path with behavioral divergence from v1:
 
 DO NOT auto-rollback without explicit user approval.
 
-### **[[VP-16713]]** — [2026-05-21 ~19:50] Calendar DB schema 混淆（critical insight）
-
-- 我給的 audit query 在 Leo 的 client 跑出 0 列，因 client 連的是 `calendar_dev_new` schema（沒有這批 prod 資料）
-- Wasted ~2 輪 query 嘗試，直到讓 Leo 跑 `current_schema()` 才確認
-- Root cause: 我預設 Leo 連的就是 prod，沒先要求 enumerate schema
-- 防範：calendar DB 操作**第一步**永遠先 `SELECT current_database(), current_schema()` 或 `SELECT schema_name FROM information_schema.schemata WHERE schema_name LIKE 'calendar%'`，這跟 repos.md 既有規則一致
-
-### **[[VP-16713]]** — `2026-05-21 20:05` — 對 event 9509 的 query 邏輯誤判
-
-- Leo 給 event 9509 raw data（明明有 clinicadmin participant 30789 Brooke）
-- 我前面 query 用 `c.role IN ('provider','clinicadmin')` 邏輯**應該**返回 Brooke
-- 我錯誤推測「event 沒有 clinician participant」，提議 creator-path fallback
-- Root cause: 連 dev schema 而 prod schema 才有資料，是 schema 問題不是 query 邏輯問題
-- Lesson: query 跑出空時，先驗證**連線 / schema / 資料存在性**，再懷疑 query 邏輯
-
 ### **[[VP-16720]]** — `2026-06-01` — order_clients 重複 INSERT（Anna 43262 ×4）
 
 **症狀**：我 INSERT 24 order_clients（per pair），但 Anna 43262 跨 4 clinic 同 customer_id → 4 個重複 oc rows（ids 2303/2306/2309/2312）。
@@ -189,70 +174,46 @@ DO NOT auto-rollback without explicit user approval.
 - F2: Theorized "zombie from 5/22 cancel-and-rebook left is_canceled=false" — WRONG (git showed rescheduleClinicalConsult sets is_canceled=true, and it was deployed 6/2 anyway). The real producer was a different env entirely.
 - F3: Assumed the local `.env` calendar_prod = the only/authoritative prod DB and that all senders write there. Missed that a separate cluster could send to the same prod email topic without touching prod's DB.
 
----
+### **[[VP-16934]]** — `2026-06-10` — VP-16940 result PULL 實作完成（read-only FHIR DiagnosticReport）
 
-## Other / uncategorized <a id='other'></a>
+- `GET /api/v1/fhir/DiagnosticReport?sampleId=N` → 解析 `result_transmission_records.generated_hl7_content`(HL7 ORU) 轉 FHIR R4 DiagnosticReport（read-only，不刷卡/寫/送）。
+- 新 module `src/modules/fhir-result/`：`Hl7ToFhirMapperService`（ORU→DiagnosticReport + contained Patient/Specimen/Observation(per OBX)/Practitioner/Organization；**PDF→presentedForm url 參照、不夾 base64**）、service（讀 record + per-client scoping）、controller（JwtAuthGuard + `FHIR_RESULT_MODE` flag 預設 disabled→403）。`FhirResultModule` **import AuthModule**（記取 CrashLoop 教訓）；註冊進 app.module。
+- **關鍵發現**：實際 `raw_result_data` 只是輕量稽核 blob（無 patient/test 細節）→ 完整資料在 `generated_hl7_content`，所以 mapper 直接解析 HL7。
+- **completeness（要求「除 PDF 外所有 HL7 都在 FHIR」）**：對 **8 筆真實 prod record** 逐 token 驗證 → **全 0 not-found**（含 929-obs 大報告）。補了 provider 姓名(ORC-12/OBR-16/PV1-7)、ORC-17 entering org、OBX-15 producer、MSH-10 control id。CI guard: `hl7-to-fhir.mapper.service.spec`。
+- **本地 npm run start:dev e2e**（POD_ROLE=pusher 安全關掉 intake cron/kafka；FHIR_RESULT_MODE=enabled；連 prod 唯讀）：401/400/**200**（DiagnosticReport, 159 obs, PDF url 無 base64, contained 齊全）。
+- 8 unit tests + build + DI boot check + 全套無新增失敗。config 兩份加 `FHIR_RESULT_MODE: disabled`（gitignored）。
+- **PR #159**(base staging) + Story **VP-16952**(掛 Epic VP-16934)。未 merge。PUSH 留後續。
 
-### **[[INCIDENT-20260528]]** — `2026-05-28` — 把 hang pod log 燒掉了
+### **[[VP-16968]]** — `2026-06-11` — backfill type 設錯 FULL_INTEGRATION (Leo 抓到)
 
-Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`、**舊 pod (`6cc4674b87-ccgbf`) 的 log 隨 pod GC 永久消失**。/var/log/pods 對應目錄 mtime 還在但 log file 已清。所以「哪個 folder 是 5/27 真正 hang 元凶」**現場證據燒掉了**。後來 21:45 tick log 出來的 id=260 反而是 transient = 不是同一個 hang。
+- 我把 225 列設 FULL_INTEGRATION + result_enabled=true → 納入 result/report 投遞管線，但 order_clients 無 result config (ehr_vendor_id/sftp_result_path/sftp_host/legacy_emr_service/msh06 全 225 null; npi 缺3; emr_name/folder 只 27/225)。225 全 result-pipeline-eligible → 報告完成會被選中然後失敗。
+- root cause: 問 Leo type 選項時沒把「FULL 會啟用 result 投遞、需要 result config」這後果講明；沒從「這些是純 order 來源」反推 result 不可行。
+- Lesson: backfill/設 capability flag 前，逐一檢查該 flag 啟用的下游 pipeline 是否有足夠 config 支撐 (result_enabled→需 vendor/sftp_result_path)。enable 一個 capability = 啟用一條 pipeline。
+- 修正: UPDATE 225 (bound requested_by='VP-16968-backfill') → ORDER_ONLY, result_enabled=0, ordering=1, sftp=1。交易內驗 0 result-eligible / 0 uncovered / 225 affected。COMMITTED。backfill 腳本 artifact 同步改 ORDER_ONLY。
+- result 投遞給這些客戶 = 另案 (需真 result config 來源，order_clients/lis_emr 都沒有)。
+- 回歸驗證: 225 戶在 result_transmission_records(24530 筆) 從未以 result_client_id 出現 → 從沒走 emr-v2 result pipeline → 改 ORDER_ONLY 零 report 回歸。確認。
 
-預防：destructive ops (rollout restart / pod delete) 前必須 `kubectl logs <pod> > /tmp/preserve.log` + `kubectl describe pod <pod> > /tmp/preserve_describe.txt`。已寫進 user memory feedback。
+### **[[VP-16987]]** — `2026-06-16 17:55` — — Live prod 取證 (appserver04, leo 授權, 唯讀)
 
-### **[[LBS-1487]]**
+Prod pod: `lis-emr-v2-deployment-prod-54d77c8846-c8l9b` (default ns, container `lis-emr-v2-prod`, image `192.168.60.10:6004/vibrant/lis-backend-emr-v2:latest`). Prod 只有單一 pod，無獨立 pusher/intake 分離部署。
 
-無。
+**Env (排除假設)**:
+- `ENVIRONMENT=production` / `NODE_ENV=production` → **排除候選 #1 (staging skip)**
+- `POD_ROLE` **未設** → 預設 'all' → isPusher=true → **排除候選 #4 (POD_ROLE gate)**
+- `VIBRANT_API_BASE_URL=https://api.vibrant-wellness.com/v1/lis/base-report-service` (與 repo .env 的 vibrant-america 不同，prod override)
+- DB: `lisportalprod2.mysql.database.azure.com` / db `lis_emr` / user `lis_emr`
 
-### **[[LBS-1541]]**
+**DB 證據 (決定性)**:
+- `emr_periodic_report_customers`: **全表只有 1 個 customer = 30248/JAGHP**，frequency=quarterly，SFTP `jagconsulting@64.124.9.100:2223` path `/Prod/JAGConsulting/Results`，created 2025-12-11。→ **排除候選 #2 (設定存在且正確)**
+- `periodic_report_records`: **整張表完全空 (total=0, 0 customers, MIN/MAX=NULL)** → 自動 pipeline **從未** 成功記錄過任何一次交付（對任何 customer）。
 
-(none yet)
+**Boot/scheduler (排除假設)**:
+- ScheduledReportsModule + ScheduleModule 正常 init，Nest app started。→ module 有載入
+- Node `Intl.DateTimeFormat('America/Los_Angeles')` 可解析 (用內建 ICU，雖然 `/usr/share/zoneinfo` 不存在) → **推翻「Node @Cron 因缺 tzdata 註冊失敗」假設**
+- ⚠️ 但 Go gRPC service 報 `failed to load timezone: unknown time zone America/Los_Angeles` (generateBarcodeForSampleID) → Go 端確實缺 OS tzdata。**若** report pipeline 的 `getCustomerSamplesByTimeRange` gRPC 也傳 LA timezone 給 Go service → 每次季度執行在抓資料階段就 throw → 無 CSV → 無上傳 → 無 record。**未證實，列為主要待查機制**。
+- cron-status 端點需 auth (401)，未強驗 cron 是否真的 fire。
 
-### **[[VP-16165]]**
-
-_(尚未 execute)_
-
----
-
-### **[[VP-16424]]**
-
-（無實作層失敗）
-
-**記憶層 failure**：Step 4 呈報時引 VP-16423 STM line 173「kit_delivery_option=BOTH_BLOOD_AND_NON_BLOOD（follow 17412 既有值）」當作 same-practice follow 範例 — 但實際 DB query 17412 與其他 6 provider 全部都是 NO_DELIVERY。Root cause：VP-16423 STM Decisions 區段是早期決策草稿，最終 Leo 在 Step 6 review 時把全部 7 筆改 NO_DELIVERY 但 STM Decisions 沒同步 update（LTM `emr-integration.md` line 436 反而有寫對）。教訓：**引 STM 的決策內容前先用 DB 實際值 cross-check**，特別是時間久的 STM。
-
-### **[[VP-16474]]**
-
-_None._
-
-### **[[VP-16476]]**
-
-_(無 execution failure。Mistakes 在 Retrospective)_
-
----
-
-### **[[VP-16521]]** — `2026-05-28 17:52` — git stash push 把 MERGE_HEAD 弄丟
-
-- **症狀**：merge in-progress 時 `git stash push` → MERGE_HEAD 消失，stash pop 報 `event.service.ts: needs merge`
-- **修法**：`git merge origin/stage_test --no-commit --no-ff` 重觸發 merge state，再 `git checkout stash@{0} -- src/calendar/models/event/event.service.ts` 把 stash 內的 resolved 版本拉回，最後 `git stash drop`
-- **教訓**：merge in-progress 時禁用 `git stash`；要保存 in-flight diff 改用 `git diff > /tmp/wip.patch` + 該 file 個別 checkout
-- **更好做法**：根本不該為了 "比較 pre-merge lint baseline" 中斷 merge state — 直接看 origin/feature 上的 ESLint baseline 即可，或先 commit 中間態再分析
-
-### **[[VP-16766]]** — `2026-05-27` — **Minor TS slip**：`_apply` 腳本初版用 `${ehr.created_at = now}`（賦值表達式）想偷塞欄位，TS2339 編譯失敗。改成直接 `${now}`。教訓：raw SQL 的 template binding 不要塞賦值/副作用，值先算好再代入。
-
-
-
-### **[[VP-16784-87]]**
-
-（無 — verification-only session）
-
-### **[[VP-16934]]** — `2026-06-09` — #157 部署後 staging dry-run 驗證通過
-
-- endpoint no-auth → 401（route live + guard）。
-- 簽 JWT(staging JWT_SECRET, HS256, payload 需 userId + 未過期；JwtStrategy 不檢 issuer) 打 dry-run（`scripts/_vp16934-staging-test.js`）：
-  - 假 provider → `201 {rejected, customer_not_found}`（auth/dryrun/富化都跑）。
-  - 缺 testCodes → `400`。
-  - **真客戶 5794 → `201 {rejected, unrecognized_test_codes:[VACP1001]}`** = customer 解析成功 + 代碼分類有跑（VACP1001 是假 code 才被擋）。
-- **結論：order intake 在 staging dry-run 全程跑通**（auth/gating/validation/customer 查詢/代碼分類）。差「完整成功單(sampleId:-1)」需對 staging 客戶有效的真 test code。
-- staging order_intake 留了 2 筆 VP16934-TEST-* rejected 測試列（無害，可清）。
+**Code path 確認**: `periodicReportRecord.createMany` 只在 **SFTP 上傳成功 AND processedRecords>0** 後才寫 (base-report.service.ts:598-605)。空表 = 從未走到成功上傳。自動產 **`.xlsx`**，但客戶收到/手動腳本送的是 **`.csv`** → 格式不一致。
 
 ---
 
@@ -349,6 +310,86 @@ I added `*_timezone` paired fields to both YAML files at Step 5 start, planning 
 **Minor procedural slip**:
 - Probe script `_vp16734-check.ts` 初版查 `ehr_integration_status_history` 用 column `ehr_integration_id`（推測），實際是 `integration_id` — 一次 retry 後補上 information_schema 查欄位名再改。教訓：跨表的 FK column 命名不要憑猜，先 `SHOW COLUMNS` / information_schema 看 schema
 
+### **[[VP-16934]]** — `2026-06-10` — 完整 happy-path + exactly-once 在 staging 驗證通過（Leo 提供值）
+
+- 值：orderingProviderId=999997（→fetchById，clinic 10136 帶出）、testCodes=[VAREQUISTION463]、chargeIndicator=C、測試病患 Vptest Dryrun。
+- **happy path：`HTTP 201 {accepted, dryRun:true, sampleId:-1}`** = 全鏈路跑通（auth→customer 999997 解析→patient find/create→VAREQUISTION463 分類成功→定價/best-deal/lab-fee/kit 組裝→finalize dryRun）。沒刷卡/送單/email。
+- **exactly-once：** 同 placerId 兩次 → 1st accepted、2nd `duplicate:true` 短路。
+- ⚠️ dry-run 仍會跑 patient find/create（gRPC），staging 可能新增測試病患 Vptest Dryrun；order_intake 留了 HAPPY/DUP/TEST 測試列（皆 staging 測試資料，可清）。
+- **結論：order intake API 在 staging 可正常下單（dry-run）且 exactly-once 生效。**
+
+### **[[VP-17076]]** — `2026-06-22` — 重大查詢 bug — Prisma $queryRaw IN() 用 join 字串
+
+- 錯誤寫法 `WHERE clinic_id IN (${CLINICS.join(',') as any})` → Prisma 把整串當**單一 bound param** → SQL 變 `clinic_id IN (?)` param='2930,8003,...' → MySQL 字串轉 int 只取開頭 → **只比對到 2930**。
+- 後果: 兩支 check script (_vp17076-check.ts / _vp17076-exist.ts) 全程只看到 2930，誤判「19 clinic 都不存在 / 需新建」。Leo 自己跑 SELECT * 抓到一堆既有 row 才發現。
+- Root cause: 沿用 scripts/check-vp16329.ts 的 hardcode 單值模式，改成 array 時沒用 `Prisma.join()`。
+- 正解: `import { Prisma }` + `IN (${Prisma.join(CLINICS)})`，或對信任的整數陣列直接字串內插建 SQL。
+- 教訓: 多值 IN 查詢務必**先驗證回傳筆數合理**（20 clinic 只回 1 筆就該起疑），不能直接拿來下「不存在」結論。對應 [[feedback_batch_db_verify]] / [[feedback_join_scope_reverse_audit]]。
+
+---
+
+## Other / uncategorized <a id='other'></a>
+
+### **[[INCIDENT-20260528]]** — `2026-05-28` — 把 hang pod log 燒掉了
+
+Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`、**舊 pod (`6cc4674b87-ccgbf`) 的 log 隨 pod GC 永久消失**。/var/log/pods 對應目錄 mtime 還在但 log file 已清。所以「哪個 folder 是 5/27 真正 hang 元凶」**現場證據燒掉了**。後來 21:45 tick log 出來的 id=260 反而是 transient = 不是同一個 hang。
+
+預防：destructive ops (rollout restart / pod delete) 前必須 `kubectl logs <pod> > /tmp/preserve.log` + `kubectl describe pod <pod> > /tmp/preserve_describe.txt`。已寫進 user memory feedback。
+
+### **[[LBS-1487]]**
+
+無。
+
+### **[[LBS-1541]]**
+
+(none yet)
+
+### **[[VP-16424]]**
+
+（無實作層失敗）
+
+**記憶層 failure**：Step 4 呈報時引 VP-16423 STM line 173「kit_delivery_option=BOTH_BLOOD_AND_NON_BLOOD（follow 17412 既有值）」當作 same-practice follow 範例 — 但實際 DB query 17412 與其他 6 provider 全部都是 NO_DELIVERY。Root cause：VP-16423 STM Decisions 區段是早期決策草稿，最終 Leo 在 Step 6 review 時把全部 7 筆改 NO_DELIVERY 但 STM Decisions 沒同步 update（LTM `emr-integration.md` line 436 反而有寫對）。教訓：**引 STM 的決策內容前先用 DB 實際值 cross-check**，特別是時間久的 STM。
+
+### **[[VP-16476]]**
+
+_(無 execution failure。Mistakes 在 Retrospective)_
+
+---
+
+### **[[VP-16521]]** — `2026-05-28 17:52` — git stash push 把 MERGE_HEAD 弄丟
+
+- **症狀**：merge in-progress 時 `git stash push` → MERGE_HEAD 消失，stash pop 報 `event.service.ts: needs merge`
+- **修法**：`git merge origin/stage_test --no-commit --no-ff` 重觸發 merge state，再 `git checkout stash@{0} -- src/calendar/models/event/event.service.ts` 把 stash 內的 resolved 版本拉回，最後 `git stash drop`
+- **教訓**：merge in-progress 時禁用 `git stash`；要保存 in-flight diff 改用 `git diff > /tmp/wip.patch` + 該 file 個別 checkout
+- **更好做法**：根本不該為了 "比較 pre-merge lint baseline" 中斷 merge state — 直接看 origin/feature 上的 ESLint baseline 即可，或先 commit 中間態再分析
+
+### **[[VP-16766]]** — `2026-05-27` — **Minor TS slip**：`_apply` 腳本初版用 `${ehr.created_at = now}`（賦值表達式）想偷塞欄位，TS2339 編譯失敗。改成直接 `${now}`。教訓：raw SQL 的 template binding 不要塞賦值/副作用，值先算好再代入。
+
+
+
+### **[[VP-16784-87]]**
+
+（無 — verification-only session）
+
+### **[[VP-16934]]** — `2026-06-09` — #157 部署後 staging dry-run 驗證通過
+
+- endpoint no-auth → 401（route live + guard）。
+- 簽 JWT(staging JWT_SECRET, HS256, payload 需 userId + 未過期；JwtStrategy 不檢 issuer) 打 dry-run（`scripts/_vp16934-staging-test.js`）：
+  - 假 provider → `201 {rejected, customer_not_found}`（auth/dryrun/富化都跑）。
+  - 缺 testCodes → `400`。
+  - **真客戶 5794 → `201 {rejected, unrecognized_test_codes:[VACP1001]}`** = customer 解析成功 + 代碼分類有跑（VACP1001 是假 code 才被擋）。
+- **結論：order intake 在 staging dry-run 全程跑通**（auth/gating/validation/customer 查詢/代碼分類）。差「完整成功單(sampleId:-1)」需對 staging 客戶有效的真 test code。
+- staging order_intake 留了 2 筆 VP16934-TEST-* rejected 測試列（無害，可清）。
+
+### **[[VP-17217]]**
+
+- 首次 build TS2322：provider 陣列 union 型別 → 加 `Provider[]` 顯式型別修正。
+- spec 原以 class token 注入 → 改 inbound token 才能解析。
+
+### **[[VP-17283]]**
+
+(none yet)
+
 ---
 
 ## Build / TypeScript / Tooling <a id='build-tooling'></a>
@@ -424,6 +465,37 @@ Production NestFactory crash at startup: `TypeError: redlock_1.default is not a 
 
 ---
 
+## Test / mock / spec <a id='test-mocking'></a>
+
+### **[[INCIDENT-2604156666]]** — `2026-05-21` — spec 在 HEAD 已壞（pre-existing，Leo 要求併本 hotfix 修）
+
+- `sample-test-result.service.spec.ts` HEAD 是 6/6 fail，多層 stale：
+  1. **DI 缺 provider**：service constructor 注入 AbnormalFlagCalculatorService + ResultStatusMapperService，spec 從來沒提供 mock → `Nest can't resolve dependencies` → 全部 test setup 階段 fail
+  2. **4b10e1a 後 Step 5 primary 變 cloud**：spec 只 mock 了 `getTestResultsDetailedData`（on-prem fallback），`getTestResultsDetailedDataCloud` 沒 mock → 4 個跑 full flow 的 test 在 Step 5 拿到 undefined
+  3. **referenceRange mock shape 過期**：service buildTestResults 讀 `result.normalRange.referenceRange`，spec 寫的是舊 `result.allList[i].referenceRange`
+  4. **`getPatientReferenceRange` 真實 payload 是 snake_case + 帶 `result_value`**，spec 期望 camelCase 不帶 result_value
+  5. **「無 reference range」`abnormalFlag` 預期錯**：Service 對齊 Java `getMasterListInfo()==null` 返回 `''`，但 spec 期望 `'N'`
+- 全部本 commit 一次修齊，6/6 pass
+
+### **[[VP-16154]]** — `2026-05-11 19:00` — - `event.service.spec.ts` 跟 `meeting-request.service.spec.ts` 用 `new ServiceClass(...)` 直接 instantiate（不走 DI），baseline 上已經缺一個 arg（pre-existing），加 settingTool inject 後 spec compile error 浮現。修法：spec 補 mock arg。
+
+
+
+### **[[VP-16612]]** — `2026-05-18` — Pre-existing test broken by env state
+
+`runReminders` test broke during local jest run because Leo's shell `.env` has `platform_type=local`, triggering early-return in `runReminders()`. This wasn't related to my changes but the existing test was env-dependent. Fixed with 1-line `delete process.env.platform_type` in `beforeEach`.
+
+Root cause: VP-16391's test was written assuming `process.env.platform_type` undefined in jest. Works in clean CI/CD, breaks under `.env`-aware shell.
+
+### **[[VP-17076]]** — `2026-06-22` — is_practice 過濾（重要修正，commit a219f82）
+
+- 真相更正：144510 的「重複 Total Baseline」**不是 catalog 重複**，而是 provider 40660 的**個人 shortcut**(is_practice=false, 33-test 含 Magnesium) 與診所 preset(is_practice=true, 727441, 2-test) 同名。Get Shortcuts 回傳 practice + personal 兩種；同一 customer 43262 在 2930/144510 都無碰撞(無個人 shortcut)，只有 40660 有。
+- 修正：resolver 只比對 `is_practice === true`(Leo 一開始就說 clinic-level)。個人 shortcut 忽略 → 永遠用診所 preset。live 驗證 40660@144510 改解析到 727441(PSA+Foundation) 非 724454(33-test)。
+- spec.ts: fetch mock 預設 is_practice:true，加 personal-vs-practice 測試。108 tests pass。
+- 差異清單 doc(2506653698) v2 已更正 Finding 2（個人 vs 診所，emr-v2 已解決，無需 catalog 動作）；Finding 1(Magnesium) 仍是 catalog action。
+
+---
+
 ## Redis / cache / pending list <a id='redis-cache'></a>
 
 ### **[[INCIDENT-20260518]]** — `2026-05-18 14:00` — 第一輪 root cause 推錯：Redis emptyDir wipe
@@ -467,27 +539,22 @@ Agent committed migration SQL to repo and assumed release pipeline would `prisma
 
 ---
 
-## Test / mock / spec <a id='test-mocking'></a>
+## Scope / requirement / PM communication <a id='scope-communication'></a>
 
-### **[[INCIDENT-2604156666]]** — `2026-05-21` — spec 在 HEAD 已壞（pre-existing，Leo 要求併本 hotfix 修）
+### **[[VP-16617]]** — `2026-05-14` — First categorization of 87 dup combos used wrong pattern detection
 
-- `sample-test-result.service.spec.ts` HEAD 是 6/6 fail，多層 stale：
-  1. **DI 缺 provider**：service constructor 注入 AbnormalFlagCalculatorService + ResultStatusMapperService，spec 從來沒提供 mock → `Nest can't resolve dependencies` → 全部 test setup 階段 fail
-  2. **4b10e1a 後 Step 5 primary 變 cloud**：spec 只 mock 了 `getTestResultsDetailedData`（on-prem fallback），`getTestResultsDetailedDataCloud` 沒 mock → 4 個跑 full flow 的 test 在 Step 5 拿到 undefined
-  3. **referenceRange mock shape 過期**：service buildTestResults 讀 `result.normalRange.referenceRange`，spec 寫的是舊 `result.allList[i].referenceRange`
-  4. **`getPatientReferenceRange` 真實 payload 是 snake_case + 帶 `result_value`**，spec 期望 camelCase 不帶 result_value
-  5. **「無 reference range」`abnormalFlag` 預期錯**：Service 對齊 Java `getMasterListInfo()==null` 返回 `''`，但 spec 期望 `'N'`
-- 全部本 commit 一次修齊，6/6 pass
+SQL `COUNT(DISTINCT emr_name)` ignores NULL, so combos with `[NULL, 'PF']` looked like "same emr_name" in audit. Re-wrote categorization with JS `new Set` (treats null as distinct) → revealed 84 combos in "diff emr (one NULL)" pattern previously misclassified as "diff kits".
 
-### **[[VP-16154]]** — `2026-05-11 19:00` — - `event.service.spec.ts` 跟 `meeting-request.service.spec.ts` 用 `new ServiceClass(...)` 直接 instantiate（不走 DI），baseline 上已經缺一個 arg（pre-existing），加 settingTool inject 後 spec compile error 浮現。修法：spec 補 mock arg。
+### **[[VP-16664]]** — `2026-05-18` — Initial date-also-with-TZ assumption
 
+At Step 6 review I included `consult_date: "05/12/2026 PDT"`. Leo corrected to "date does not need TZ; only time-bearing strings do". My reasoning was "dates cross midnight differently in different TZs so date should carry TZ" — technically true but display-copy convention does not write dates with TZ. Lesson: distinguish display-copy convention from technical correctness; the latter does not always require the former.
 
+### **[[VP-17076]]** — `2026-06-23` — 改用 shortcut_id 比對（commit 0ea3cbe，取代 name 比對）
 
-### **[[VP-16612]]** — `2026-05-18` — Pre-existing test broken by env state
-
-`runReminders` test broke during local jest run because Leo's shell `.env` has `platform_type=local`, triggering early-return in `runReminders()`. This wasn't related to my changes but the existing test was env-dependent. Fixed with 1-line `delete process.env.platform_type` in `beforeEach`.
-
-Root cause: VP-16391's test was written assuming `process.env.platform_type` undefined in jest. Works in clean CI/CD, breaks under `.env`-aware shell.
+- Leo 定案：EMR 在 OBR-4 送 `VASC{shortcut_id}`（如 VASC727441），emr-v2 用 `shortcut_id` 比對（唯一），不再用 name。
+- shortcut.service: `parseShortcutCode`(VASC{id}) 取代 normalizeName；resolveShortcut 改 `s.shortcut_id === id`；非 VASC → null（不打 API）。is_practice 過濾移除（id 唯一無碰撞，a219f82 的考量被取代）。expand(tests/groups/bundles) 不變。candidatePairs(winner first + NPI fallback) 不變。
+- live 驗證 144510+40660：VASC727441→Total Baseline(MALE)[376+853]、VASC727440→(FEMALE)[853]、VASC999999→null、非VASC→null。109 tests pass。
+- **3 份 Confluence doc 現已過時**（它們寫 by-name；實際是 VASC{id}）：內部 2506326018 / 外部 2506457090 / 差異清單 2506653698。外部 vendor doc 尤其需改成「OBR-4 填 VASC{shortcut_id}」+ 提供 per-clinic shortcut_id 對照（xlsx）。待 Leo 決定如何對 vendor 呈現再更新。
 
 ---
 
@@ -506,15 +573,18 @@ Root cause: LTM had two conflicting statements (mapping table at line 173-176 co
 
 ---
 
-## Scope / requirement / PM communication <a id='scope-communication'></a>
+## Error handling / throw vs log <a id='error-handling'></a>
 
-### **[[VP-16617]]** — `2026-05-14` — First categorization of 87 dup combos used wrong pattern detection
+### **[[VP-16154]]** — `2026-05-11 19:15` — - 第一次 helper 用 `throw new Error('...')` 對 missing header — Leo 要求「沒新 data 不報錯」後改成 try/catch + log.warn + return undefined。
 
-SQL `COUNT(DISTINCT emr_name)` ignores NULL, so combos with `[NULL, 'PF']` looked like "same emr_name" in audit. Re-wrote categorization with JS `new Set` (treats null as distinct) → revealed 84 combos in "diff emr (one NULL)" pattern previously misclassified as "diff kits".
 
-### **[[VP-16664]]** — `2026-05-18` — Initial date-also-with-TZ assumption
 
-At Step 6 review I included `consult_date: "05/12/2026 PDT"`. Leo corrected to "date does not need TZ; only time-bearing strings do". My reasoning was "dates cross midnight differently in different TZs so date should carry TZ" — technically true but display-copy convention does not write dates with TZ. Lesson: distinguish display-copy convention from technical correctness; the latter does not always require the former.
+### **[[VP-16987]]** — `2026-06-16 18:40` — — pipeline 設計脆弱點 (連帶發現)
+
+1. per-customer `catch` 只 `logger.error(msg, error.message)` 且 error.message 對 Prisma 錯誤為空 → 失敗幾乎不可見、無告警。
+2. 失敗時不寫任何 record（連 failure record 都沒）→ 監控無從得知 0 交付。
+3. upload 成功但 record 失敗 → 狀態不一致。
+4. 自動產的 xlsx 內容 (per-accession csvReport, 7.4MB) 與手動精簡版 (139KB) 差異大 → 正式內容規格需與 PM 對齊。
 
 ---
 
@@ -526,19 +596,22 @@ After `cd /Users/hung.l/src/EMR-Backend && gh pr view 156`, subsequent Bash call
 
 ---
 
-## Error handling / throw vs log <a id='error-handling'></a>
-
-### **[[VP-16154]]** — `2026-05-11 19:15` — - 第一次 helper 用 `throw new Error('...')` 對 missing header — Leo 要求「沒新 data 不報錯」後改成 try/catch + log.warn + return undefined。
-
-
-
----
-
 ## gRPC / network / timeout <a id='grpc-network'></a>
 
 ### **[[VP-16521]]** — `2026-05-28 17:53` — IDE diagnostics 不穩（mcp__ide__getDiagnostics 連續 timeout）
 
 - 試 2 次都 timeout，改跑 `npx eslint <file>` CLI 直接拿同樣結果
 - 教訓：WebStorm 抓 lint 等於 eslint + prettier；agent 端不要等 IDE diagnostics，CLI 更快更穩
+
+---
+
+## GraphQL / API design <a id='graphql-api'></a>
+
+### **[[VP-17076]]** — `2026-06-22` — 收尾動作
+
+- PR #190 → base=staging（feature/leo/VP-17076，commit 243079d）。
+- 差異清單 doc（pricing team）：page 2506653698。掃 14 clinic 證實 **Total Baseline (Male/Female) 13/14 缺 Magnesium**（test 384）；**Fashion Island 144510 有重複 Total Baseline shortcut**(大小寫兩套，含/不含 Magnesium)→ resolver first-match 不確定；建議 catalog 去重 + 統一大小寫。
+- Task 4 結論：**Next Health 無任何 customer/clinic 專屬 VACP bundle**（只用 shortcut）→ 外部 doc(2506457090) 更新 v2 為 shortcut-only 範例，VACP 改為通用可選說明。
+- 3 份 Confluence：內部 rules(2506326018) / 外部 vendor guide(2506457090) / 差異清單(2506653698)，皆在 folder 2032697346。
 
 ---
