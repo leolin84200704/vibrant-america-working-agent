@@ -31,7 +31,7 @@ DRY RUN: would run weekly self-improvement
     1. python3 scripts/extract-failures.py
     2. python3 scripts/extract-rules.py
     3. python3 scripts/sweep-urgency.py
-    4. python3 -c '... rebuild indexes'
+    4. python3 scripts/memory_scoring.py
     5. python3 scripts/eval.py --label weekly-$DATE
     6. python3 scripts/test-retrieval.py --label weekly-$DATE
     7. write $REPORT (diff with previous weekly snapshot)
@@ -52,14 +52,7 @@ step() {
 step "extract-failures"  python3 scripts/extract-failures.py
 step "extract-rules"     python3 scripts/extract-rules.py
 step "sweep-urgency"     python3 scripts/sweep-urgency.py
-step "rebuild-scores"    python3 -c "
-from src.memory.scorer import MemoryScorer
-s = MemoryScorer()
-for tier in ('stm','ltm','archive'):
-    s.update_scores_in_files(tier)
-s.rebuild_all_indexes()
-print('indexes rebuilt')
-"
+step "rebuild-scores"    python3 scripts/memory_scoring.py
 step "eval-snapshot"     python3 scripts/eval.py --label "weekly-$DATE"
 step "retrieval-test"    python3 scripts/test-retrieval.py --label "weekly-$DATE"
 

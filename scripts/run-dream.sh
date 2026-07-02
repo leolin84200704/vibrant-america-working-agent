@@ -21,6 +21,14 @@ LOG_FILE="$LOG_DIR/launchd-stdout-$DATE.log"
 echo "[$(date)] Starting dream pipeline..." | tee -a "$LOG_FILE"
 echo "  Agent root: $AGENT_ROOT" | tee -a "$LOG_FILE"
 
+# A missing claude binary must fail loudly — previously it produced no dream
+# log and no notification (output had no "API Error" so it looked like success).
+if ! command -v claude >/dev/null 2>&1; then
+    echo "[$(date)] FATAL: claude CLI not found on PATH ($PATH)" | tee -a "$LOG_FILE"
+    osascript -e 'display notification "claude CLI not found — dream pipeline cannot run" with title "LIS Code Agent" sound name "Basso"' >/dev/null 2>&1 || true
+    exit 1
+fi
+
 # Wait up to 60s for network (just woken from sleep may need a moment)
 for i in $(seq 1 30); do
     if curl -sS --max-time 3 -o /dev/null https://api.anthropic.com/; then
@@ -41,9 +49,12 @@ while [[ $ATTEMPT -le $MAX_ATTEMPTS ]]; do
     claude -p "$PROMPT" \
         --allowedTools "Read,Write,Edit,Glob,Grep,Bash" \
         > "$TMP" 2>&1
+    CLAUDE_EXIT=$?
     cat "$TMP" | tee -a "$LOG_FILE"
 
-    if ! grep -q "API Error" "$TMP"; then
+    # Success requires BOTH zero exit and no API error — grepping alone let
+    # hard failures (crash, command error) pass as success.
+    if [[ $CLAUDE_EXIT -eq 0 ]] && ! grep -q "API Error" "$TMP"; then
         SUCCESS=1
         rm -f "$TMP"
         break
