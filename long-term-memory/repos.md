@@ -3,7 +3,7 @@ id: repos
 type: ltm
 category: technical
 status: active
-score: 0.8019
+score: 0.891
 base_weight: 0.9
 created: 2026-04-22
 updated: 2026-04-22
@@ -62,6 +62,14 @@ links:
 - VP-16859
 - VP-16921
 - VP-16945
+- VP-16954
+- VP-16955
+- VP-16968
+- VP-16980
+- VP-17065
+- VP-17077
+- VP-17217
+- VP-17222
 - business-model
 - business-model-deep
 - failures
@@ -73,6 +81,18 @@ tags:
 - grpc
 summary: 'Active repo reference: tech stack, ports, key areas, setup'
 ---
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -177,7 +197,8 @@ summary: 'Active repo reference: tech stack, ports, key areas, setup'
   - `src/calendar/models/notification/email.service.ts` — Postmark integration（publish 到 `notification-email-template`）
   - `src/calendar/models/event/appointment-event.service.ts` (L88-99) — Kafka topic & broker 設定
   - `prisma/schema.prisma` — `v2_event` (L164+, status enum L237) / `v2_event_participant` / `v2_calendar` / `v2_reminder_audit_log` (新)
-  - `src/calendar/models/accession-claim/` (新, VP-16410) — `AccessionClaimService` 提供 claim/release/sync/reset + audit；event.service 6 個 hook 點 (createEvent/createEventByPatient/updateEvent/updateEventByPatient/deleteEvent/deleteEventByPatient) 限 150105 自動 enforce 1:1 (`accession_id` UNIQUE)；GraphQL `resetEventAccession` (admin) + `getClaimedAccessionIds` (clinic user)；docs 在 `docs/vp-16410-accession-claim.md`
+  - `src/calendar/models/accession-claim/` (新, VP-16410) — `AccessionClaimService` 提供 claim/release/sync/reset + audit；event.service 6 個 hook 點 (createEvent/createEventByPatient/updateEvent/updateEventByPatient/deleteEvent/deleteEventByPatient) 限 150105 自動 enforce 1:1 (`accession_id` UNIQUE)；GraphQL `resetEventAccession` (admin/clinicadmin/**clinicalteam**, PR #496) + `getClaimedAccessionIds` (clinic user)；docs 在 `docs/vp-16410-accession-claim.md`。
+  - **Calendar RBAC 細節（`src/calendar/guard/auth.guard.ts`）**：`AuthGuard` 是 calendar 模組通用 guard；`validateClinicUser` 要求 clinic-user token 有 `user_id`+`clinic_id`，否則 `401 "Missing required clinic user identifiers"`（在進 resolver 前就擋）。`isAdminUser(user)` **只看 `user_roles[]`**（admin/clinic_admin/clinic）或 `user_permission`，**不看** `role`/`internal_user_role` 字串。`isClinicalTeamUser(user)` = `internal_user_role` 或 `role` === `'clinicalteam'`（內部跨 clinic、無 clinic_id，已在 guard 層豁免 identifier 檢查）。要放行某 role 做某 accession 操作 → guard(validateClinicUser 豁免) + resolver(allow-list) **兩處都要改**。
   - 詳細 email flow / Kafka 佈局見 `patterns.md` → "Clinical Consult Calendar Email Flow"
 - **Base branch = `stage_test`**（非 staging/main）；feature PR → stage_test。
 - **切 branch 後**（特別是不同 branch 的 `prisma/schema.prisma` 不同欄位／model 時）**必須跑 `npx prisma generate` + `npx prisma generate --schema=prisma2/schema2.prisma`** 對齊兩個 client（calendar / main LIS）。⚠️ **本 repo 的 `npm run build` 的 `prebuild` 只是 `rimraf dist`，不會 `prisma generate`**；`start:dev`/`build` 也都不會。客戶端 drift 會在 `npm run build` 跑出一堆 type error（如 18 個 `specialties` 錯）但實際 schema/code 沒問題。**絕對不要把這當「pre-existing / 假象」放掉** — 它意味著 client 對不上 schema，`npm run start:dev` 也會跟著炸（鐵律：start:dev 100% 要過）。VP-16521 session 翻車過：切 branch 沒 generate → 誤判為 stale 假象 → Leo 糾正。
@@ -203,6 +224,7 @@ summary: 'Active repo reference: tech stack, ports, key areas, setup'
 - **⚠️ `.env DATABASE_URL` 指 prod**: `lisportalprod2.mysql.database.azure.com / lis_emr`，不是 dev。`prisma migrate deploy` / `db execute` / `db push` 前要先 verify schema element 存在。`_prisma_migrations` table **不存在於 prod**，所以 `prisma migrate status` 會報所有 migration 未 applied（schema 早已 manual SQL apply）— 別誤信 status，個別 `SHOW COLUMNS` / `SHOW TABLES` 驗證。
 - **Repo convention `/scripts/` 在 `.gitignore`**：one-shot ts-node ops scripts（`_apply-*.ts`, `seed-*.ts`）不入版控。deploy-required 的 seed 改放 `prisma/seed.ts` 或 dump SQL fixture 進 migration folder；ad-hoc script 留 local。
 - **JWT auth `isAdmin` derive 規則**：`auth.service.ts:36-41` 從 `internal_user_role` 比對 allowlist `['admin','super_admin','system_admin']` (lowercase) 算 isAdmin — payload 內直接寫 `isAdmin: true` 會被覆蓋。Bypass `validateCustomerAccess` / `validateApply` 要設 `internal_user_role: 'admin'`，不是 `'sales'`。Auth header 用 JWT_SECRET 從 .env 簽出來即可（HS256）。
+- **授權是雙層,RBAC 改動要兩層都處理**（VP-16980）：(1) 全域 `APP_GUARD = JwtAuthGuard`（`app.module.ts`）—— 非 admin 且請求無 customer_id/clinic_id → `validateGeneralAccess` 要求 accessibleCustomer/ClinicIds 非空,否則 `403 "Access denied: no customer or clinic permissions"`；(2) controller 內 `validateCustomerAccess`/`validateClinicAccess`/`validateIntegrationAccess`（每個 controller 各自一份,散在幾乎每個 by-id 路由）。**只改 guard 不夠** → approve/reject 仍會被第二層擋。要放行某 role 存取整組 endpoint：用 `@SkipDataAccessCheck()` decorator（`auth/decorators/`,仿 `@Public`）—— guard 命中設 `user.skipDataAccess=true` 仍要求有效 JWT,各 access-helper 比照 `isAdmin` 加 `|| user.skipDataAccess` 提早 return。**區分兩種 gate**：customer/clinic ownership（可被 skipDataAccess 放行）vs `if(!user.isAdmin) throw 'Admin role required...'` 管理權限 mutation（**不該**被 skip 連帶放寬,保留）。「只給某內部角色」改判 `internal_user_role` 而非全開。
 - **Branch / PR flow**：feature/leo/{ticket_id} → PR base=staging → 累積後另開 PR base=main ← head=staging rolling up。同一 feature branch 可有多個 PR (#116 / #118 / #120) 因為每次新 commit 起一張新 PR；最後 #121 把 staging 收進 main。「PR ready」不代表立刻進 main，要等 staging→main roll-up PR。
 - **新 controller 掛 `@UseGuards(JwtAuthGuard)` → 該 controller 所屬 module 必須 import `AuthModule`**（`AuthModule` 非 @Global，export AuthService；JwtAuthGuard 注入 AuthService）。漏 import → 開機 `UnknownDependenciesException: JwtAuthGuard can't resolve AuthService` → **CrashLoopBackOff**。比照 ResultModule/SftpModule。`npm run build`(純 tsc) 與「手動 `new Service()` 單元測試」**都抓不到**這種 module-graph DI 錯，只有 app bootstrap 會炸（VP-16934 翻車：只跑 build 就部署，staging+prod 新 pod CrashLoop）。→ **鐵則 [[feedback_start_dev_iron_rule]]：prod-impacting deploy 前必跑 `npm run start:dev` 或 `Test.compile(AppModule)` 開機驗證**（範例 `scripts/_vp16934-boot-check.ts`）。
 - **Key Areas**: `src/modules/ordering/`, `src/modules/result/`, `src/modules/hl7/`, `src/modules/integration-management/`, `src/modules/hl7-order-processing/`, `src/modules/queue/` (BullMQ), `src/modules/grpc/` (multi-tier upstream clients)
@@ -223,6 +245,12 @@ summary: 'Active repo reference: tech stack, ports, key areas, setup'
   - **⚠️ VP-16777 parity gotcha**: Java `TransactionPayInput` carries field-initializer defaults (`token_platform="stax"`, currency/charge_type/type/payment_source/new_sample). TS interfaces have **no runtime defaults** → caller must spread `TRANSACTION_PAY_DEFAULTS` (in `dto/payment.dto.ts`). Omitting `token_platform` makes the charging API silently not charge the card. See [[VP-16777]].
   - **emr-v2 不 durably 存 per-order 收費結果**: `order_intake_records` dormant（近期 0 筆）、`emr_sample` 不可靠當收費查詢源。查某 EMR order 收費/payment 狀態 → 上游 LIS-core / charging 系統。
   - **Result-side already ported**: `result-generation.service.ts` (getReportStatusListV2 + pdf-cache/download), `test-panel-mapping.service.ts` (packagePriceMapping + packageTestMapping), `scheduled-reports/base-report.service.ts` (csvReport via `VIBRANT_API_BASE_URL`), `ehr-email-notification.service.ts` (ehrEmailSupportForProvider/InnerTeam via `EHR_EMAIL_API_BASE_URL`)
+- **Periodic report pipeline（客戶定期 SFTP 報告，`src/modules/scheduled-reports/`，VP-12605/VP-16987）**:
+  - 觸發: NestJS `@Cron`（`quarterly/monthly/weekly-report.service.ts`，皆 extends `base-report.service.ts`）。quarterly `0 59 23 28-31 3,6,9,12 *` + `isLastDayOfQuarter()` guard（真正只在 3/31,6/30,9/30,12/31 跑）。`POD_ROLE` 未設=all→`isPusher` true 會跑；`ENVIRONMENT==='staging'` 會整段 skip。`@Cron` in-memory、無 catch-up（pod 在 fire 當下沒活就 miss）。cron-status 端點 `/api/v1/scheduled-reports/cron-status`（需 JwtAuthGuard）。
+  - 收件人 table: `emr_periodic_report_customers`（customer_id/clinic_id/host/port/username/password/folder_path/frequency；**無 enabled 欄**，有 row 就發）。交付紀錄 table: `periodic_report_records`，unique=(customer_id, accession_id, report_period)→**每 accession 一筆**。
+  - 資料流: gRPC `getCustomerSamplesByTimeRange` → ClickHouse `general_event_data`(report_finished/redraw_report_finished) → 逐 accession 打 `VIBRANT_API_BASE_URL/result/csvReport?barcode=` 取 CSV → 組 XLSX(每 accession 一 sheet) → SFTP 上傳 → 寫 record。產出是 **.xlsx**（非 .csv）。
+  - **csvReport CSV 欄位（14 欄, 0-indexed）**: 0 SampleId,1 BarcodeTubeId,2 TestId,3 TestName,4 PatientId,5 PatientName,6 TestResult,7 ResultUnit,8 ResultRangeType,9 NormalRangeMin,10 NormalRangeMax,11 ReportableRangeMin,12 ReportableRangeMax,**13 ReportGeneratedTimeStamp**。資料列尾有逗號(naive split→15 欄)、CRLF。`ReportGeneratedTimeStamp` 是 on-demand API 產生當下時間(≈now)，非歷史報告時間。
+  - **VP-16987 坑**: 舊 code 讀 `column[12]`(ReportableRangeMax 數字)當 timestamp→`new Date("170")`=年0170<MySQL DATETIME 下限→`createMany` 對全部 customer throw、被 per-customer catch 靜默吞→`periodic_report_records` 全空、客戶斷交付。修法(PR #175): quote-aware parse + 用 header 名定位欄 + 日期範圍驗證 + record 寫入獨立於 SFTP try（bookkeeping 失敗不可 mask 成功交付）。**debug 此類隱形失敗：先把 catch 改印 stack / 觸發真實路徑復現，別信 error.message（Prisma error message 為空）。**
 
 ### LIS-backend-v2-coreSamples
 - **Purpose**: Core lab samples, orders, customers

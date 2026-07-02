@@ -3,7 +3,7 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 0.7301
+score: 0.8044
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-05-04
@@ -53,6 +53,12 @@ links:
 - VP-16881
 - VP-16885
 - VP-16934
+- VP-16987
+- VP-17076
+- VP-17117
+- VP-17120
+- VP-17136
+- VP-17283
 - fhir-api
 tags:
 - emr
@@ -67,6 +73,14 @@ tags:
 summary: EMR/HL7/SFTP integration rules, identity mapping, MSH values, bundle config,
   hl7_file_input triage
 ---
+
+
+
+
+
+
+
+
 
 
 
@@ -183,6 +197,24 @@ summary: EMR/HL7/SFTP integration rules, identity mapping, MSH values, bundle co
 - FULL_INTEGRATION 需要 order_clients + sftp_folder_mapping
 - **integration_type 不 follow 既有 same-practice integration** — 即使該 practice 既有 provider 都是 RESULT_ONLY，新 provider 仍套用預設 FULL_INTEGRATION
 - **唯一例外**：該 vendor 本身只提供 result-only 服務時，才用 RESULT_ONLY
+
+### capability flag ↔ integration_type 推導 + 「啟用 flag = 啟用一條 pipeline」（VP-16968 教訓）
+- emr-v2 的 `ehr_integrations` 三個 flag 與 `integration_type` 在 create/update（auto-integrate API）原本**完全獨立**、純由 request body 的 `technicalRequirements` 決定（DTO + Prisma 雙層 default 全 false），不從 type 推導、無 validation → 「請求通過 ≠ integrate 成功」。VP-16968 加 `deriveCapabilityFlags`（`integration-type-validation.util.ts`）依 type 推導：**ORDER_ONLY**(o1,r0,s1) / **RESULT_ONLY**(o0,r1,s1) / **FULL_INTEGRATION**(o1,r1,s1) / **OTHER**(只 s1)。`sftp_enabled` 一律手動/預設 true。
+- 下游真正的 gate 是 flag 不是 type：order → `ordering_enabled=true`（`hl7-order.processor.ts`）；result 生成 → `result_enabled OR type∈{RESULT_ONLY,FULL}`；Kafka result → `result_enabled AND type`；sftp → `sftp_enabled`。
+- **鐵則：set/backfill 一個 capability flag 前，逐一確認該 flag 啟用的下游 pipeline 有足夠 config 支撐**。VP-16968 翻車案例：把 225 純 order 來源列 backfill 成 `FULL_INTEGRATION + result_enabled=1`，但它們沒有任何 result config（ehr_vendor_id / sftp_result_path / sftp_host / msh06 全 null）→ 報告完成時會被 result pipeline 選中然後失敗。**啟用一個 capability = 啟用一條 pipeline**；result_enabled 需要 vendor/sftp_result_path，ordering_enabled 需要 order 解析來源。修正為 ORDER_ONLY(o1,r0,s1) 後零回歸（這批客戶在 `result_transmission_records` 從未以 result_client_id 出現過 → 從沒走 result pipeline）。
+
+### Order 解析來源：order_clients → ehr_integrations cutover（VP-16968）
+- 舊路徑 order 准入閘門 = `order_clients`（`customer-detail-fetcher.service.ts` fetchById/fetchByNpi，覆寫 kits_options/clinic_id/old_clinic_id；customer 主檔來自 gRPC GetCustomer）；`hl7-order.processor.ts` 查 ehr_integrations 只做 logging（Java parity，配不到不擋）。
+- VP-16968 cutover：閘門改 `ehr_integrations`，gate = **status='LIVE' AND ordering_enabled=true**；多列優先序 **FULL > ORDER_ONLY > 其他，再 updated_at desc**；`kits_options` / `old_clinic_id`（order payload/token 必要，原來只在 order_clients）新增到 ehr_integrations 欄位並從那取。
+- 前置陷阱：`order_clients` 955 distinct 客戶中 ~225（23.6%）**完全沒有 ehr_integrations 列** → 直接 cutover 會停單，必須先 backfill。`order_clients` 是 per-customer（非 per (customer,clinic)），多列衝突時 Java findFirst 取第一筆。
+- **VP-16968 後新整合只寫 `ehr_integrations`，不碰 `order_clients`**（kits_options/old_clinic_id 已在 ehr_integrations 欄位）。Leo 明確：order_clients 現在完全不碰。
+
+### inbound order 解析的 key = ORC-12.1，**不是 MSH-6**（VP-17136 釐清，務必記住）
+- **真正決定「誰下單」的是 `ORC-12.1`**（ordering provider）：parser.service 取值，`len<=7 → fetchById(customer_id)` 否則 `fetchByNpi(NPI)`。`customer-detail-fetcher` 兩條路最終都用 **customer_id** 去 `ehr_integrations`(LIVE+ordering) 配對（fetchByNpi 先 gRPC `getCustomerByNPINumber` 把 NPI→customerIds，再 by customer_id 配）。
+- **`ehr_integrations.customer_npi` 在 order 路徑其實不被直接配對用**（matching 靠 customer_id）→ 無 NPI 帳號（如 Practice Admin，gRPC 回 "Internal NPI"）只要 customer_id 有 LIVE+ordering 列、FTP 在 ORC-12 送該 **customer_id（≤7碼走 fetchById）** 就能下單，customer_npi 留 NULL（clinic-level）即可。
+- **inbound order 的 MSH-6（receiving facility）emr-v2 完全不用**。MSH-6 語意=收件方(Vibrant 實驗室)；`ehr_integrations.msh06_receiving_facility` 是給**外送 result** 用的 MSH-6（hl7-encoder），與 inbound order 的 MSH-6 是**相反方向、不同東西**。
+- **MSH-4（sending facility）** 只在 `hl7-order.processor.resolveIntegration` 的 clinic-level fallback（`customer_id='-1'`=`CLINIC_LEVEL_MARKER` AND `clinic_id=MSH-4`）才用；該 processor 解析主供 logging + gz_ny pilot gate，真正下單 fall through 到 parser.service（ORC-12）。
+- 教 EMR vendor 填單：強調 **ORC-12=Provider ID(customer_id)**；別說「MSH-6=Practice ID」（誤導）。
 
 ---
 
@@ -709,6 +741,13 @@ ORDER BY received_time DESC;
 | `order_input` 有值, `sample_id=NULL`, `emr_code_not_found=NULL` | 下單流程失敗（payment 或 Order API） | 手動 payment + order recovery |
 | `order_input=NULL`, `emr_code_not_found=NULL` | HL7 parsing exception | 查 EMR-Backend pod logs |
 
+### 取得 provider NPI / 原始 HL7 / DB 存取（2026-06-29 補）
+- **`hl7_file_input.order_input` 不是原始 HL7**，是 emr-v2 轉換後的**送單 payload(JSON)**（含 `orderItems`/`item_id`/`chargeMethod`/`emr_payment_fail_reason`/`clinic_id`）；customer 解析失敗時為 NULL。→ 要拿 **provider NPI（ORC.12 / OBR.16，NPI 是第一個 `^` 子值）必須讀原始 `.hl7` 檔**，DB 沒存。
+- 原始 HL7 路徑：持久 `/EMR_storage/HL7Message_prod/<emr_service>/Prod/Order/<file_name>`（讀得到）；ephemeral `/tmp/hl7/<...>`（pod 重啟即清掉，舊單讀不到）。`localDir` 欄位指向其一。
+- **存取只能走 pod 內**：emr-v2 prod DB 的 grant 綁 pod IP，從 appserver04 直連 `mysql` 會 `Access denied for 'lis_emr'@<appserver04 IP>`。→ 用 **pod 內 node prisma 查 DB + `fs.readFileSync` 讀 raw HL7**（`kubectl exec <prod-pod> -c lis-emr-v2-prod -- sh -c 'echo <b64> | base64 -d | node'`）。
+- **customer_not_found="<First Last>"** = 該 ORC.12 NPI 在 `ehr_integrations` **0 筆**（provider 未 onboard）→ 要建 LIVE+ordering integration 才解析得到。**區別** `emr_code_not_found`：customer 已解析成功，是 battery/bundle code（如 `discountpanel{n}`→官方 bundle map）在該 customer 找不到。
+- **appserver04 SSH 連太多次會被 fail2ban 擋**（接受密碼但指令零輸出）→ 用 `ssh -o ControlMaster=auto -o ControlPath=/tmp/cm.sock -o ControlPersist=15m`（[[reference_appserver04_ssh]]）建一條 master，後續所有查詢重用同 socket、免密碼免重連。
+
 ### OBR Prefix → Order Service API Mapping（**先看 prefix 再選 API，不要混用**）
 
 `EMR-Backend/.../ParseHL7.java` 對不同 prefix 走完全不同 path，誤判 API 等於白查：
@@ -734,6 +773,8 @@ ORDER BY received_time DESC;
 
 **Anti-pattern:** 看到 `emr_code_not_found` 就直接查 bundle mapping。先看 prefix；VAREQUISTION 走 `packagePriceMapping` whitelist，跟 VACP custom bundle 完全是兩回事。
 
+**EMR shortcut auto-sync 架構結論 (2026-06-17 huddle 討論，未定案):** 把可下的 shortcut code 清單同步給 EMR（讓 provider 在 EMR 端選）**不該由 emr-v2 蓋新 endpoint**。理由：(1) **非一次性** — catalog 動態，emr-v2 自己每 30 分鐘 `@Cron` re-pull (`order-mapping-cache.service.ts:50`)，custom bundle 有 `expireTime` 會到期；(2) **資料/控管權在上游** — VAREQUISTION 來自 pricing `getLegacyPackagePriceMapping`、VACP 來自 `getLegacyBundleMapping`，custom bundle 由上游 pricing/ops 建，emr-v2 只是下游消費者。→ 正解是接**上游 / 既有 portal 的 per-customer orderable catalog API**（portal 本來就在顯示給人下單，很可能已有）。emr-v2 唯一獨有的是 **code 格式規則**（package.uniqueemrcode→VAREQUISTION；bundle.oldOrderTypeId+customer_id→VACP），頂多提供格式規則，不該當 catalog publisher。詳見 auto-memory `project_emr_shortcut_sync`。
+
 ### 手動 Payment + Order Recovery
 
 **前置:** 從 `sftpDir` 反查 clinic/customer:
@@ -745,13 +786,14 @@ sftpDir → order_clients.remote_folder_path → customer_id → ehr_integration
 ```
 GET vibrant-america.com/lisapi/v1/charging/paymentMethod/allSharedPaymentMethods
   ?customer_id=X&clinic_id=Y
-Header: Authorization: {JWT with role="clinic", getTokenCustomerPM=true}
+Header: Authorization: {JWT with role="clinic", getTokenCustomerPM=true}   ← 不加 "Bearer " 前綴！
 ```
+Response: `{clinic_payment_methods: [...], customer_payment_methods: [...]}`，每筆有 `payment_token`/`customer_token`。
 
 **Step 2: transactionPay 扣款**
 ```
 POST vibrant-america.com/lisapi/v1/charging/transaction/pay
-Header: Authorization: {JWT with role="clinic"}
+Header: Authorization: {JWT with role="clinic"}   ← 不加 "Bearer " 前綴！
 Body: {
   account_id, account_type: "customer", amount, type: "card",
   currency: "usd", charge_type: "testorder", token_platform: "stax",
@@ -759,6 +801,7 @@ Body: {
 }
 → 回傳: sample_id, payment_transaction_id, julien_barcode
 ```
+**⚠️ 這兩個 API 若少了 query params 或誤加 "Bearer " 前綴，會回 `400 invalid customer_id`（VP triage 2026-07-01 撞到，run_triage.py 修正）**。Step 3 缺 `lisCookie` header 則下單會直接失敗（同次事故撞到）——**扣款一旦成功即不可逆**，若下單緊接失敗會造成「已扣款、無訂單」中間態，須人工補下單或退款，不能讓 daily job 對同一筆記錄重跑（會重複扣款）。
 
 **Step 3: Order API 下單**
 ```

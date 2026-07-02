@@ -3,7 +3,7 @@ id: repo-catalog
 type: ltm
 category: technical
 status: active
-score: 0.6794
+score: 0.7351
 base_weight: 0.9
 created: 2026-06-07
 updated: 2026-06-07
@@ -55,6 +55,11 @@ links:
 - VP-16859
 - VP-16921
 - VP-16945
+- VP-16954
+- VP-16968
+- VP-17065
+- VP-17217
+- VP-17222
 - business-model
 - business-model-deep
 - emr-integration
@@ -71,6 +76,14 @@ summary: 'Org-wide repo catalog: every Vibrant-America LIS repo — service type
   tech, ports, data stores, role in ecosystem. Companion to repos.md (which holds
   deep gotchas for actively-worked repos).'
 ---
+
+
+
+
+
+
+
+
 
 
 

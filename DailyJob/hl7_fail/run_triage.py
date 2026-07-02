@@ -116,21 +116,22 @@ def fetch_bundle_mapping() -> dict:
 
 # ── Payment helpers ───────────────────────────────────────────────────────────
 def get_payment_methods(customer_id: int, clinic_id: int) -> Optional[dict]:
+    # Java quirk (ChargeClient.java): Authorization header has NO "Bearer " prefix
     token = make_jwt(customer_id, clinic_id, role="clinic", get_pm=True)
     resp = requests.get(
         PAYMENT_METHODS_URL,
-        headers={"Authorization": f"Bearer {token}"},
+        params={"customer_id": customer_id, "clinic_id": clinic_id},
+        headers={"Authorization": token},
         timeout=30
     )
     if resp.status_code != 200:
         return None
-    data = resp.json()
-    methods = data.get("data", {})
-    return methods
+    return resp.json()
 
 
 def charge_payment(customer_id: int, clinic_id: int, amount: float,
                    payment_token: str, customer_token: str) -> Optional[dict]:
+    # Java quirk (ChargeClient.java): Authorization header has NO "Bearer " prefix
     token = make_jwt(customer_id, clinic_id, role="clinic", get_pm=True)
     payload = {
         "account_id": customer_id,
@@ -148,7 +149,7 @@ def charge_payment(customer_id: int, clinic_id: int, amount: float,
     resp = requests.post(
         TRANSACTION_PAY_URL,
         json=payload,
-        headers={"Authorization": f"Bearer {token}"},
+        headers={"Authorization": token},
         timeout=30
     )
     if resp.status_code not in (200, 201):
@@ -161,7 +162,11 @@ def place_order(customer_id: int, clinic_id: int, order_input: dict) -> Optional
     resp = requests.post(
         ORDER_URL,
         json=order_input,
-        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json",
+            "lisCookie": "",
+        },
         timeout=30
     )
     if resp.status_code not in (200, 201):
@@ -302,6 +307,21 @@ No failed records found in the past 72 hours.
 
         try:
             order_input = json.loads(order_input_raw)
+        except json.JSONDecodeError:
+            # MySQL batch mode escapes actual newlines as \n, tabs as \t, etc.
+            try:
+                decoded = (order_input_raw
+                           .replace('\\\\', '\x00BS\x00')
+                           .replace('\\n', '\n')
+                           .replace('\\r', '\r')
+                           .replace('\\t', '\t')
+                           .replace('\x00BS\x00', '\\\\'))
+                order_input = json.loads(decoded)
+            except Exception as e2:
+                result["error"] = f"order_input JSON parse error: {e2} (raw[:80]={order_input_raw[:80]!r})"
+                type_b_results.append(result)
+                print(f"    JSON parse 失敗: {e2}")
+                continue
         except Exception as e:
             result["error"] = f"order_input JSON parse error: {e}"
             type_b_results.append(result)
@@ -357,16 +377,11 @@ No failed records found in the past 72 hours.
         payment_token = None
         customer_token = None
 
-        # pm_data structure varies; try common keys
-        cards = pm_data.get("cards") or pm_data.get("creditCards") or []
+        cards = (pm_data.get("clinic_payment_methods") or
+                 pm_data.get("customer_payment_methods") or [])
         if isinstance(cards, list) and cards:
-            payment_token = cards[0].get("paymentToken") or cards[0].get("payment_token")
-            customer_token = cards[0].get("customerToken") or cards[0].get("customer_token")
-
-        if not payment_token:
-            # Try flat structure
-            payment_token = pm_data.get("paymentToken") or pm_data.get("payment_token")
-            customer_token = pm_data.get("customerToken") or pm_data.get("customer_token")
+            payment_token = cards[0].get("payment_token")
+            customer_token = cards[0].get("customer_token")
 
         if not payment_token:
             result["error"] = f"找不到 payment_token，PM data keys: {list(pm_data.keys())[:10]}"
