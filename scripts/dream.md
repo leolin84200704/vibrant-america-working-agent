@@ -54,6 +54,8 @@ Execute applicable operations:
 
 1. **Distill journal** — For `undistilled_journal` entries: extract generalizable insights (Decisions + why, ruled-out approaches, user feedback) into the appropriate LTM file (emr-integration.md, patterns.md, repos.md, ticket-routing.md). Set `distilled: true` in the entry's frontmatter. This is the ONLY path by which LTM gets written — the work loop never writes LTM directly.
 
+   **Universal-lesson routing**: while distilling, if an insight is a job-agnostic engineering discipline (would hold at any employer/project — testing, DB safety, migration hygiene, config coupling), ALSO propose it for `~/agent-core/framework/ENGINEERING-LESSONS.md` (if that path exists on this machine). Grep that file first to avoid duplicates; append under the matching section, stripped of Vibrant-specific identifiers. Job-specific knowledge stays in this repo's LTM only. List any universal lessons added in the dream log.
+
 2. **Extract** — For `lasting_insight` STM files: extract Lessons Learned to the appropriate LTM file. Grep the target LTM file first; don't duplicate if already extracted.
 
 3. **Merge** — For `overlap` files: combine into one, preserve all unique content, delete the redundant file.
