@@ -54,11 +54,11 @@ Execute applicable operations:
 
 1. **Distill journal** — For `undistilled_journal` entries: extract generalizable insights (Decisions + why, ruled-out approaches, user feedback) into the appropriate LTM file (emr-integration.md, patterns.md, repos.md, ticket-routing.md). Set `distilled: true` in the entry's frontmatter. This is the ONLY path by which LTM gets written — the work loop never writes LTM directly.
 
-   **Universal-lesson routing** — if an insight is a job-agnostic engineering discipline (would hold at any employer/project — testing, DB safety, migration hygiene, config coupling), do NOT write it to agent-core directly; propose it via a lesson PR per `~/agent-core/CONTRIBUTING.md`:
-   1. If `~/agent-core` does not exist on this machine, skip and note it in the dream log.
-   2. `git -C ~/agent-core pull`, then grep `framework/ENGINEERING-LESSONS.md` — skip if already covered.
+   **Universal-lesson routing** — if an insight is a job-agnostic engineering discipline (would hold at any employer/project — testing, DB safety, migration hygiene, config coupling), do NOT write it to project-agent-factory directly; propose it via a lesson PR per `~/project-agent-factory/CONTRIBUTING.md`:
+   1. If `~/project-agent-factory` does not exist on this machine, skip and note it in the dream log.
+   2. `git -C ~/project-agent-factory pull`, then grep `framework/ENGINEERING-LESSONS.md` — skip if already covered.
    3. Create branch `lesson/lis/{slug}`, append the **de-identified** lesson (no Vibrant/customer names, internal hostnames, VP ticket ids in the file) to the matching section, commit + push, open a PR with `gh pr create` using the CONTRIBUTING format: `[lesson:lis]` title, body with Source / Why universal (>=2 cases or an incident) / Example / Target. Identifying details (VP ids, customers, incidents) belong in the PR body as evidence, not in the file. Do NOT merge — Leo reviews.
-   4. If `gh` or push is unavailable: write the same content to `~/agent-core/framework/proposals/{date}-{slug}.md` and commit to agent-core main as an unreviewed inbox item.
+   4. If `gh` or push is unavailable: write the same content to `~/project-agent-factory/framework/proposals/{date}-{slug}.md` and commit to project-agent-factory main as an unreviewed inbox item.
    5. Job-specific knowledge stays in this repo's LTM only. List proposed lesson PRs in the dream log.
 
 2. **Extract** — For `lasting_insight` STM files: extract Lessons Learned to the appropriate LTM file. Grep the target LTM file first; don't duplicate if already extracted.

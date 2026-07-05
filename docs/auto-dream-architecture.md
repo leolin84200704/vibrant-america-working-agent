@@ -1,6 +1,6 @@
 # Auto Dream Architecture — Technical Design Document
 
-> A comprehensive reference for the personal-agent's memory consolidation system,
+> A comprehensive reference for the general-personal-agent's memory consolidation system,
 > covering architecture, framework choices, implementation, and academic foundations.
 
 **Version:** 1.0
@@ -357,7 +357,7 @@ MCP servers provide standardized tool interfaces for external data. The dreaming
 
 The dream process runs as a macOS Launch Agent:
 
-- **Plist:** `~/Library/LaunchAgents/com.personal-agent.dream.plist`
+- **Plist:** `~/Library/LaunchAgents/com.general-personal-agent.dream.plist`
 - **Schedule:** daily at 8:00 PM (America/Los_Angeles)
 - **Mechanism:** launchd → `scripts/run-dream.sh` → `claude -p` with `scripts/dream.md`
 - **Logs:** `logs/launchd-stdout.log`, `logs/dream-YYYY-MM-DD.md`
@@ -386,7 +386,7 @@ claude -p "$(cat scripts/dream.md)" --allowedTools "Read,Write,Edit,Glob,Grep,Ba
 ### Manual Trigger
 
 ```bash
-cd /Users/linhungfan/personal_project/personal-agent
+cd /Users/linhungfan/personal_project/general-personal-agent
 ./scripts/run-dream.sh          # full run
 ./scripts/run-dream.sh --dry    # preview command only
 ```
@@ -395,13 +395,13 @@ cd /Users/linhungfan/personal_project/personal-agent
 
 ```bash
 # Check if dream agent is scheduled
-launchctl list | grep personal-agent
+launchctl list | grep general-personal-agent
 
 # Temporarily disable
-launchctl unload ~/Library/LaunchAgents/com.personal-agent.dream.plist
+launchctl unload ~/Library/LaunchAgents/com.general-personal-agent.dream.plist
 
 # Re-enable
-launchctl load ~/Library/LaunchAgents/com.personal-agent.dream.plist
+launchctl load ~/Library/LaunchAgents/com.general-personal-agent.dream.plist
 ```
 
 ---
@@ -491,4 +491,4 @@ The "dreaming" metaphor is grounded in established neuroscience:
 
 ---
 
-*This document is maintained alongside the personal-agent codebase. For the operational memory architecture spec, see [`MEMORY-ARCHITECTURE.md`](../MEMORY-ARCHITECTURE.md). For the dream execution prompt, see [`scripts/dream.md`](../scripts/dream.md).*
+*This document is maintained alongside the general-personal-agent codebase. For the operational memory architecture spec, see [`MEMORY-ARCHITECTURE.md`](../MEMORY-ARCHITECTURE.md). For the dream execution prompt, see [`scripts/dream.md`](../scripts/dream.md).*
