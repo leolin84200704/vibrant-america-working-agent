@@ -33,7 +33,7 @@ Read `.claude/skills/bug-triage/SKILL.md` and follow its flow for each ticket, u
 Write `{{REPORT_FILE}}`:
 
 ```markdown
-# Bug Watch — {date} ({{LOOKBACK_HOURS}}h lookback, DB {{DB_STATUS}})
+# Bug Watch — {date} ({{LOOKBACK_HOURS}}h lookback)
 
 ## Summary
 - Total new: X | auto-resolved: X | awaiting approval: X | interactive follow-up: X | blocked: X
