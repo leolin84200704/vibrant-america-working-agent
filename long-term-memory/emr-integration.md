@@ -3,11 +3,12 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 0.8044
+score: 0.8168
 base_weight: 1.0
 created: 2026-04-22
-updated: 2026-05-04
+updated: 2026-07-05
 links:
+- FHIR-ONDEMAND-RESULT
 - HL7-TRIAGE-20260427
 - INCIDENT-2604156666
 - LBS-1541
@@ -73,6 +74,8 @@ tags:
 summary: EMR/HL7/SFTP integration rules, identity mapping, MSH values, bundle config,
   hl7_file_input triage
 ---
+
+
 
 
 
@@ -957,3 +960,26 @@ WHERE (ei.integration_type <> 'FULL_INTEGRATION' OR ei.ordering_enabled = 0)
 - `integration_type` (enum: ORDER_ONLY / RESULT_ONLY / FULL_INTEGRATION / OTHER) = **合約/分類**標籤、人填的
 - `ordering_enabled` / `result_enabled` (tinyint) = **runtime gate**、實際決定 v1/v2 是否處理 order / result
 - 客戶詢問「is this clinic placing orders from EMR」**看 `ordering_enabled=1`**，不是 `integration_type`。`RESULT_ONLY + ordering_enabled=1` 是正常 LIVE 狀態（合約叫 result-only 但實際雙向）
+
+## Result pipeline go-live 時序缺口 — report_finished 早於 integration 上線會被靜默丟棄（journal 2026-07-02）
+
+- 事實鏈（accession 2606116259/2606116226, customer 51154）：report_finished kafka event 到達時 `findEligibleResultIntegrations` 回空 → `kafka-report-finished-listener.service.ts:268` 直接 return，offset 照 commit → event 永久消失。該 integration 的 `created_at` 比 event 晚 ~11.5h（一建立就 LIVE）。
+- 三個設計缺口（截至 2026-07-05 未修，只回報）：
+  1. 查無 eligible integration = 靜默丟棄，只有 `logger.debug`（prod 看不到），`result_transmission_records` 0 rows、無任何 DB 痕跡。
+  2. integration 轉 LIVE / 開 `result_enabled` 時**沒有 backfill** 上線前已 finished 的 report。與 VP-16968「開 flag 只對未來生效」同族，方向相反（這次是 flag 晚開）。
+  3. `handleMessage` catch-all 吞錯後 offset 一樣 commit → transient DB error 也永久丟 event。
+- 診斷特徵：`result_transmission_records` 該 sample **0 rows** = event 根本沒進 pipeline（pipeline 失敗一定留 row + BullMQ retry；SFTP hang 會留 GENERATING/ERROR）。
+- 補救：`result.service.ts#generateResultHl7(sample_id)` 手動觸發補發。
+- Debug 手法：repo 本地 `.env` 的 `DATABASE_URL` + `node_modules/mysql2` 直查 prod（read-only），不需 mysql client / pod exec。
+
+## emr-v2 GenerateSampleID 從未生效 + order replay 安全準則（VP-17120 / VP-17318, 2026-07-02）
+
+- **GenerateSampleID 自 VP-16463 port 起就沒 work 過**：proto 欄位是 `sampleId`（camelCase）但 client 帶 `keepCase:true` 讀 `response.sample_id` → undefined → `parseInt(x || '0')` 靜默變 0。5/28 前的非零 patientPayLater id 全是 Java EMR-Backend 寫的。
+- `sendOrder`（POST /v1/portal/order/orderTest/order）收到 sampleId=0 會**自行分配正確 id**（70/74 zero-id orders 成功）；卡住的是該路徑上偶發的 sendOrder 失敗。
+- **coresamples v2 GenerateSampleID sequence 落後 ~311k**（live probe 回的 id 全是既有 sample）→ 只修欄位名會注入撞號 id；order path 在 coresamples 修好 sequence 前**不得**使用此 RPC。Fix branch `bugfix/leo/VP-17318`：finalizer 直接送 0、client 讀正確欄位並 reject invalid、[RETRY-EXHAUSTED] loud log。
+- **replay 安全準則**（非冪等 POST：client-failure ≠ server-failure）：
+  - replay 前先查 `lis_core_v7.sample` 該 patient 有無 sample — 「失敗」的 attempt 可能已在 server 端建單（6517/18/20 就是）。
+  - 手動 backfill `hl7_file_input.sample_id` 時**必須同時補 `emr_sample` row**，否則 result 回來 matching 會斷。
+  - control_id/emr_order_id 來源依 vendor 而異：OPTIMANTRA = 檔名數字；MDHQ = 檔案內容的 MQ* id（檔案丟失即無法重建，向 vendor 要 MSH.10，**不要**請 vendor resend — 會重複下單）。
+  - THM 在自家 SFTP 有 `/Prod/OrderArchive` 可撈回原檔；OPTIMANTRA/MDHQ 無。
+- Retry 雙倍燒毀陷阱：AKS 測試 pod 與 on-prem pod 同時跑 fetch + retry-rescan，redlock 各自鎖在自己的 redis sidecar → 無跨 pod 互斥；沒檔案的 pod 用「Local file missing」燒 retry_num、有檔案的 pod 用真失敗燒 → retry 兩倍速耗盡。Phase B cutover 前 retry-rescan 也要 gate 在 intake role。

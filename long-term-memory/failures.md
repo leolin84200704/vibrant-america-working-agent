@@ -3,74 +3,166 @@ id: failures
 type: ltm
 category: technical
 status: active
-score: 0.0
+score: 1.0859
 base_weight: 0.9
 urgency: 3
-created: 2026-07-02
-updated: 2026-07-02
+created: 2026-07-05
+updated: 2026-07-05
 links:
 - INCIDENT-20260518
-- INCIDENT-20260601-sftp-hang
-- VP-15460
-- VP-16337
-- VP-16410
-- VP-16520
-- VP-16521
-- VP-16934
-- feedback_start_dev_iron_rule
 - INCIDENT-20260528
+- INCIDENT-20260601-sftp-hang
+- INCIDENT-20260604
+- INCIDENT-20260604-mdhq-stale-connections
+- INCIDENT-2604156666
 - LBS-1487
 - LBS-1541
-- VP-16424
-- VP-16476
-- VP-16766
-- VP-16784-87
-- VP-17217
-- VP-17283
-- INCIDENT-20260604-mdhq-stale-connections
+- PO-222
+- QH-1104
+- QH-1130
+- QH-1159
+- QH-1591
+- QH-1775
+- QH-1860
+- QH-211
+- QH-2259
+- QH-2648
+- QH-680
+- QH-862
+- QH-918
+- QH-919
+- VP-15460
+- VP-16009
+- VP-16154
 - VP-16164
-- VP-16251
-- VP-16280
-- VP-16423
-- VP-16463
-- VP-16720
-- VP-16921
-- VP-16968
-- VP-16987
+- VP-16168
+- VP-16169
+- VP-16172
 - VP-16193
 - VP-16232
+- VP-16251
+- VP-16280
 - VP-16329
+- VP-16337
+- VP-16391
+- VP-16410
+- VP-16423
+- VP-16424
+- VP-16463
+- VP-16476
+- VP-16499
+- VP-16513
+- VP-16514
+- VP-16516
+- VP-16520
+- VP-16521
 - VP-16612
+- VP-16617
+- VP-16629
 - VP-16664
+- VP-16689
+- VP-16720
 - VP-16734
+- VP-16759
+- VP-16760
+- VP-16766
+- VP-16784
+- VP-16784-87
+- VP-16785
+- VP-16786
+- VP-16787
+- VP-16850
+- VP-16859
+- VP-16921
+- VP-16934
+- VP-16945
+- VP-16954
+- VP-16955
+- VP-16968
+- VP-16980
+- VP-16987
+- VP-17065
 - VP-17076
+- VP-17077
+- VP-17120
+- VP-17217
+- VP-17222
+- VP-17283
+- business-model
+- business-model-deep
 - feedback_batch_db_verify
 - feedback_join_scope_reverse_audit
-- INCIDENT-2604156666
-- VP-16154
-- VP-16617
+- feedback_start_dev_iron_rule
+- repo-catalog
+- repos
 tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 66 entries across STM
+summary: Auto-aggregated failure index from 70 entries across STM
 ---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # Failure Index
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-07-02 — total 66 entries
+> Last updated: 2026-07-05 — total 70 entries
 
 ## Themes
 
-- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 14 entries
+- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 16 entries
+- [Other / uncategorized](#other) — 12 entries
 - [DB / migration / backfill](#db-migration) — 12 entries
-- [Other / uncategorized](#other) — 11 entries
 - [Build / TypeScript / Tooling](#build-tooling) — 9 entries
+- [Deploy / commit / push coordination](#deploy-coordination) — 4 entries
 - [Test / mock / spec](#test-mocking) — 4 entries
 - [Redis / cache / pending list](#redis-cache) — 3 entries
-- [Deploy / commit / push coordination](#deploy-coordination) — 3 entries
 - [Scope / requirement / PM communication](#scope-communication) — 3 entries
 - [Auth / permission / role](#auth-permission) — 2 entries
 - [Error handling / throw vs log](#error-handling) — 2 entries
@@ -215,6 +307,94 @@ Prod pod: `lis-emr-v2-deployment-prod-54d77c8846-c8l9b` (default ns, container `
 
 **Code path 確認**: `periodicReportRecord.createMany` 只在 **SFTP 上傳成功 AND processedRecords>0** 後才寫 (base-report.service.ts:598-605)。空表 = 從未走到成功上傳。自動產 **`.xlsx`**，但客戶收到/手動腳本送的是 **`.csv`** → 格式不一致。
 
+### **[[VP-17120]]** — `2026-07-02 23:00` — Follow-up investigation: 3 orders exhausted all 5 retries (2026-07-01~07-02)
+
+- Retry-rescan itself works: INITIAL_RETRY_NUM=5; 6517/6518/6520 also failed initial attempts in the same window but eventually got samples (2589157-59) created upstream; 6515/6525/6526 burned all 5 retries in ~1h (rescan every 15 min) and stopped.
+- Root-cause signature (from DB, pod logs lost): healthy orders record order_input.sampleId == final sample_id (generateSampleID returned real id). All failing attempts record order_input.sampleId=0 → v2 coresamples_service (10.224.0.199:32100) GenerateSampleID returned an EMPTY response, and grpc-client-v2.service.ts:482 `parseInt(response.sample_id || '0')` silently coerces it to 0 instead of rejecting. sendOrder (POST api.vibrant-wellness.com/v1/portal/order/orderTest/order) then fails with sampleId=0 — but for 6517/18/20 at least one "failed" attempt actually created the sample server-side (samples exist in lis_core_v7.sample, correct patients) → client-failure ≠ server-failure (non-idempotent POST).
+- Evidence loss chain: original error messages unrecoverable — both processing replicasets (5bbb5d7548, 5cb5966c99) were replaced by later deploys; docker containers GC'd; /var/log/pods dirs for those replicasets removed.
+- File loss chain: rows were ingested when HL7_LOCAL_ROOT was still ephemeral /tmp/hl7 (before a85515e); fetch deletes the remote SFTP file at ingest → pod restart destroyed the only copy. Verified: all 3 SFTP order folders empty, PVC /EMR_storage has no copies. a85515e (persistent /EMR_storage) is live in prod since 2026-07-02 ~17:49 UTC — new ingests are safe (verified id 6528 localDir=/EMR_storage/... parsed OK).
+- THM keeps its own /Prod/OrderArchive on their SFTP → recovered 12554_070126.hl7 (valid HL7, NPI 1801889050 → single LIVE integration customer 17565, bundle VACP85842). Saved to lis-code-agent/storage/recovered-files/. OPTIMANTRA has no archive; MDHQ file unrecovered.
+- Secondary gap: 6517/6518/6520 were manually backfilled (2026-07-02 11:01 UTC, sample_id set on hl7_file_input) but emr_sample rows were NOT inserted → result matching for those 3 MDHQ orders will break when results arrive.
+- Replay safety verified: patients 3249545 (6525) / 3249575 (6526) have NO samples in lis_core_v7.sample — no orphan orders upstream; replay cannot duplicate.
+
+### **[[VP-17120]]** — `2026-07-02 23:00` — Recovery execution (Leo approved: 1=re-ingest, 6525/6526=option B, code fix fast)
+
+- 6515 (THM): file restored from THM's own /Prod/OrderArchive → uploaded to pod /EMR_storage path, localDir fixed + retry_num=1 → rescan re-parsed cleanly. sample 2589795, emr_sample 5962 (control_id 202607011246361542), upstream verified (RUTH MOORHEAD, customer 17565), no duplicates.
+- 6525 (OPTIMANTRA): replayed via in-pod script (jsonwebtoken sign with pod JWT_SECRET_PROD, UserPayload = system user bolin.l/54674 + customer 50342/clinic 153585 from the winning ehr_integration) POSTing the stored order_input with sampleId=0 → sample 2589807, barcode 2607026655. control_id/emr_order_id = filename number (66128162607012036) — OPTIMANTRA pattern verified against history. Patient is literally "Test Patient" (new integration onboarding order).
+- 6526 (MDHQ): same replay → sample 2589808, barcode 2607026656. control_id/emr_order_id UNKNOWN (MDHQ internal MQ* ids come from file content, not filename) → emr_sample row 5964 has NULLs; MDHQ result write-back may not reconcile. Do NOT ask vendor to resend (would duplicate — order is now placed); ask MDHQ for MSH.10 + specimen id from their message log instead, then UPDATE emr_sample.
+- Both replays verified upstream: exactly 1 sample per patient, correct customer.
+
+---
+
+## Other / uncategorized <a id='other'></a>
+
+### **[[INCIDENT-20260528]]** — `2026-05-28` — 把 hang pod log 燒掉了
+
+Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`、**舊 pod (`6cc4674b87-ccgbf`) 的 log 隨 pod GC 永久消失**。/var/log/pods 對應目錄 mtime 還在但 log file 已清。所以「哪個 folder 是 5/27 真正 hang 元凶」**現場證據燒掉了**。後來 21:45 tick log 出來的 id=260 反而是 transient = 不是同一個 hang。
+
+預防：destructive ops (rollout restart / pod delete) 前必須 `kubectl logs <pod> > /tmp/preserve.log` + `kubectl describe pod <pod> > /tmp/preserve_describe.txt`。已寫進 user memory feedback。
+
+### **[[LBS-1487]]**
+
+無。
+
+### **[[LBS-1541]]**
+
+(none yet)
+
+### **[[VP-16424]]**
+
+（無實作層失敗）
+
+**記憶層 failure**：Step 4 呈報時引 VP-16423 STM line 173「kit_delivery_option=BOTH_BLOOD_AND_NON_BLOOD（follow 17412 既有值）」當作 same-practice follow 範例 — 但實際 DB query 17412 與其他 6 provider 全部都是 NO_DELIVERY。Root cause：VP-16423 STM Decisions 區段是早期決策草稿，最終 Leo 在 Step 6 review 時把全部 7 筆改 NO_DELIVERY 但 STM Decisions 沒同步 update（LTM `emr-integration.md` line 436 反而有寫對）。教訓：**引 STM 的決策內容前先用 DB 實際值 cross-check**，特別是時間久的 STM。
+
+### **[[VP-16476]]**
+
+_(無 execution failure。Mistakes 在 Retrospective)_
+
+---
+
+### **[[VP-16521]]** — `2026-05-28 17:52` — git stash push 把 MERGE_HEAD 弄丟
+
+- **症狀**：merge in-progress 時 `git stash push` → MERGE_HEAD 消失，stash pop 報 `event.service.ts: needs merge`
+- **修法**：`git merge origin/stage_test --no-commit --no-ff` 重觸發 merge state，再 `git checkout stash@{0} -- src/calendar/models/event/event.service.ts` 把 stash 內的 resolved 版本拉回，最後 `git stash drop`
+- **教訓**：merge in-progress 時禁用 `git stash`；要保存 in-flight diff 改用 `git diff > /tmp/wip.patch` + 該 file 個別 checkout
+- **更好做法**：根本不該為了 "比較 pre-merge lint baseline" 中斷 merge state — 直接看 origin/feature 上的 ESLint baseline 即可，或先 commit 中間態再分析
+
+### **[[VP-16766]]** — `2026-05-27` — **Minor TS slip**：`_apply` 腳本初版用 `${ehr.created_at = now}`（賦值表達式）想偷塞欄位，TS2339 編譯失敗。改成直接 `${now}`。教訓：raw SQL 的 template binding 不要塞賦值/副作用，值先算好再代入。
+
+
+
+### **[[VP-16784-87]]**
+
+（無 — verification-only session）
+
+### **[[VP-16934]]** — `2026-06-09` — #157 部署後 staging dry-run 驗證通過
+
+- endpoint no-auth → 401（route live + guard）。
+- 簽 JWT(staging JWT_SECRET, HS256, payload 需 userId + 未過期；JwtStrategy 不檢 issuer) 打 dry-run（`scripts/_vp16934-staging-test.js`）：
+  - 假 provider → `201 {rejected, customer_not_found}`（auth/dryrun/富化都跑）。
+  - 缺 testCodes → `400`。
+  - **真客戶 5794 → `201 {rejected, unrecognized_test_codes:[VACP1001]}`** = customer 解析成功 + 代碼分類有跑（VACP1001 是假 code 才被擋）。
+- **結論：order intake 在 staging dry-run 全程跑通**（auth/gating/validation/customer 查詢/代碼分類）。差「完整成功單(sampleId:-1)」需對 staging 客戶有效的真 test code。
+- staging order_intake 留了 2 筆 VP16934-TEST-* rejected 測試列（無害，可清）。
+
+### **[[VP-17120]]** — `2026-07-02 23:05` — ROOT CAUSE UPGRADED during replay (filed VP-17318, branch bugfix/leo/VP-17318 pushed)
+
+- emr-v2 generateSampleID NEVER worked: proto field is `sampleId` (camelCase in proto) but client reads `response.sample_id` with keepCase:true → undefined → `|| '0'` → always 0 since the VP-16463 port. Pre-5/28 nonzero patientPayLater ids were written by Java EMR-Backend.
+- sendOrder with sampleId=0 self-assigns a correct id (70/74 zero-id orders succeeded). The stuck rows are occasional sendOrder failures on that path.
+- coresamples v2 GenerateSampleID sequence is ~311k STALE: live probes returned ids 2277991-2278000, ALL existing patient samples in lis_core_v7.sample. A field-name-only fix would inject colliding ids → order path must NOT consume this RPC until their sequence is repaired (needs a coresamples-team ticket).
+- Fix on branch: finalizer skips pre-generation (sends 0 explicitly), client reads correct field + rejects invalid, [RETRY-EXHAUSTED] loud log, decrement floored. 21/21 targeted tests pass, build clean.
+
+### **[[VP-17217]]**
+
+- 首次 build TS2322：provider 陣列 union 型別 → 加 `Provider[]` 顯式型別修正。
+- spec 原以 class token 注入 → 改 inbound token 才能解析。
+
+### **[[VP-17283]]**
+
+(none yet)
+
 ---
 
 ## DB / migration / backfill <a id='db-migration'></a>
@@ -328,70 +508,6 @@ I added `*_timezone` paired fields to both YAML files at Step 5 start, planning 
 
 ---
 
-## Other / uncategorized <a id='other'></a>
-
-### **[[INCIDENT-20260528]]** — `2026-05-28` — 把 hang pod log 燒掉了
-
-Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`、**舊 pod (`6cc4674b87-ccgbf`) 的 log 隨 pod GC 永久消失**。/var/log/pods 對應目錄 mtime 還在但 log file 已清。所以「哪個 folder 是 5/27 真正 hang 元凶」**現場證據燒掉了**。後來 21:45 tick log 出來的 id=260 反而是 transient = 不是同一個 hang。
-
-預防：destructive ops (rollout restart / pod delete) 前必須 `kubectl logs <pod> > /tmp/preserve.log` + `kubectl describe pod <pod> > /tmp/preserve_describe.txt`。已寫進 user memory feedback。
-
-### **[[LBS-1487]]**
-
-無。
-
-### **[[LBS-1541]]**
-
-(none yet)
-
-### **[[VP-16424]]**
-
-（無實作層失敗）
-
-**記憶層 failure**：Step 4 呈報時引 VP-16423 STM line 173「kit_delivery_option=BOTH_BLOOD_AND_NON_BLOOD（follow 17412 既有值）」當作 same-practice follow 範例 — 但實際 DB query 17412 與其他 6 provider 全部都是 NO_DELIVERY。Root cause：VP-16423 STM Decisions 區段是早期決策草稿，最終 Leo 在 Step 6 review 時把全部 7 筆改 NO_DELIVERY 但 STM Decisions 沒同步 update（LTM `emr-integration.md` line 436 反而有寫對）。教訓：**引 STM 的決策內容前先用 DB 實際值 cross-check**，特別是時間久的 STM。
-
-### **[[VP-16476]]**
-
-_(無 execution failure。Mistakes 在 Retrospective)_
-
----
-
-### **[[VP-16521]]** — `2026-05-28 17:52` — git stash push 把 MERGE_HEAD 弄丟
-
-- **症狀**：merge in-progress 時 `git stash push` → MERGE_HEAD 消失，stash pop 報 `event.service.ts: needs merge`
-- **修法**：`git merge origin/stage_test --no-commit --no-ff` 重觸發 merge state，再 `git checkout stash@{0} -- src/calendar/models/event/event.service.ts` 把 stash 內的 resolved 版本拉回，最後 `git stash drop`
-- **教訓**：merge in-progress 時禁用 `git stash`；要保存 in-flight diff 改用 `git diff > /tmp/wip.patch` + 該 file 個別 checkout
-- **更好做法**：根本不該為了 "比較 pre-merge lint baseline" 中斷 merge state — 直接看 origin/feature 上的 ESLint baseline 即可，或先 commit 中間態再分析
-
-### **[[VP-16766]]** — `2026-05-27` — **Minor TS slip**：`_apply` 腳本初版用 `${ehr.created_at = now}`（賦值表達式）想偷塞欄位，TS2339 編譯失敗。改成直接 `${now}`。教訓：raw SQL 的 template binding 不要塞賦值/副作用，值先算好再代入。
-
-
-
-### **[[VP-16784-87]]**
-
-（無 — verification-only session）
-
-### **[[VP-16934]]** — `2026-06-09` — #157 部署後 staging dry-run 驗證通過
-
-- endpoint no-auth → 401（route live + guard）。
-- 簽 JWT(staging JWT_SECRET, HS256, payload 需 userId + 未過期；JwtStrategy 不檢 issuer) 打 dry-run（`scripts/_vp16934-staging-test.js`）：
-  - 假 provider → `201 {rejected, customer_not_found}`（auth/dryrun/富化都跑）。
-  - 缺 testCodes → `400`。
-  - **真客戶 5794 → `201 {rejected, unrecognized_test_codes:[VACP1001]}`** = customer 解析成功 + 代碼分類有跑（VACP1001 是假 code 才被擋）。
-- **結論：order intake 在 staging dry-run 全程跑通**（auth/gating/validation/customer 查詢/代碼分類）。差「完整成功單(sampleId:-1)」需對 staging 客戶有效的真 test code。
-- staging order_intake 留了 2 筆 VP16934-TEST-* rejected 測試列（無害，可清）。
-
-### **[[VP-17217]]**
-
-- 首次 build TS2322：provider 陣列 union 型別 → 加 `Provider[]` 顯式型別修正。
-- spec 原以 class token 注入 → 改 inbound token 才能解析。
-
-### **[[VP-17283]]**
-
-(none yet)
-
----
-
 ## Build / TypeScript / Tooling <a id='build-tooling'></a>
 
 ### **[[INCIDENT-20260518]]** — [2026-05-18 後續] 看到 c0852d0 部署後 Leo 仍見舊行為，沒立刻意識到 image age
@@ -465,6 +581,35 @@ Production NestFactory crash at startup: `TypeError: redlock_1.default is not a 
 
 ---
 
+## Deploy / commit / push coordination <a id='deploy-coordination'></a>
+
+### **[[INCIDENT-20260518]]** — `2026-05-19` — 寫 logging 跟 timeout 但沒先說「現在不用 build」
+
+Leo 急著補發、不想 build。我多次 commit + push 沒先問是否需要 deploy。後來 Leo 主動講「現在不用 build」才停下。
+**Preventable**：是。緊急 incident 過程中 commit ↔ deploy 是兩個分離決策，要先確認再做。
+
+### **[[INCIDENT-20260528]]** — `2026-05-28` — Migration apply 漏 staging DB
+
+VP-16760 創 `ehr_vendor_inquiry_status_history` table、migration SQL commit 進 repo、但只 apply 到 prod DB (`lisportalprod2`)、漏 apply staging DB (`192.168.60.11`)。今天 staging 部署後 FE call reject endpoint 才爆 P2021 500。
+
+LTM patterns.md 304-308 行早就有「兩 DB 都要 apply」、但實際上線時還是踩了 — 因為**沒有自動化驗證機制**、純靠人記得。已建議寫進 Jenkinsfile pre-deploy。
+
+### **[[VP-15460]]** — `2026-04-28` — Migration not applied automatically
+
+Agent committed migration SQL to repo and assumed release pipeline would `prisma migrate deploy` it. Leo had to remind: "你 sftp_folder_mapping 的改動還沒真的上傳到 database". Then `prisma migrate deploy` failed with P3005 (DB never baselined for prisma migrations) → fell back to `prisma db execute --file <sql>` (raw SQL apply). Then "192.168.60.11:3306 也要 apply" — second DB. Lesson: this repo has two MySQL instances + Prisma is not the migration source-of-truth in prod.
+
+### **[[VP-17120]]** — `2026-07-03 00:15` — CORRECTION: /tmp ingestion was NOT a pre-deploy-wide state — it was the AKS Phase A test pods
+
+Leo caught that /EMR_storage was already the norm since ~June. Data: localDir by day shows /EMR_storage steadily since 6/1, with /tmp only on 6/23 (6441/6442), 6/30 (6506), 7/1 (6517/18/20), 7/2 early (6525/26) — interleaved with /EMR_storage rows within the same hour on 7/1. Same pod cannot flip localRoot (constructor-read) → TWO fetchers ran concurrently:
+- The /tmp fetcher = AKS Phase A test pods (VP-17291/92 pipeline iteration; 7 replicasets in 24h in AKS ns emr-v2; the /tmp rows' parser replicasets don't exist in on-prem history). They lacked HL7_LOCAL_ROOT and had fetch cron enabled.
+- Redlock lives in each pod's OWN redis sidecar → no cross-pod mutual exclusion → AKS + on-prem raced SFTP; whoever won stored the file locally (AKS /EMR_storage is a DIFFERENT storage than on-prem — AKS has no HL7Message_prod dir at all).
+- Both pods run the 15-min retry-rescan against the shared DB → the pod WITHOUT the file burns retry_num with "Local file missing" while the owner pod burns it with real failures → double-speed exhaustion. That's why exactly the /tmp rows died fast.
+- Current state safe: AKS pod now has POD_ROLE=web (fetch cron off, 0 fetch logs in 5h) + HL7_LOCAL_ROOT set + a85515e default; on-prem is the only fetcher.
+- Cutover TODO (Phase B): shared/migrated HL7Message_prod storage, single-side cron via POD_ROLE, and gate the retry-rescan on intake role too (otherwise cross-pod retry_num trampling returns).
+- Side mystery resolved-ish: the 7/2 11:01 heal of 6517/18/20 did not touch last_parse_time nor last_update_pod_name → not an app code path; someone ran manual SQL at 11:01 UTC (ask team — not Leo's session with me).
+
+---
+
 ## Test / mock / spec <a id='test-mocking'></a>
 
 ### **[[INCIDENT-2604156666]]** — `2026-05-21` — spec 在 HEAD 已壞（pre-existing，Leo 要求併本 hotfix 修）
@@ -517,25 +662,6 @@ Root cause: VP-16391's test was written assuming `process.env.platform_type` und
 - 5/30 INCIDENT-20260528: identified same symptom but only documented "Required pod rollout restart". Root cause was not traced into the singleton/await chain. Recurrence on 6/1 demanded deeper investigation.
 
 ---
-
----
-
-## Deploy / commit / push coordination <a id='deploy-coordination'></a>
-
-### **[[INCIDENT-20260518]]** — `2026-05-19` — 寫 logging 跟 timeout 但沒先說「現在不用 build」
-
-Leo 急著補發、不想 build。我多次 commit + push 沒先問是否需要 deploy。後來 Leo 主動講「現在不用 build」才停下。
-**Preventable**：是。緊急 incident 過程中 commit ↔ deploy 是兩個分離決策，要先確認再做。
-
-### **[[INCIDENT-20260528]]** — `2026-05-28` — Migration apply 漏 staging DB
-
-VP-16760 創 `ehr_vendor_inquiry_status_history` table、migration SQL commit 進 repo、但只 apply 到 prod DB (`lisportalprod2`)、漏 apply staging DB (`192.168.60.11`)。今天 staging 部署後 FE call reject endpoint 才爆 P2021 500。
-
-LTM patterns.md 304-308 行早就有「兩 DB 都要 apply」、但實際上線時還是踩了 — 因為**沒有自動化驗證機制**、純靠人記得。已建議寫進 Jenkinsfile pre-deploy。
-
-### **[[VP-15460]]** — `2026-04-28` — Migration not applied automatically
-
-Agent committed migration SQL to repo and assumed release pipeline would `prisma migrate deploy` it. Leo had to remind: "你 sftp_folder_mapping 的改動還沒真的上傳到 database". Then `prisma migrate deploy` failed with P3005 (DB never baselined for prisma migrations) → fell back to `prisma db execute --file <sql>` (raw SQL apply). Then "192.168.60.11:3306 也要 apply" — second DB. Lesson: this repo has two MySQL instances + Prisma is not the migration source-of-truth in prod.
 
 ---
 
