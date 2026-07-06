@@ -38,29 +38,21 @@ for i in $(seq 1 30); do
     sleep 2
 done
 
-# Soft VPN/DB pre-flight: Jira (443) works either way, so the watch still runs;
-# the prompt downgrades DB-dependent diagnosis to BLOCKED when DB_STATUS=down.
-# Same Cisco CLI cautions as DailyJob/hl7_fail/run_triage.sh: parse only the
-# LAST state line; `vpn connect` tears down a live session, so only attempt
-# when unambiguously Disconnected.
+# VPN/DB pre-flight: if the VPN is down (prod DB unreachable), skip this run
+# entirely — the next 2-hourly run's dynamic lookback covers the gap, since
+# no report is written for skipped runs. No reconnect attempt here (SSO is
+# interactive; `vpn connect` can tear down a live session), and no
+# notification (overnight the VPN is routinely down — 12 pings would be noise).
 DB_HOST="lisportalprod2.mysql.database.azure.com"
-VPN_CLI="/opt/cisco/secureclient/bin/vpn"
-VPN_SERVER="45.24.217.146"
 db_reachable() { nc -z -w 5 "$DB_HOST" 3306 >/dev/null 2>&1; }
 
-if ! db_reachable && [[ -x "$VPN_CLI" ]]; then
-    VPN_STATE=$("$VPN_CLI" state 2>/dev/null | grep '>> state:' | tail -1 | awk '{print $NF}')
-    echo "[$(date)] DB unreachable; Cisco state: ${VPN_STATE:-unknown}" >> "$LOG_FILE"
-    if [[ "$VPN_STATE" == "Disconnected" ]]; then
-        "$VPN_CLI" -s connect "$VPN_SERVER" < /dev/null >> "$LOG_FILE" 2>&1
-        for i in $(seq 1 12); do db_reachable && break; sleep 5; done
-    fi
+if ! db_reachable; then
+    echo "[$(date)] Pre-flight: ${DB_HOST}:3306 unreachable (VPN down) — skipping this run" >> "$LOG_FILE"
+    exit 0
 fi
-if db_reachable; then DB_STATUS="up"; else DB_STATUS="down"; fi
-echo "[$(date)] Run=${RUN_TAG} lookback=${LOOKBACK_HOURS}h DB=${DB_STATUS}" >> "$LOG_FILE"
+echo "[$(date)] Run=${RUN_TAG} lookback=${LOOKBACK_HOURS}h DB=up" >> "$LOG_FILE"
 
 PROMPT=$(sed -e "s/{{LOOKBACK_HOURS}}/${LOOKBACK_HOURS}/g" \
-             -e "s/{{DB_STATUS}}/${DB_STATUS}/g" \
              -e "s|{{REPORT_FILE}}|${REPORT_FILE}|g" "$PROMPT_FILE")
 
 ATTEMPT=1

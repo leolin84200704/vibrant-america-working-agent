@@ -1,6 +1,6 @@
 # AI-Native Bug Watch — scheduled run
 
-You are running headless as the scheduled bug-watch job. Look back **{{LOOKBACK_HOURS}} hours** for newly created bug tickets, triage each one, and write the digest to `{{REPORT_FILE}}`. Prod DB status for this run: **{{DB_STATUS}}**.
+You are running headless as the scheduled bug-watch job. Look back **{{LOOKBACK_HOURS}} hours** for newly created bug tickets, triage each one, and write the digest to `{{REPORT_FILE}}`. The runner already verified prod DB reachability before starting this run (it skips entirely when the VPN is down).
 
 ## Step 1 — Fetch new tickets (Jira REST, not MCP)
 
@@ -24,7 +24,7 @@ Read `.claude/skills/bug-triage/SKILL.md` and follow its flow for each ticket, u
 
 - **Allowed without a human**: read-only diagnosis (Jira, DB queries when DB is up, SFTP listings), and the whitelisted repush action (Class A: `generateResultHl7` via gRPC, with the skill's pre-checks and mandatory 100% post-verify).
 - **NOT in watch mode**: code changes, branches, PRs (Class C/D stops after root-cause diagnosis — flag `interactive follow-up: /bug-triage {id}` in the digest); any prod UPDATE/DELETE/INSERT; posting Jira comments or Slack messages (draft them into the digest only).
-- DB status is `{{DB_STATUS}}`. When `down`: mark every DB-dependent diagnosis **BLOCKED — VPN down** (empty result ≠ no failures) and still do the Jira-only part of the classification.
+- If the DB becomes unreachable mid-run (VPN can drop at any time), mark the affected diagnoses **BLOCKED — VPN down** (empty result ≠ no failures); never present a failed query as "no records".
 - Per-ticket budget: keep diagnosis focused; if a ticket needs deep code archaeology, classify it, note the entry points, and flag it for interactive follow-up rather than burning the whole run on one ticket.
 - Create an STM file (`storage/short_term_memory/{ticket_id}.md`) only for tickets where you executed an action (e.g. a repush); digest-only tickets do not get STM shells.
 
