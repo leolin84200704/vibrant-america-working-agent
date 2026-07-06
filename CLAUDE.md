@@ -1,8 +1,8 @@
 # LIS Code Agent — Vibrant America instance
 
 > Workspace-level context，只放這份工作專屬的內容。
-> 個人習慣與通用紀律來自 `~/agent-core/AGENTS.md`（user-level 自動載入），不在此重複。
-> 處理 ticket 時先讀 `~/agent-core/framework/WORK-LOOP.md`（9 步流程）；memory 檢索深度見 `RETRIEVAL.md`（本 repo，framework 版的 Vibrant 適配）。
+> 個人習慣與通用紀律來自 `~/project-agent-factory/AGENTS.md`（user-level 自動載入），不在此重複。
+> 處理 ticket 時先讀 `~/project-agent-factory/framework/WORK-LOOP.md`（9 步流程）；memory 檢索深度見 `RETRIEVAL.md`（本 repo，framework 版的 Vibrant 適配）。
 > 動 prod / DB / config / push 前先過 `lis-prod-change-gate` skill。
 
 ## 角色
@@ -14,7 +14,7 @@
 - 允許: checkout -b, commit, push（僅自己的 branch）
 - 禁止: push --force, reset --hard, push to master/staging（LIS 工作 repo 亦禁 push main）
 - 部署: feature/bugfix branch push 不會 auto-deploy；要 deploy 開 PR target `stage_test`／staging 流程，絕不直接 push staging
-- 例外（僅 personal repo `lis-code-agent` 與 `agent-core`）: 允許 push 到 `main`；仍禁 force-push、reset --hard
+- 例外（僅 personal repo `lis-code-agent` 與 `project-agent-factory`）: 允許 push 到 `main`；仍禁 force-push、reset --hard
 - Agent 不 merge — Leo 決定（例外不適用於 LIS 工作 repo）
 
 ## Ticket 系統
@@ -47,14 +47,14 @@
 > Note: `knowledge/` 是 `long-term-memory/` 的 symlink，舊路徑仍可用。
 
 ## STM
-每個 ticket 一份：`storage/short_term_memory/{ticket_id}.md`，模板見 `~/agent-core/framework/templates/stm.md`。
+每個 ticket 一份：`storage/short_term_memory/{ticket_id}.md`，模板見 `~/project-agent-factory/framework/templates/stm.md`。
 - category（本 instance）：`emr_integration` (base_weight 1.0) | `technical` (0.9) | `repo_patterns` (0.8) | `pm_patterns` (0.7) | `process` (0.6)
 - 追加：Edit 在對應 section 下插 `### [YYYY-MM-DD HH:MM]`，並更新 frontmatter `updated:`
 - 只為實際動工的 ticket 建 STM — 不要批次預建空殼（污染 index；總覽放單一 `_OVERVIEW` 檔）
 
 ## Work Loop 的 instance 參數
-流程本體：`~/agent-core/framework/WORK-LOOP.md`。本工作的具體化：
+流程本體：`~/project-agent-factory/framework/WORK-LOOP.md`。本工作的具體化：
 - **L4 驗證**（Step 1/RETRIEVAL）= Atlassian MCP 查 Jira 現況
 - **Routine**（Step 3 跳過 debate）= 照既有 pattern 的 config/integration ticket：加 provider、改 MSH 值、開關 integration 等；需註明依循的過去 ticket
 - **Explore**（Step 2）= 掃相關 LIS repos；subagent patterns 見 `AGENTS.md`（本 repo）
-- Retrospective 詳細框架：`~/agent-core/skills/work-loop/RETROSPECTIVE.md`
+- Retrospective 詳細框架：`~/project-agent-factory/skills/work-loop/RETROSPECTIVE.md`

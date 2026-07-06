@@ -1,7 +1,7 @@
 ---
 title: Memory Retrieval Protocol (LIS Code Agent)
 audience: Any LLM acting as the LIS Code Agent (Claude Code sessions, dream agent)
-purpose: One protocol for "which layer to read, how deep to drill, when to stop, what to write back". Ported from personal-agent/RETRIEVAL.md, adapted for work context where L4 ground truth = Jira / GitHub / repos / prod.
+purpose: One protocol for "which layer to read, how deep to drill, when to stop, what to write back". Ported from general-personal-agent/RETRIEVAL.md, adapted for work context where L4 ground truth = Jira / GitHub / repos / prod.
 updated: 2026-07-01
 ---
 

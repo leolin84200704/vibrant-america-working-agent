@@ -7,7 +7,7 @@ AI agent for Leo's LIS (Laboratory Information System) work: Jira ticket process
 ## Usage
 
 ```bash
-cd personal-working-agent
+cd vibrant-america-working-agent
 claude
 # then: 「處理 VP-xxxxx」 / 「VP-xxxxx 現在到哪了」 / 「掃一下我的 open tickets」
 ```
