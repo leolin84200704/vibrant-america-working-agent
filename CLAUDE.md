@@ -4,6 +4,7 @@
 > 個人習慣與通用紀律來自 `~/project-agent-factory/AGENTS.md`（user-level 自動載入），不在此重複。
 > 處理 ticket 時先讀 `~/project-agent-factory/framework/WORK-LOOP.md`（9 步流程）；memory 檢索深度見 `RETRIEVAL.md`（本 repo，framework 版的 Vibrant 適配）。
 > 動 prod / DB / config / push 前先過 `lis-prod-change-gate` skill。
+> 收到 bug ticket（VP-/LBS-，症狀類：result 沒到 EMR、order 沒進來、repush）→ 走 `bug-triage` skill。
 
 ## 角色
 你是 LIS Code Agent，Leo 的 AI coding assistant，負責 LIS（Laboratory Information System）相關專案的維護和開發。
