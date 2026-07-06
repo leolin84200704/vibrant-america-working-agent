@@ -1,8 +1,9 @@
 #!/bin/bash
 # AI-native bug watch — scheduled triage of newly created bug tickets.
-# Runs via launchd twice daily (com.lis.bug-watch.plist):
-#   11:30 -> look back 17h (covers overnight, since yesterday 18:30)
-#   17:30 -> look back 7h  (covers the workday, since 10:30)
+# Runs via launchd every 2 hours (com.lis.bug-watch.plist, odd hours at :30).
+# Lookback is dynamic: covers everything since the newest previous watch
+# report (+1h overlap for dedupe), clamped to [3, 24]h — so runs missed
+# while the Mac sleeps are caught up in one sweep on wake.
 # Install: cp DailyJob/bug_watch/com.lis.bug-watch.plist ~/Library/LaunchAgents/ \
 #          && launchctl load ~/Library/LaunchAgents/com.lis.bug-watch.plist
 
@@ -12,14 +13,19 @@ PROMPT_FILE="${WATCH_DIR}/watch_prompt.md"
 
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 
-# Which run is this? Before 14:00 = morning run (17h lookback), else evening (7h).
-HOUR=$(date +%H)
-if [[ $HOUR -lt 14 ]]; then
-    RUN_TAG="am"; LOOKBACK_HOURS=17
+# Dynamic lookback: hours since the newest previous report, +1h overlap.
+LAST_REPORT=$(ls -t "${WATCH_DIR}"/watch_*.md 2>/dev/null | head -1)
+if [[ -n "$LAST_REPORT" ]]; then
+    LAST_TS=$(stat -f %m "$LAST_REPORT")
+    NOW_TS=$(date +%s)
+    LOOKBACK_HOURS=$(( (NOW_TS - LAST_TS) / 3600 + 1 ))
 else
-    RUN_TAG="pm"; LOOKBACK_HOURS=7
+    LOOKBACK_HOURS=17
 fi
+[[ $LOOKBACK_HOURS -lt 3 ]] && LOOKBACK_HOURS=3
+[[ $LOOKBACK_HOURS -gt 24 ]] && LOOKBACK_HOURS=24
 
+RUN_TAG=$(date +%H%M)
 LOG_FILE="${WATCH_DIR}/run_$(date +%Y-%m-%d)_${RUN_TAG}.log"
 REPORT_FILE="${WATCH_DIR}/watch_$(date +%Y-%m-%d)_${RUN_TAG}.md"
 
@@ -78,8 +84,12 @@ while [[ $ATTEMPT -le $MAX_ATTEMPTS ]]; do
 done
 
 if [[ $SUCCESS -eq 1 && -f "$REPORT_FILE" ]]; then
-    SUMMARY=$(grep -m1 '^- Total' "$REPORT_FILE" 2>/dev/null || echo "report ready")
-    osascript -e "display notification \"${SUMMARY}\" with title \"Bug Watch (${RUN_TAG})\"" >/dev/null 2>&1 || true
+    # With 12 runs/day, only notify when there is actually something new.
+    SUMMARY=$(grep -m1 '^- Total' "$REPORT_FILE" 2>/dev/null || echo "")
+    NEW_COUNT=$(echo "$SUMMARY" | grep -o 'Total new: [0-9]*' | grep -o '[0-9]*$')
+    if [[ -n "$NEW_COUNT" && "$NEW_COUNT" -gt 0 ]]; then
+        osascript -e "display notification \"${SUMMARY}\" with title \"Bug Watch (${RUN_TAG})\"" >/dev/null 2>&1 || true
+    fi
 else
     osascript -e 'display notification "Bug watch run failed — check log" with title "Bug Watch" sound name "Basso"' >/dev/null 2>&1 || true
     exit 1

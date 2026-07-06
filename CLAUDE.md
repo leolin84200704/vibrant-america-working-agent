@@ -16,6 +16,7 @@
 - 禁止: push --force, reset --hard, push to master/staging（LIS 工作 repo 亦禁 push main）
 - 部署: feature/bugfix branch push 不會 auto-deploy；要 deploy 開 PR target `stage_test`／staging 流程，絕不直接 push staging
 - 例外（僅 personal repo `vibrant-america-working-agent` 與 `project-agent-factory`）: 允許 push 到 `main`；仍禁 force-push、reset --hard
+- **Automation 行為變更必須走 PR**：改 `scripts/dream.md`、`DailyJob/`、launchd 排程、`.claude/skills/` 等會改變 agent 自動行為的檔案，即使在 personal repo 也不得直接 commit main — 開 PR 讓 Leo 看到規則變了什麼（2026-07-06：dream 的 lesson-PR 規則曾被 agent 直接寫進 main，Leo 事後才發現）
 - Agent 不 merge — Leo 決定（例外不適用於 LIS 工作 repo）
 
 ## Ticket 系統
