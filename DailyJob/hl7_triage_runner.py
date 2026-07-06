@@ -29,7 +29,7 @@ TRANSACTION_PAY_URL = "https://www.vibrant-america.com/lisapi/v1/charging/transa
 ORDER_API_URL = "https://www.vibrant-america.com/lisapi/v1/portal/order/orderTest/order"
 
 TODAY = datetime.now().strftime("%Y-%m-%d")
-REPORT_PATH = f"/Users/hung.l/src/lis-code-agent/DailyJob/hl7_fail/triage_{TODAY}.md"
+REPORT_PATH = f"/Users/hung.l/src/vibrant-america-working-agent/DailyJob/hl7_fail/triage_{TODAY}.md"
 
 
 # ── DB helper ────────────────────────────────────────────────────────────────

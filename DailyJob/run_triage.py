@@ -21,7 +21,7 @@ MYSQL_PASS = "md?At3pUJnS2?Zx68"
 MYSQL_DB = "lis_emr"
 
 TODAY = datetime.date.today().isoformat()
-OUTPUT_DIR = "/Users/hung.l/src/lis-code-agent/DailyJob/hl7_fail"
+OUTPUT_DIR = "/Users/hung.l/src/vibrant-america-working-agent/DailyJob/hl7_fail"
 OUTPUT_FILE = f"{OUTPUT_DIR}/triage_{TODAY}.md"
 
 # ─── DB Helper ────────────────────────────────────────────────────────────────

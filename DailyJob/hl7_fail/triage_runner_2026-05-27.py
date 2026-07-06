@@ -13,7 +13,7 @@ import jwt as pyjwt
 
 # ── Constants ──────────────────────────────────────────────
 TODAY = "2026-05-27"
-OUTPUT_FILE = f"/Users/hung.l/src/lis-code-agent/DailyJob/hl7_fail/triage_{TODAY}.md"
+OUTPUT_FILE = f"/Users/hung.l/src/vibrant-america-working-agent/DailyJob/hl7_fail/triage_{TODAY}.md"
 
 DB_HOST = "lisportalprod2.mysql.database.azure.com"
 DB_PORT = 3306

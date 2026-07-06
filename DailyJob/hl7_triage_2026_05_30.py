@@ -9,7 +9,7 @@ import jwt as pyjwt
 from datetime import datetime
 
 TODAY = "2026-05-30"
-REPORT_PATH = f"/Users/hung.l/src/lis-code-agent/DailyJob/hl7_fail/triage_{TODAY}.md"
+REPORT_PATH = f"/Users/hung.l/src/vibrant-america-working-agent/DailyJob/hl7_fail/triage_{TODAY}.md"
 
 # ── Config ───────────────────────────────────────────────────────────────────
 DB_HOST     = "lisportalprod2.mysql.database.azure.com"

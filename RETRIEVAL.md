@@ -52,7 +52,7 @@ The nightly dream runs `scripts/reconcile-jira.py --apply` to do this in bulk, b
 
 The memory pipeline can die silently (it did: 2026-06-08 → 2026-07-01, three weeks unnoticed). At session start, after reading the L2 indexes, check the `Last updated:` line in `storage/short_term_memory/_index.md`:
 
-- **> 3 days old** → tell Leo the dream pipeline appears down, before doing anything else. Suggest `./scripts/run-dream.sh` and checking `launchctl list | grep lis-code-agent`.
+- **> 3 days old** → tell Leo the dream pipeline appears down, before doing anything else. Suggest `./scripts/run-dream.sh` and checking `launchctl list | grep vibrant-america-working-agent`.
 - Treat all index scores as unreliable until the pipeline runs again; fall back to Grep + frontmatter `updated:` dates.
 
 ## Session bootstrap

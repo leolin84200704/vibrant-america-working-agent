@@ -12,7 +12,7 @@ if echo "$COMMAND" | grep -qE '\-\-force|\-f '; then
 fi
 
 # Block push to protected branches.
-# NOTE: this is the personal lis-code-agent repo — pushing to `main` is allowed
+# NOTE: this is the personal vibrant-america-working-agent repo — pushing to `main` is allowed
 # here (the daily-digest job and manual knowledge consolidation land on main).
 # master/staging stay protected; force-push is blocked above.
 if echo "$COMMAND" | grep -qE 'push\s+\S+\s+(master|staging)(\s|$)'; then

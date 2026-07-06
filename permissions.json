@@ -1,6 +1,6 @@
 {
   "_comment": [
-    "Permission rules for lis-code-agent.",
+    "Permission rules for vibrant-america-working-agent.",
     "Each rule has: tool (tool name or '*'), action ('allow'/'deny'), pattern (regex), reason.",
     "Deny rules are evaluated before allow rules. If no rule matches, the action is allowed.",
     "Hardcoded safety defaults (rm -rf, force push, etc.) are always enforced regardless of this file."

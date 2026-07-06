@@ -1,7 +1,7 @@
 #!/bin/bash
 # Generate + install the launchd jobs (dream nightly 18:30, weekly Sunday 11:00)
 # for THIS machine's checkout path. The old committed plists hardcoded
-# /Users/hung.l/src/lis-code-agent, so on any other machine the jobs silently
+# /Users/hung.l/src/vibrant-america-working-agent, so on any other machine the jobs silently
 # never existed — that is how the dream pipeline died without anyone noticing.
 #
 # Usage: bash scripts/install-launchd.sh          # install/refresh both jobs
@@ -13,7 +13,7 @@ LAUNCH_DIR="$HOME/Library/LaunchAgents"
 mkdir -p "$LAUNCH_DIR" "$AGENT_ROOT/logs"
 
 if [[ "${1:-}" == "--status" ]]; then
-    for label in com.lis-code-agent.dream com.lis-code-agent.weekly; do
+    for label in com.vibrant-america-working-agent.dream com.vibrant-america-working-agent.weekly; do
         echo "== $label =="
         launchctl list "$label" 2>/dev/null || echo "  not loaded"
     done
@@ -57,13 +57,13 @@ EOF
     echo "installed + loaded: $out -> $AGENT_ROOT/scripts/$script"
 }
 
-make_plist com.lis-code-agent.dream run-dream.sh \
+make_plist com.vibrant-america-working-agent.dream run-dream.sh \
 "        <key>Hour</key>
         <integer>18</integer>
         <key>Minute</key>
         <integer>30</integer>"
 
-make_plist com.lis-code-agent.weekly weekly-routine.sh \
+make_plist com.vibrant-america-working-agent.weekly weekly-routine.sh \
 "        <key>Weekday</key>
         <integer>0</integer>
         <key>Hour</key>
@@ -72,4 +72,4 @@ make_plist com.lis-code-agent.weekly weekly-routine.sh \
         <integer>0</integer>"
 
 echo
-echo "Verify: launchctl list | grep lis-code-agent"
+echo "Verify: launchctl list | grep vibrant-america-working-agent"

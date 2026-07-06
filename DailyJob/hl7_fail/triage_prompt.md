@@ -1,6 +1,6 @@
 ## hl7_file_input Daily Triage
 
-執行以下完整流程，結果輸出到 `/Users/hung.l/src/lis-code-agent/DailyJob/hl7_fail/` 目錄下，檔名格式 `triage_{YYYY-MM-DD}.md`。
+執行以下完整流程，結果輸出到 `/Users/hung.l/src/vibrant-america-working-agent/DailyJob/hl7_fail/` 目錄下，檔名格式 `triage_{YYYY-MM-DD}.md`。
 
 ### 連線資訊
 - Azure MySQL: host=lisportalprod2.mysql.database.azure.com, port=3306, user=lis_core_emr, password=md?At3pUJnS2?Zx68, db=lis_emr, ssl-mode=REQUIRED
@@ -49,7 +49,7 @@ ORDER BY received_time DESC;
 7. 如果任何步驟失敗，記錄錯誤但繼續處理下一筆
 
 ### Step 5: 產出報告
-寫入 `/Users/hung.l/src/lis-code-agent/DailyJob/hl7_fail/triage_{YYYY-MM-DD}.md`，格式：
+寫入 `/Users/hung.l/src/vibrant-america-working-agent/DailyJob/hl7_fail/triage_{YYYY-MM-DD}.md`，格式：
 ```markdown
 # HL7 File Input Daily Triage — {YYYY-MM-DD}
 

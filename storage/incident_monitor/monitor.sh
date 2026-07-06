@@ -2,8 +2,8 @@
 # INCIDENT-20260604 — every-5min tick. Idempotent.
 set +e
 
-STATE="/Users/hung.l/src/lis-code-agent/storage/incident_monitor/INCIDENT-20260604.state.json"
-LOG="/Users/hung.l/src/lis-code-agent/storage/incident_monitor/INCIDENT-20260604.ticks.log"
+STATE="/Users/hung.l/src/vibrant-america-working-agent/storage/incident_monitor/INCIDENT-20260604.state.json"
+LOG="/Users/hung.l/src/vibrant-america-working-agent/storage/incident_monitor/INCIDENT-20260604.ticks.log"
 
 NOW_TS=$(date +%s)
 NOW_ISO=$(date -u +"%Y-%m-%dT%H:%M:%SZ")

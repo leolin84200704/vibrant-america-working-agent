@@ -2,8 +2,8 @@
 # hl7_file_input Daily Triage — runs via launchd at 4:00 AM daily
 # Uses Claude Code CLI to execute the triage prompt
 
-PROMPT_FILE="/Users/hung.l/src/lis-code-agent/DailyJob/hl7_fail/triage_prompt.md"
-LOG_DIR="/Users/hung.l/src/lis-code-agent/DailyJob/hl7_fail"
+PROMPT_FILE="/Users/hung.l/src/vibrant-america-working-agent/DailyJob/hl7_fail/triage_prompt.md"
+LOG_DIR="/Users/hung.l/src/vibrant-america-working-agent/DailyJob/hl7_fail"
 LOG_FILE="${LOG_DIR}/run_$(date +%Y-%m-%d).log"
 
 export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"

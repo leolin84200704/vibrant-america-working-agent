@@ -1,7 +1,7 @@
 #!/bin/zsh
 # Vibrant America nightly digest — headless Claude Code summarizes today's code changes
 # (Vibrant-America org, read-only via gh) + Jira VP activity into
-# long-term-memory/daily-digest/<DATE>.md, then commit+push to lis-code-agent auto/daily-digest.
+# long-term-memory/daily-digest/<DATE>.md, then commit+push to vibrant-america-working-agent auto/daily-digest.
 #
 # Runs in an ISOLATED git worktree (this directory), NEVER in Leo's working repo.
 # Scheduled via launchd at local midnight. The Mac may be asleep at fire time, so this

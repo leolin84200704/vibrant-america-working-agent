@@ -14,7 +14,7 @@
 - 允許: checkout -b, commit, push（僅自己的 branch）
 - 禁止: push --force, reset --hard, push to master/staging（LIS 工作 repo 亦禁 push main）
 - 部署: feature/bugfix branch push 不會 auto-deploy；要 deploy 開 PR target `stage_test`／staging 流程，絕不直接 push staging
-- 例外（僅 personal repo `lis-code-agent` 與 `project-agent-factory`）: 允許 push 到 `main`；仍禁 force-push、reset --hard
+- 例外（僅 personal repo `vibrant-america-working-agent` 與 `project-agent-factory`）: 允許 push 到 `main`；仍禁 force-push、reset --hard
 - Agent 不 merge — Leo 決定（例外不適用於 LIS 工作 repo）
 
 ## Ticket 系統
