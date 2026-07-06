@@ -54,12 +54,18 @@ Execute applicable operations:
 
 1. **Distill journal** — For `undistilled_journal` entries: extract generalizable insights (Decisions + why, ruled-out approaches, user feedback) into the appropriate LTM file (emr-integration.md, patterns.md, repos.md, ticket-routing.md). Set `distilled: true` in the entry's frontmatter. This is the ONLY path by which LTM gets written — the work loop never writes LTM directly.
 
-   **Universal-lesson routing** — if an insight is a job-agnostic engineering discipline (would hold at any employer/project — testing, DB safety, migration hygiene, config coupling), do NOT write it to project-agent-factory directly; propose it via a lesson PR per `~/project-agent-factory/CONTRIBUTING.md`:
+   **Universal-lesson routing** — a lesson may be *proposed* to project-agent-factory only if it clears ALL of these bars (2026-07-06: Leo rejected 3 lesson PRs as too agent-specific — the previous bar was far too low):
+   - **Standalone test**: the lesson text reads fully standalone with ZERO domain context — no LIS/EMR/HL7/integration/pipeline nouns, no "our system" phrasing. If stripping the domain nouns leaves it vague or trivial, it is not universal.
+   - **Cross-domain evidence**: supported by >=2 cases from *different* domains (e.g. one LIS incident + one calendar/billing incident is still ONE employer-domain — that does not count). Two incidents from the same subsystem never qualify.
+   - **Discipline, not behavior**: it must prescribe a way of working (verify X before Y), not describe how a particular class of system behaves.
+
+   Default is DO NOT PROMOTE. Expect most dream runs to promote nothing; a lesson PR should be rare (roughly monthly, not nightly). When a lesson is strong but fails a bar, write it to `~/project-agent-factory/framework/proposals/{date}-{slug}.md` (committed to project-agent-factory main as an unreviewed inbox item) instead of opening a PR — Leo triages the inbox on his own schedule.
+
+   For the rare lesson that clears all bars, propose via PR per `~/project-agent-factory/CONTRIBUTING.md`:
    1. If `~/project-agent-factory` does not exist on this machine, skip and note it in the dream log.
    2. `git -C ~/project-agent-factory pull`, then grep `framework/ENGINEERING-LESSONS.md` — skip if already covered.
-   3. Create branch `lesson/lis/{slug}`, append the **de-identified** lesson (no Vibrant/customer names, internal hostnames, VP ticket ids in the file) to the matching section, commit + push, open a PR with `gh pr create` using the CONTRIBUTING format: `[lesson:lis]` title, body with Source / Why universal (>=2 cases or an incident) / Example / Target. Identifying details (VP ids, customers, incidents) belong in the PR body as evidence, not in the file. Do NOT merge — Leo reviews.
-   4. If `gh` or push is unavailable: write the same content to `~/project-agent-factory/framework/proposals/{date}-{slug}.md` and commit to project-agent-factory main as an unreviewed inbox item.
-   5. Job-specific knowledge stays in this repo's LTM only. List proposed lesson PRs in the dream log.
+   3. Create branch `lesson/lis/{slug}`, append the **de-identified** lesson to the matching section, commit + push, open a PR with `gh pr create` using the CONTRIBUTING format: `[lesson:lis]` title, body with Source / Why universal (must cite the cross-domain cases) / Example / Target. Identifying details (VP ids, customers, incidents) belong in the PR body as evidence, not in the file. Do NOT merge — Leo reviews.
+   4. Job-specific knowledge stays in this repo's LTM only. List proposed lesson PRs and inbox proposals in the dream log.
 
 2. **Extract** — For `lasting_insight` STM files: extract Lessons Learned to the appropriate LTM file. Grep the target LTM file first; don't duplicate if already extracted.
 
