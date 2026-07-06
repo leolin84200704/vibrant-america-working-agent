@@ -1,0 +1,22 @@
+[
+  {"query": "/bug-triage VP-17216", "should_trigger": true},
+  {"query": "VP-17216 Cerbo 客戶說 result 沒到 EMR，幫我看一下", "should_trigger": true},
+  {"query": "triage 這張 bug: VP-16001", "should_trigger": true},
+  {"query": "客戶回報 lab results 沒有出現在他們的 EMR 裡，ticket 是 VP-13517", "should_trigger": true},
+  {"query": "幫我 repush accession 2606116259 的 result", "should_trigger": true},
+  {"query": "LBS-1547 order 沒進來，hl7_file_input 好像有失敗記錄", "should_trigger": true},
+  {"query": "VP-17039 missing EMR order，查一下為什麼沒進單", "should_trigger": true},
+  {"query": "Practice Fusion 客戶說從上週開始都沒收到報告，開了 VP-16001", "should_trigger": true},
+  {"query": "new bug ticket VP-17300: calendar booking returns 500 for some providers, please handle it", "should_trigger": true},
+  {"query": "這張 LBS 是 Zendesk 進來的 hotfix：endpoint revert 之後要 repush order", "should_trigger": true},
+  {"query": "customer says HL7 results stopped arriving in their EMR since Friday, no ticket yet — investigate", "should_trigger": true},
+  {"query": "VP-16850 掛在 sprint 裡的 bug：calendar slot 會掉格，幫我處理", "should_trigger": true},
+  {"query": "幫我實作 VP-16629 這張 feature ticket：approve/reject integration requests 的 API", "should_trigger": false},
+  {"query": "我要跑一個 SQL 修 prod 的資料，先確認一下流程", "should_trigger": false},
+  {"query": "這張 ticket 的需求描述很模糊，幫我釐清要改什麼再動手", "should_trigger": false},
+  {"query": "把 VP-16921 的 PDF 附件轉成 markdown 給我看", "should_trigger": false},
+  {"query": "幫我 review PR #8", "should_trigger": false},
+  {"query": "deploy emr-v2 到 staging 的正確流程是什麼？", "should_trigger": false},
+  {"query": "加一個新的 EMR integration，客戶是 XYZ Clinic，SFTP 資訊在 ticket 裡", "should_trigger": false},
+  {"query": "今天的 daily digest 跑了嗎？", "should_trigger": false}
+]
