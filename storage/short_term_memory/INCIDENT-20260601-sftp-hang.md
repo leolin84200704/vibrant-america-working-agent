@@ -3,7 +3,7 @@ id: INCIDENT-20260601-sftp-hang
 type: stm
 category: technical
 status: active
-score: 0.1576
+score: 0.1508
 base_weight: 0.9
 created: 2026-06-01
 updated: 2026-06-01
@@ -40,6 +40,7 @@ links:
 - VP-17065
 - VP-17217
 - VP-17222
+- VP-17312
 - failures
 - repo-catalog
 - repos
@@ -53,6 +54,8 @@ tags:
 summary: 'lis-emr-v2 pod recurring hang: SftpConnectionService singleton''s safeDisconnect
   awaits client.end() with no timeout, blocking all callers'
 ---
+
+
 
 
 

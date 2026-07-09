@@ -3,11 +3,11 @@ id: failures
 type: ltm
 category: technical
 status: active
-score: 1.0859
+score: 1.1004
 base_weight: 0.9
 urgency: 3
-created: 2026-07-05
-updated: 2026-07-05
+created: 2026-07-06
+updated: 2026-07-06
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -88,6 +88,7 @@ links:
 - VP-17217
 - VP-17222
 - VP-17283
+- VP-17312
 - business-model
 - business-model-deep
 - feedback_batch_db_verify
@@ -148,11 +149,12 @@ summary: Auto-aggregated failure index from 70 entries across STM
 
 
 
+
 # Failure Index
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-07-05 — total 70 entries
+> Last updated: 2026-07-06 — total 70 entries
 
 ## Themes
 

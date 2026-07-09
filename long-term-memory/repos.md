@@ -3,7 +3,7 @@ id: repos
 type: ltm
 category: technical
 status: active
-score: 0.891
+score: 0.9356
 base_weight: 0.9
 created: 2026-04-22
 updated: 2026-04-22
@@ -70,6 +70,7 @@ links:
 - VP-17077
 - VP-17217
 - VP-17222
+- VP-17312
 - business-model
 - business-model-deep
 - failures
@@ -81,6 +82,8 @@ tags:
 - grpc
 summary: 'Active repo reference: tech stack, ports, key areas, setup'
 ---
+
+
 
 
 
@@ -240,7 +243,13 @@ summary: 'Active repo reference: tech stack, ports, key areas, setup'
   - **Stage 3a done**: SFTP fetch / HL7 parse / clinic resolution (via NPI lookup) in `src/modules/hl7-order-processing/processors/hl7-order.processor.ts`
   - **Stage 3b DONE (VP-16463, prod since ~2026-05-13)**: payment + sendOrder + emr_sample write ported to `src/modules/hl7-order-processing/services/order-finalizer.service.ts`. EMR-Backend `OrderTestClient` endpoints (BEST_DEAL / labProcessingFee / order / orderV2 / orderSetting / shortcut / paymentMethods / transactionPay) → wellness URLs in `EMR-Backend/.../orderApi.yaml` (most `api.vibrant-wellness.com`, except **BEST_DEAL on `api.vibrant-america.com`**). ~~Only VP-16463 batch-cutover clients route through emr-v2; others still hit Java EMR-Backend.~~ **UPDATE 2026-06-10 (Leo 確認)**: Java EMR-Backend 已**完全停用**——所有 EMR-originated order 現在都走 lis-backend-emr-v2（含 bestDeal / order / charging）。改 EMR order 行為只需動 emr-v2，不必動 EMR-Backend repo。
   - **LBS-1541 / bestDeal host**: emr-v2 `generateBestDeal()` (order-test-client.service.ts:35-41) 讀 `ORDER_BEST_DEAL_URL`，fallback hardcode `api.vibrant-america.com`。**cloud `api.` host 沒有 server-side 免費 Total Ig (id 167) add-on rule，只有 on-prem legacy `lis.vibrant-america.com` 有**（wellness 遷移時靜默掉的；orderApi.yaml「byte-identical 2026-05-11」註解是錯的）。interim fix = 在 config 設 `ORDER_BEST_DEAL_URL=https://lis.vibrant-america.com/...`，待 cloud bestDeal 更新後切回。同 token（VIBRANT_API_TOKEN）兩台 host 都收；改此 env 不牽連 charging/order（各自獨立 env）。
-  - **⚠ 部署現況 (2026-06-10)**: live prod emr-v2 跑在 **on-prem (192.168.60.x)**，**AKS 上沒有 emr-v2 pod**（雲端遷移未完成，AKS configmap 已備但無 pod）。`lis-emr-v2-config.yaml`(staging) 與 `lis-emr-v2-config-prod.yaml`(prod) 是 **gitignored 的本地 ConfigMap 副本**，Leo 直接 `kubectl apply` 部署（不入版控、無 PR）。改 prod 行為改這兩個檔，不是改 AKS configmap。
+  - **⚠ 部署現況 (updated 2026-07-08, supersedes 2026-06-10「AKS 無 pod」)**: prod emr-v2 是**雙 pod 混合**——
+    - **AKS pod** `lis-emr-v2-deployment-prod`（ns `emr-v2`，redis sidecar）：Phase A (VP-17291) 起 serve 所有 **endpoints**；Stage B (VP-17312, 2026-07-07) 起 `POD_ROLE=all` + `PIPELINE_LOCATION=cloud` + consumer group `emr-result-consumer-cloud-production`——pipeline 依 DB flag 分區，flags 全 onprem 時 idle。AKS egress IP `20.14.29.219`（外部 vendor SFTP allowlist 用）。
+    - **on-prem pod**（appserver04）：`PIPELINE_LOCATION=onprem`，目前跑全部 pipeline（1263 integrations / 198 folders 全 onprem）。
+    - **分區機制 (VP-17312)**：`pipeline_location ENUM('onprem','cloud')` 在 `ehr_integrations` / `sftp_folder_mapping` / `emr_periodic_report_customers` 三表，UPDATE 即時生效＝instant rollback。Stage C canary（ZymeBalanz→cloud→rollback）2026-07-08 全程 PASS。widening 前置：先修 VP-17342 silent-drop；同 (legacy_emr_service, sftp_result_path) dest 的 integrations 要一起 flip（VP-17343）；order 全留 on-prem（result-first）。
+    - **Deploy 鏈**：main branch Jenkins build 一次做完 build image→on-prem rollout restart→ACR push→AKS apply（SHA-pin）——merge staging→main 的 release PR 即是部署。staging endpoints 也在 AKS（VP-17363, 2026-07-08，`/v1/lis/emr-service-staging`，web-only `-staging` 物件；staging DB 仍在 on-prem `192.168.60.11:3306`，AKS 可達已驗）。
+    - `lis-emr-v2-config.yaml`(staging) 與 `lis-emr-v2-config-prod.yaml`(prod) 仍是 **gitignored 本地 ConfigMap 副本**；⚠ Jenkins 會把 AKS ConfigMap sync 到**兩邊** cluster——cloud-only env（如 KAFKA_CONSUMER_GROUP override）必須放 deployment 的 pod-level env（env 蓋 envFrom），不能進 ConfigMap。
+    - ⚠ 既有 quirk：main build 會 restart default ns 的 on-prem **staging** pod 並把 image 重設回 `:latest`，蓋掉 staging branch 的 set image（VP-17363 驗證；staging cloud pod 不受影響）。
   - **Customer-pay charge flow**: `order-finalizer.service.ts` (charge branch: customerPay + stax method on file) → `ChargeClientService.getFirstPaymentMethod` + `transactionPay` → `api.vibrant-wellness.com/v1/charging/{paymentMethod/allSharedPaymentMethods, transaction/pay}`. Java ref = `ParseHL7.java:988-1006` + `ChargeClient.java`. Auth header has **no "Bearer " prefix** (Java quirk, intentionally preserved).
   - **⚠️ VP-16777 parity gotcha**: Java `TransactionPayInput` carries field-initializer defaults (`token_platform="stax"`, currency/charge_type/type/payment_source/new_sample). TS interfaces have **no runtime defaults** → caller must spread `TRANSACTION_PAY_DEFAULTS` (in `dto/payment.dto.ts`). Omitting `token_platform` makes the charging API silently not charge the card. See [[VP-16777]].
   - **emr-v2 不 durably 存 per-order 收費結果**: `order_intake_records` dormant（近期 0 筆）、`emr_sample` 不可靠當收費查詢源。查某 EMR order 收費/payment 狀態 → 上游 LIS-core / charging 系統。
@@ -315,6 +324,7 @@ sudo prompt 用 `echo <pw> | sudo -S <cmd>`。Heredoc 內含 `[^...]` 之類 exp
 - `lis-emr-prod-<hash>-<id>` = **V1 Java** EMR-Backend (image `192.168.60.10:6004/prod/emr/execute_all:latest`)
 - `lis-emr-v2-deployment-prod-<hash>-<id>` = **V2 NestJS** prod
 - `lis-emr-v2-deployment-<hash>-<id>` = **V2 NestJS** staging（同 cluster 同 node、不同 deployment，連 staging DB `192.168.60.11`）
+- AKS ns `emr-v2` 另有 `lis-emr-v2-deployment-prod-*`（prod cloud pod，VP-17291/17312）與 `lis-emr-v2-deployment-staging-*`（staging endpoints 上雲，VP-17363）——與 on-prem deployment 名字相近但分屬不同 cluster，看 kubectl context 別搞混
 
 **Node-level container log path**（pod 已 GC 後）: `/var/log/pods/default_<podname>_<uid>/<container>/0.log` symlink 到 `/var/lib/docker/containers/<id>/<id>-json.log`。需要 sudo。**但 GC 後 docker container json log 也會清**、別賴它做 post-mortem。
 

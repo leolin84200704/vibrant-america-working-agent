@@ -3,7 +3,7 @@ id: patterns
 type: ltm
 category: repo_patterns
 status: active
-score: 0.1782
+score: 0.1881
 base_weight: 0.8
 created: 2026-04-22
 updated: 2026-07-06
@@ -31,6 +31,7 @@ tags:
 - investigation
 summary: Build/deploy patterns, investigation flows, DB connections, known issues
 ---
+
 
 
 
@@ -1135,3 +1136,11 @@ LIS-transformer-v2 calendar：customer 預約「能不能 book」要與「getLab
 
 ### OAuth prod DB（Postgres `Auth0`）read-only 查詢
 `kubectl get secret my-secret -n oauth` 取 `OAUTH_DATABASE_URL` + `/opt/homebrew/opt/libpq/bin/psql`。`Session` JOIN `Client` 可反查「誰在什麼時候用哪個 client 拿 token」。
+
+### Dormant feature：DB-config gate + short-TTL cache（VP-17344 確立，接 VP-16463/VP-17312 的 flag-cutover 族）
+
+新功能要「部署零行為差異、之後 Ops 手動啟用」時的標準做法：
+- 開關放 **DB 欄位**（ENUM，DEFAULT = 舊行為），不是 env var——UPDATE 即啟用/rollback，不用重新部署；per-integration/per-row 粒度。
+- 熱路徑不能每 event 查 DB → **短 TTL（60s）in-memory cache** 的 gate（先查「有沒有任何 row 開啟」，空集合時新路徑零成本 early-return）。
+- gate 查詢失敗必須 **fail-CLOSED**：回空集合且不沿用 stale cache——新功能暫停、舊行為不受影響。注意「註解說 paused 但 code 留著上次的 cache」這種寫法是 fail-open，Cursor bot 在 VP-17344 抓過。
+- 部署驗證標準：flags 全 default 時新舊 code 的查詢/行為 **byte-identical**（VP-17312 pre-merge zero-diff audit 的做法）。

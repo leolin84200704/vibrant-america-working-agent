@@ -3,7 +3,7 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 0.8168
+score: 0.8415
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-07-05
@@ -60,6 +60,7 @@ links:
 - VP-17120
 - VP-17136
 - VP-17283
+- VP-17344
 - fhir-api
 tags:
 - emr
@@ -74,6 +75,8 @@ tags:
 summary: EMR/HL7/SFTP integration rules, identity mapping, MSH values, bundle config,
   hl7_file_input triage
 ---
+
+
 
 
 
@@ -983,3 +986,20 @@ WHERE (ei.integration_type <> 'FULL_INTEGRATION' OR ei.ordering_enabled = 0)
   - control_id/emr_order_id 來源依 vendor 而異：OPTIMANTRA = 檔名數字；MDHQ = 檔案內容的 MQ* id（檔案丟失即無法重建，向 vendor 要 MSH.10，**不要**請 vendor resend — 會重複下單）。
   - THM 在自家 SFTP 有 `/Prod/OrderArchive` 可撈回原檔；OPTIMANTRA/MDHQ 無。
 - Retry 雙倍燒毀陷阱：AKS 測試 pod 與 on-prem pod 同時跑 fetch + retry-rescan，redlock 各自鎖在自己的 redis sidecar → 無跨 pod 互斥；沒檔案的 pod 用「Local file missing」燒 retry_num、有檔案的 pod 用真失敗燒 → retry 兩倍速耗盡。Phase B cutover 前 retry-rescan 也要 gate 在 intake role。
+
+## Result push levels — per-report / per-sample-type partial push（VP-17344, 2026-07-08，dormant 上線）
+
+- **機制**：`ehr_integrations.result_push_level` ENUM('WHOLE_ORDER','PER_REPORT','PER_SAMPLE_TYPE') DEFAULT WHOLE_ORDER + `result_transmission_records.push_scope_key`（如 `SAMPLE_TYPE:EDTA` / `REPORT:VA`；whole-order 記錄 = NULL，新舊互不干擾）。全 fleet 部署時 100% WHOLE_ORDER（零行為變化）；啟用 = `UPDATE ehr_integrations SET result_push_level=... WHERE id=...`，60s listener cache 內生效，rollback = 改回 WHOLE_ORDER。
+- **設計定數**：partial push 強制 `add_report='0'`（報告 PDF 未生成時 downloadPdfFromApi 會 ~70s×5 retry spiral）；partial-level integration 仍保留 final whole-order push（no-stall AC）；redraw 一律 whole-order；REPORT scope 已 TRANSMITTED 永不重推、未送達只擋 24h；SAMPLE_TYPE scope 24h 後可重推（redraw→re-finish）。gate 查詢失敗 = fail-CLOSED（空集合、不留 stale cache，partial 暫停、whole-order 不受影響）。
+- **記錄定位**：partial job 帶 `transmission_record_id`，processor 的 retry/failure 更新精準打該 row——不能用 scope filter updateMany（會改寫較舊的 TRANSMITTED sibling）。已知 latent：whole-order updateMany 仍會打 >24h 舊 sibling（pre-existing，未動）。
+- **Ops doc**：Confluence「Result Granularity」folder（pages/2542501892）。測試 integrations `cvp17344e2etest0000000001/2`（customer 999997 → Vibrant 自家 SFTP /Test/Input/EMR_V2/VP17344*）。
+
+### general_sample_events 事件語意（設計 partial push 時查證，ClickHouse 192.168.62.85:8123 kafka db）
+
+- **`sample_type_all_finish`**（lis-result，2026-07-08 Yekai 新增）：某 tube/sample type 全部 tests finished 即發、不管 TNP；是 `sample_type_all_finish_with_tnp` 的 superset（後者仍在 TNP≥1 時另發，獨立訊息、既有 consumer 不受影響）。~4-5k/day。
+- **`new_report_status_updated`**（lis-report）：每次 per-report status 變化都發（**ready 和 viewed 都算**），consumer 要自己 diff 哪些 report 新 ready；producer 送 **sample_id=0**，要用 `getSampleIdByBarcode(accession)` 反查。~1.3k/day partial。
+- **`personalized_report_ready`** = barcode 下**全部** reports 完成才發，不是 per-report——per-report trigger 別用它。
+- **lis-result 系事件 customer_id NULL / clinic_id 0** → 必須 `grpcClient.getSampleRelevantInfo(sample_id)` 解析 customer/clinics（回全部 clinicIds，eligibility 查詢要 `clinic_id IN (...)` 不能只拿第一個）。
+- `products_finished`：per-product finish，~0.9% 會重發 2-6 次 → consumer 需冪等。
+- 順序：`results_all_finished` → `sample_finished`(/`_with_tnp`) → `report_finished`（最後，report 生成完）。
+- **跨團隊 event gap 會在 ticket 進行中消失**：前一天查證「沒有 plain per-sample-type finish event」，回報後 producer 團隊一天內加了 `sample_type_all_finish`——設計 workaround 前先重驗 ClickHouse ground truth。
