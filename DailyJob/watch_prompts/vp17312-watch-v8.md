@@ -1,11 +1,19 @@
-# VP-17312 Watch v7 — 30-min prod monitoring prompt
+# VP-17312 Watch v8 — 30-min prod monitoring prompt
 
 > Canonical copy of the session-cron prompt (cron `13,43 * * * *`, session-only,
 > 7-day expiry — re-create with CronCreate from THIS file after a session restart).
-> v7 adds Step 5 (VP-17412 agent-layer failure diagnosis) and Step 6 (ghost detector
-> as a numbered step). Changes to this file = automation behavior change → PR.
+> v8 adds ghost LIVE CAPTURE to Step 6. Changes to this file = automation
+> behavior change → PR.
 
 ## Changelog
+- v8 (2026-07-14): Step 6 ghost detector gains LIVE CAPTURE: on new_tmp>0,
+  same-tick PROCESSLIST snapshot (app account, full HOST incl. port),
+  classify sources (10.224.x = AKS legit; 45.24.217.146 = office NAT shared
+  by legit on-prem pod AND any office machine — excess connection group =
+  ghost pool), record received_time (UTC) as the correlation key for IT
+  firewall/NAT lookup. Clean baseline 2026-07-14: AKS 9 conns, NAT 11 conns.
+  Also: repush is_cloud=0 rows documented as expected; row 6590 rescued
+  (sample 2595956, duplicate watch if vendor re-sends).
 - v7 (2026-07-14): +Step 5 failure diagnosis: snapshot pod-log evidence to
   storage/failure-evidence/ at detection time, LLM-diagnose root cause, UPDATE
   hl7_file_input.error_detail (bounded single-id, app account). Per Leo:
@@ -29,5 +37,9 @@
    b. Diagnose the root cause (LLM): emr_code_not_found → reverse-lookup code ownership (VACP: bundle owner vs NPI resolution winner — ehr_integrations for the NPI's customers, rank LIVE+ordering by FULL_INTEGRATION>ORDER_ONLY then updated_at DESC; VATEST/VAREQU → orderability; VASC → Get Shortcuts API catalog); customer_not_found → near-misses (rows exist but not LIVE/ordering_enabled); file-missing//tmp → ghost-process storage explanation; sendOrder/payment → upstream error from logs.
    c. Write the full English explanation to DB: UPDATE hl7_file_input SET error_detail='<explanation>' WHERE id=<id>; using the app write account (access-and-secrets.md, user lis_emr). Bound every UPDATE to the explicit id.
    d. Report the diagnosis to Leo in the tick summary (1-2 lines per failure).
-6. Ghost detector: SELECT COUNT(*) FROM hl7_file_input WHERE localDir LIKE '/tmp/%' AND received_time >= NOW() - INTERVAL 40 MINUTE; — >0 = anomaly (details + evidence snapshot per 5a).
+6. GHOST DETECTOR + LIVE CAPTURE: SELECT COUNT(*) new_tmp FROM hl7_file_input WHERE localDir LIKE '/tmp/%' AND received_time >= NOW() - INTERVAL 40 MINUTE; — if >0, in the SAME tick immediately (ghost's Prisma pool may still be connected):
+   a. SELECT HOST, USER, COMMAND, TIME, STATE, INFO FROM information_schema.PROCESSLIST WHERE USER IN ('lis_emr','lis_core_emr') ORDER BY HOST; via the app account — full HOST incl. source port.
+   b. Classify source IPs: 10.224.x.x = AKS cloud pod (legit); 45.24.217.146 = office NAT (SHARED by legit on-prem pod AND any office machine). Compare per-IP connection count against clean baseline (2026-07-14: AKS 9, NAT 11) — excess group on the NAT = ghost pool; record its ports.
+   c. Snapshot ghost row dump + processlist + exact received_time (UTC) to storage/failure-evidence/<date>-ghost-<id>.md, commit. received_time is the correlation key for IT firewall/NAT lookup (outbound to the vendor SFTP host at that instant).
+   d. Report processlist findings to Leo.
 Context: batch-4 flipped 2026-07-10 (MDHQ 403 etc.; snapshots scratchpad vp17312_batch{1..4}_snapshot.tsv; rollback = UPDATE ids back to onprem). Cloud/onprem = 505/530. Remaining onprem: cust 15185 (P2P), cust 5784 (ChARM), clinic 7145 (P2P), batch-5 externals blocked on egress 20.14.29.219 allowlist. VP-17344 partial dormant (2 test integrations). Row 6590 rescue awaiting Leo approval. Known-broken vendors (do not re-alert): Cascades (host dead since 6/18, 2 samples stranded, PM outreach), Marqimedical (DNS dead, dormant).
