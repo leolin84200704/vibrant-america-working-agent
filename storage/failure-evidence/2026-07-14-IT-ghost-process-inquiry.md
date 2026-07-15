@@ -1,7 +1,27 @@
 # IT Inquiry: locate a rogue lis-backend-emr-v2 instance hitting production
 
-Prepared 2026-07-14. Send to IT / infra. Goal: identify the machine running
-an unauthorized old copy of the order-fetch service against production.
+Prepared 2026-07-14, updated 2026-07-15 — **PRIORITY P1**. Send to IT / infra.
+Goal: identify the machine running an unauthorized old copy of the order-fetch
+service against production.
+
+## 2026-07-15 UPDATE — escalating, now ~hourly, and it is INTERNAL
+
+Live monitoring caught two fresh strands on 2026-07-15, roughly one hour apart,
+and one gives a direct internal lead:
+
+- **2026-07-15 16:04:14 UTC** — pulled `12604_071526.hl7` from **THM SFTP
+  45.24.217.155** (this is Vibrant's OWN internal SFTP). Because the target is
+  internal, IT can read **45.24.217.155's SFTP auth log** for which internal
+  host authenticated as user `THM` and fetched `/Prod/Orders/12604_071526.hl7`
+  at 16:04 UTC — this should pinpoint the machine directly.
+- **2026-07-15 17:05:14 UTC** — pulled `order_354_1784134863_74.hl7` from
+  **MDHQ 34.199.194.51:2210** (clinic risefunctionalmedicine).
+
+The rogue's DB connections come from behind the office/on-prem NAT
+**45.24.217.146** — same 45.24.217.x subnet as the internal SFTP it hit — so
+**the machine is inside Vibrant's internal network**, not a home/remote laptop.
+Cadence is ~hourly around :04–:05 past the hour, so it is also predictable
+enough to watch live. Each firing strands a real patient order (5+ so far).
 
 ## What we're seeing
 
@@ -55,12 +75,16 @@ we snapshot the DB connection list (with source ports) at that instant, which
 should give you a port to match against the NAT table. We'll forward it when it
 fires.
 
-## Ask
+## Ask (P1)
 
-1. From NAT/firewall logs, which internal host connected outbound to
-   `34.199.194.51:2210` around the two timestamps above?
-2. Once identified: stop that instance (it's running unauthorized against
-   prod) and let us know whose machine it is so we can prevent recurrence.
+1. **Fastest path**: read `45.24.217.155` SFTP auth log for the internal host
+   that logged in as user `THM` and pulled `/Prod/Orders/12604_071526.hl7` at
+   **2026-07-15 16:04:14 UTC**. That host is the rogue instance.
+2. Cross-check NAT/firewall egress to `34.199.194.51:2210` (MDHQ) at
+   **2026-07-15 17:05:14 UTC** and to `64.124.9.100` on prior dates.
+3. Once identified: stop that instance and tell us whose machine it is.
+4. Rotate the prod DB (`lis_emr`) + vendor SFTP credentials afterward — the
+   rogue holds an old copy of them.
 
 ## Why this matters
 
