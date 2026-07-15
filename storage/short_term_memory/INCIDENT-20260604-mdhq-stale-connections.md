@@ -3,7 +3,7 @@ id: INCIDENT-20260604
 type: stm
 category: technical
 status: resolved
-score: 0.1513
+score: 0.1329
 base_weight: 0.9
 urgency: 5
 created: 2026-06-04
@@ -20,6 +20,7 @@ links:
 - VP-16232
 - VP-16391
 - VP-16410
+- VP-16499
 - VP-16521
 - VP-16859
 - VP-17065
@@ -39,6 +40,8 @@ summary: 'MDHQ reports 20 stale SFTP connections/day from v2 prod pod. Root caus
   cron hammers MDHQ 172 sessions/15min. Fix = 3-stage forciblyClose (end→FIN→RST)
   + enableShutdownHooks. 2h prod verify: 1939 graceful + 1 fin_then_rst = 0 leaks.'
 ---
+
+
 
 
 

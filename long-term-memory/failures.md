@@ -3,7 +3,7 @@ id: failures
 type: ltm
 category: technical
 status: active
-score: 1.1004
+score: 1.1149
 base_weight: 0.9
 urgency: 3
 created: 2026-07-08
@@ -88,6 +88,7 @@ links:
 - VP-17222
 - VP-17283
 - VP-17312
+- VP-17412
 - business-model
 - business-model-deep
 - feedback_batch_db_verify
@@ -101,6 +102,8 @@ tags:
 - auto-generated
 summary: Auto-aggregated failure index from 69 entries across STM
 ---
+
+
 
 
 

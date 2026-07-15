@@ -71,6 +71,7 @@ links:
 - VP-17217
 - VP-17222
 - VP-17312
+- VP-17412
 - business-model
 - business-model-deep
 - failures
@@ -82,6 +83,7 @@ tags:
 - grpc
 summary: 'Active repo reference: tech stack, ports, key areas, setup'
 ---
+
 
 
 
@@ -230,7 +232,7 @@ summary: 'Active repo reference: tech stack, ports, key areas, setup'
 - **授權是雙層,RBAC 改動要兩層都處理**（VP-16980）：(1) 全域 `APP_GUARD = JwtAuthGuard`（`app.module.ts`）—— 非 admin 且請求無 customer_id/clinic_id → `validateGeneralAccess` 要求 accessibleCustomer/ClinicIds 非空,否則 `403 "Access denied: no customer or clinic permissions"`；(2) controller 內 `validateCustomerAccess`/`validateClinicAccess`/`validateIntegrationAccess`（每個 controller 各自一份,散在幾乎每個 by-id 路由）。**只改 guard 不夠** → approve/reject 仍會被第二層擋。要放行某 role 存取整組 endpoint：用 `@SkipDataAccessCheck()` decorator（`auth/decorators/`,仿 `@Public`）—— guard 命中設 `user.skipDataAccess=true` 仍要求有效 JWT,各 access-helper 比照 `isAdmin` 加 `|| user.skipDataAccess` 提早 return。**區分兩種 gate**：customer/clinic ownership（可被 skipDataAccess 放行）vs `if(!user.isAdmin) throw 'Admin role required...'` 管理權限 mutation（**不該**被 skip 連帶放寬,保留）。「只給某內部角色」改判 `internal_user_role` 而非全開。
 - **Branch / PR flow**：feature/leo/{ticket_id} → PR base=staging → 累積後另開 PR base=main ← head=staging rolling up。同一 feature branch 可有多個 PR (#116 / #118 / #120) 因為每次新 commit 起一張新 PR；最後 #121 把 staging 收進 main。「PR ready」不代表立刻進 main，要等 staging→main roll-up PR。
 - **新 controller 掛 `@UseGuards(JwtAuthGuard)` → 該 controller 所屬 module 必須 import `AuthModule`**（`AuthModule` 非 @Global，export AuthService；JwtAuthGuard 注入 AuthService）。漏 import → 開機 `UnknownDependenciesException: JwtAuthGuard can't resolve AuthService` → **CrashLoopBackOff**。比照 ResultModule/SftpModule。`npm run build`(純 tsc) 與「手動 `new Service()` 單元測試」**都抓不到**這種 module-graph DI 錯，只有 app bootstrap 會炸（VP-16934 翻車：只跑 build 就部署，staging+prod 新 pod CrashLoop）。→ **鐵則 [[feedback_start_dev_iron_rule]]：prod-impacting deploy 前必跑 `npm run start:dev` 或 `Test.compile(AppModule)` 開機驗證**（範例 `scripts/_vp16934-boot-check.ts`）。
-- **Spec/jest gotchas**：(1) `result.service` 以 bracket notation 取用 generation service 的 private 成員（`this.resultGenerationService['grpcClientService']`）→ spec mock 必須提供該 nested shape（VP-17343）。(2) repo 內有 `.claude/worktrees/` 分支副本，`npx jest <path>` 會把 worktree 內同名檔一起跑 → 一律加 `--testPathIgnorePatterns=worktrees`（VP-17344）。(3) full jest 在 clean origin/staging 本來就有 ~25 個 DI wiring 壞掉的 suite → 回歸判定要先跑 stashed baseline 對照。
+- **Spec/jest gotchas**：(1) `result.service` 以 bracket notation 取用 generation service 的 private 成員（`this.resultGenerationService['grpcClientService']`）→ spec mock 必須提供該 nested shape（VP-17343）。(2) repo 內有 `.claude/worktrees/` 分支副本，`npx jest <path>` 會把 worktree 內同名檔一起跑 → 一律加 `--testPathIgnorePatterns=worktrees`（VP-17344）。(3) ~~full jest 在 clean origin/staging 本來就有 ~25 個壞 suite~~ **RESOLVED 2026-07-13/14（VP-17407 PR #256 + VP-17408 PR #258）**：`npm test` 現在 clean checkout 82/82 suites 綠、parallel==serial。當年兩個根因：`test/setup.ts` 的 per-file `afterAll` 跑 `cleanupAllTestDatabases()`（`rm -rf test-*.db`）砍掉其他 worker 的活 DB（"table does not exist" 只在 parallel 出現）＋ per-suite `prisma db push` 沒 `--skip-generate` 會 mid-run 重生 shared test-client；另外 24 個 suite 是 stale spec（對舊 API 寫的），已全部現代化。**回歸判定不再需要 stashed baseline — 紅了就是你弄的。**(4) jest 的 FAIL 行會印兩次（run + summary），數失敗 suite 前先 dedupe。(5) `prisma/test.db` 是被 track 的 binary、測試會重建它 — diff 髒了屬預期。(6) pre-commit config-yaml-coupling hook 對任何靠近 `ORDER_INTAKE_MODE` 用法或 downward-API env（`MY_POD_NAME` fieldRef）的 commit 會 false positive（它要的兩個 yaml 不在 repo）— `--no-verify` 加說明，CJK check 手動跑（#249-#266 慣例）。
 - **Key Areas**: `src/modules/ordering/`, `src/modules/result/`, `src/modules/hl7/`, `src/modules/integration-management/`, `src/modules/hl7-order-processing/`, `src/modules/queue/` (BullMQ), `src/modules/grpc/` (multi-tier upstream clients)
 - **Scripts**: `scripts/insert-ehr-integration.ts`, `scripts/insert-order-client.ts`, etc.
 - **Result generation entry**: `resultgeneration.ResultGenerationService/GenerateBatchResultsHl7` @ `192.168.60.6:31317` — proto `src/proto/result-generation.proto`，內部 fan-out 到 multiple distinct (legacy_emr_service, sftp_result_path) destinations，sequential
@@ -256,6 +258,7 @@ summary: 'Active repo reference: tech stack, ports, key areas, setup'
     - ⚠ 既有 quirk：main build 會 restart default ns 的 on-prem **staging** pod 並把 image 重設回 `:latest`，蓋掉 staging branch 的 set image（VP-17363 驗證；staging cloud pod 不受影響）。
   - **Customer-pay charge flow**: `order-finalizer.service.ts` (charge branch: customerPay + stax method on file) → `ChargeClientService.getFirstPaymentMethod` + `transactionPay` → `api.vibrant-wellness.com/v1/charging/{paymentMethod/allSharedPaymentMethods, transaction/pay}`. Java ref = `ParseHL7.java:988-1006` + `ChargeClient.java`. Auth header has **no "Bearer " prefix** (Java quirk, intentionally preserved).
   - **⚠️ VP-16777 parity gotcha**: Java `TransactionPayInput` carries field-initializer defaults (`token_platform="stax"`, currency/charge_type/type/payment_source/new_sample). TS interfaces have **no runtime defaults** → caller must spread `TRANSACTION_PAY_DEFAULTS` (in `dto/payment.dto.ts`). Omitting `token_platform` makes the charging API silently not charge the card. See [[VP-16777]].
+  - **⚠️ UPDATE 2026-07-13/14（部分推翻上條，PR #255/#264/#263, VP-17286/VP-17411）**：charging **不會**從 token 反解 platform — `type`/`token_platform` 必須**跟著選中的 payment method 走**，stax defaults 只當 fallback（Java parity 硬編 stax 對 stripe method 是錯的）。stripe card 走 stax 憑證會 400（`Credit Card Error:` 空 stax_error = mismatch 特徵）；stripe card 走 stripe 會 2xx `requires_confirmation` + **空 payment_id（錢沒動）**，unattended flow 無法 confirm；stripe ACH charging 端 call Stripe 格式壞掉（404 空 id）。**#264 guard：finalizer success 必須有 `payment_transaction_id`**，否則記 fail reason（HL7 照 Java 語意出貨但可見；API path 直接擋）。**API path 正式規則（Leo 2026-07-14，#263 test-locked）**：customerPay 必須付款成功否則 error（不同於 HL7/EMR path 的「出貨＋記 fail reason」）；patientPayLater 無卡正常下單。文件：`docs/ORDER-PIPELINE.md`。prod 大宗是 stax-first，不受影響；stripe-first 客戶要真正可收費還缺 charging 端 off-session auto-confirm（VP-17411 追）。
   - **emr-v2 不 durably 存 per-order 收費結果**: `order_intake_records` dormant（近期 0 筆）、`emr_sample` 不可靠當收費查詢源。查某 EMR order 收費/payment 狀態 → 上游 LIS-core / charging 系統。
   - **Result-side already ported**: `result-generation.service.ts` (getReportStatusListV2 + pdf-cache/download), `test-panel-mapping.service.ts` (packagePriceMapping + packageTestMapping), `scheduled-reports/base-report.service.ts` (csvReport via `VIBRANT_API_BASE_URL`), `ehr-email-notification.service.ts` (ehrEmailSupportForProvider/InnerTeam via `EHR_EMAIL_API_BASE_URL`)
 - **Periodic report pipeline（客戶定期 SFTP 報告，`src/modules/scheduled-reports/`，VP-12605/VP-16987）**:
@@ -305,6 +308,12 @@ summary: 'Active repo reference: tech stack, ports, key areas, setup'
 - **Tech**: NestJS 9.3, Bull/Redis queues, 20+ Kafka topics
 - **Port**: 6457
 - **Note**: `setting-consumer.controller.ts` ~16K lines
+
+### Portal-Calendar（legacy，VP-16499 specialty 追查 2026-07-14）
+- **Purpose**: legacy portal calendar/clinician service — `/v1/portal/calendar/*/clinicians/first-available` 的真身（**不是** transformer-v2）
+- **Tech**: NestJS + Prisma → MySQL **crm** DB（dev `192.168.10.40:33306/crm`）；prod 跑 **on-prem**（AKS 的 portal-calendar deployments 已 scale to 0 逾 225 天 — 別被雲上物件騙）；repo 另有 schema2 → `va_schedule@192.168.10.213`（此 flow 不用）
+- **Key tables**: `clinicians`（+ `clinicians_on_lab_products` → `lab_products`，soft-delete `deleted_at`；`clinician_availability_settings`）+ `calendar`（events）
+- **⚠ v2_calendar.specialties drift 根因**：first-available API 回的是「照 availability 過濾後的 derived specialties」— 拿它當 seed source 必 drift。正解是直接讀 crm 表（email lowercase match、full-overwrite + 三向 diff）。**2026-07-14 狀態：整個 service 可能整包遷 v2，等 PM 決定 — sync 不要先做**（見 [[VP-16499]]）。
 
 ### On-prem K8s 存取（appserver04 + 192.168.60.5）
 EMR-Backend (Java v1, deployment `lis-emr-prod`) + lis-backend-emr-v2 (NestJS, deployment `lis-emr-v2-deployment` + `lis-emr-v2-deployment-prod`) 都 pinned 在 on-prem node `appserver04` (= IP `192.168.60.5`)。本機 kubeconfig `lisportalprod` 連的是 **Azure AKS**，看不到 on-prem 的 pod、SSH 進 appserver04 才能 `kubectl`。

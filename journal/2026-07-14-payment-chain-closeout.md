@@ -5,7 +5,7 @@ related:
 - VP-17286
 - VP-17408
 - VP-17411
-distilled: false
+distilled: true
 ---
 
 # Payment-chain close-out + the stacked-PR trap

@@ -3,7 +3,7 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 0.8415
+score: 0.8539
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-07-05
@@ -60,7 +60,9 @@ links:
 - VP-17120
 - VP-17136
 - VP-17283
+- VP-17286
 - VP-17344
+- VP-17411
 - fhir-api
 tags:
 - emr
@@ -75,6 +77,9 @@ tags:
 summary: EMR/HL7/SFTP integration rules, identity mapping, MSH values, bundle config,
   hl7_file_input triage
 ---
+
+
+
 
 
 
@@ -1003,3 +1008,13 @@ WHERE (ei.integration_type <> 'FULL_INTEGRATION' OR ei.ordering_enabled = 0)
 - `products_finished`：per-product finish，~0.9% 會重發 2-6 次 → consumer 需冪等。
 - 順序：`results_all_finished` → `sample_finished`(/`_with_tnp`) → `report_finished`（最後，report 生成完）。
 - **跨團隊 event gap 會在 ticket 進行中消失**：前一天查證「沒有 plain per-sample-type finish event」，回報後 producer 團隊一天內加了 `sample_type_all_finish`——設計 workaround 前先重驗 ClickHouse ground truth。
+
+## API order path (VP-17283/VP-17286) — staging E2E 測試身分與代碼（2026-07-13 建立）
+
+- **Endpoint（staging）**：`https://api.vibrant-america.com/v1/lis/emr-service-staging/order-intake` — AKS ingress 走這個 path，**沒有 `/api/v1` prefix**。JWT 用 dev secret（PyJWT 自簽），身分 customer 999997 / clinic 10136。staging pod `env=dev` → order-staging 上游；`ORDER_INTAKE_MODE` 在 cluster ConfigMap `lis-emr-v2-config`。
+- **測試病人**（customer 999997 底下，searchPatient API 可查）：`477769` TEST TEST（M, CO）、`717336` NY FORM TEST（F, NY — NY swap 測試用）、`3226406` BRIAN TEST（無 gender — IncompletePatientInfo 測試用）。
+- **測試代碼**：`VAREQUISTION463` = Gut Zoomer（**就是 GZ_EMR_CODE**，happy-path 跟 NY-swap 測試同一產品族）、`485` = GZ-NY、`VAREQUISTION99` = PSA duo（items 376+377，PSAMaleOnly 規則）、`VAREQUISTION89` = Celiac Genetics、`30010` = NutriproZ-Maintenance（ProzFollowupNoPreviousOrder 規則）；Regenere/Skincare `30011-13` 不在 classifier mapping（unrecognized 測試用）。
+- **staging 前置 fix（保留中）**：999997 的 LIVE ehr_integrations row（id `cmpcy2u1h0001r107bkwuuuuk`）原本 `ordering_enabled=false`，已改 true — fetchById 硬性要求 LIVE+ordering_enabled，這行解鎖所有後續 API-path staging 測試。
+- **Eligibility 實測 failure codes**（vs Confluence 2517139459 有 drift）：實際 `PSAMaleOnly`（文件寫 PFSAMaleOnly）、`IncompletePatientInfo`（會點名缺哪個欄位）、`ProzFollowupNoPreviousOrder`；`GeneticTestAlreadyOrdered` 在 staging 連續下兩單**沒有 fire**（rule 觸發條件待 order team 釐清）。
+- **Idempotency 語意**：同 placerId 重送回 `duplicate`（帶真 sampleId、不重複收費）；placement 失敗的 row 現在標 `failed` — follow-up 應允許 failed row 重跑（否則 placerId 永久卡死）。
+- **ConfigMap drift 教訓**：PROD ConfigMap `lis-emr-v2-config-prod` 在 E2E 通過前就已是 `ORDER_INTAKE_MODE: live`（違反 PR #206 的 flag 註記）— 「文件說 disabled」不可信，**查實際 ConfigMap**。

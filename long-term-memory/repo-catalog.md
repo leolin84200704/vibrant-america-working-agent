@@ -61,6 +61,7 @@ links:
 - VP-17217
 - VP-17222
 - VP-17312
+- VP-17412
 - business-model
 - business-model-deep
 - emr-integration
@@ -77,6 +78,7 @@ summary: 'Org-wide repo catalog: every Vibrant-America LIS repo — service type
   tech, ports, data stores, role in ecosystem. Companion to repos.md (which holds
   deep gotchas for actively-worked repos).'
 ---
+
 
 
 
