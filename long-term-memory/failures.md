@@ -3,11 +3,11 @@ id: failures
 type: ltm
 category: technical
 status: active
-score: 1.1149
+score: 1.1438
 base_weight: 0.9
 urgency: 3
-created: 2026-07-08
-updated: 2026-07-08
+created: 2026-07-14
+updated: 2026-07-14
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -32,7 +32,6 @@ links:
 - QH-919
 - VP-15460
 - VP-16009
-- VP-16154
 - VP-16164
 - VP-16168
 - VP-16169
@@ -44,21 +43,15 @@ links:
 - VP-16329
 - VP-16337
 - VP-16391
-- VP-16410
-- VP-16423
-- VP-16424
 - VP-16463
-- VP-16476
 - VP-16499
 - VP-16513
 - VP-16514
 - VP-16516
 - VP-16520
 - VP-16521
-- VP-16612
 - VP-16617
 - VP-16629
-- VP-16664
 - VP-16689
 - VP-16720
 - VP-16734
@@ -89,6 +82,8 @@ links:
 - VP-17283
 - VP-17312
 - VP-17412
+- VP-17421
+- VP-17422
 - business-model
 - business-model-deep
 - feedback_batch_db_verify
@@ -100,8 +95,9 @@ tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 69 entries across STM
+summary: Auto-aggregated failure index from 57 entries across STM
 ---
+
 
 
 
@@ -156,22 +152,22 @@ summary: Auto-aggregated failure index from 69 entries across STM
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-07-08 — total 69 entries
+> Last updated: 2026-07-14 — total 57 entries
 
 ## Themes
 
-- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 16 entries
-- [DB / migration / backfill](#db-migration) — 12 entries
-- [Other / uncategorized](#other) — 11 entries
-- [Build / TypeScript / Tooling](#build-tooling) — 9 entries
+- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 15 entries
+- [Other / uncategorized](#other) — 9 entries
+- [Build / TypeScript / Tooling](#build-tooling) — 8 entries
+- [DB / migration / backfill](#db-migration) — 8 entries
 - [Deploy / commit / push coordination](#deploy-coordination) — 4 entries
-- [Test / mock / spec](#test-mocking) — 4 entries
 - [Redis / cache / pending list](#redis-cache) — 3 entries
-- [Scope / requirement / PM communication](#scope-communication) — 3 entries
+- [Test / mock / spec](#test-mocking) — 2 entries
 - [Auth / permission / role](#auth-permission) — 2 entries
-- [Error handling / throw vs log](#error-handling) — 2 entries
+- [Scope / requirement / PM communication](#scope-communication) — 2 entries
 - [Tool / cwd / branch / repo confusion](#tool-usage) — 1 entries
 - [gRPC / network / timeout](#grpc-network) — 1 entries
+- [Error handling / throw vs log](#error-handling) — 1 entries
 - [GraphQL / API design](#graphql-api) — 1 entries
 
 ---
@@ -217,15 +213,6 @@ Picked `lock.release()` from redlock@5 docs while installing redlock@4. The two 
 - 沒查 `kit_delivery_option` same-clinic 既有 → 預設 `NO_DELIVERY` 與 practice 實際 `BOTH_BLOOD_AND_NON_BLOOD` 不一致
 - 沒查 `order_clients.old_clinic_id` → 新 record null，既有皆 1002859
 Root cause: Step 5c 只查了 integration-level 欄位（report_option / integration_type / sftp paths），沒把 `kit_delivery_option` 和 order_clients 的 `old_clinic_id` 納入 same-practice-follow-existing 檢查清單。
-
-### **[[VP-16423]]** — `2026-05-04` — kit_delivery_option 錯誤對齊 PENDING stub
-
-- 錯誤決定：Phase 2 把 7 筆 ehr_integrations.kit_delivery_option 對齊 17412 PENDING stub 的 BOTH_BLOOD_AND_NON_BLOOD
-- Root cause：誤把 PENDING stub（4/23 internal staff 預建、business 欄位全空）當「same-clinic 既有 LIVE」可 follow。實際 stub 的 kit_delivery_option 是 schema default（`@default(BOTH_BLOOD_AND_NON_BLOOD)`），不是真實設定
-- prod 驗證：(kits_options=0, kit_delivery_option=NO_DELIVERY) 配對有 112 筆全部一致；其餘 (kits_options=0, BOTH) 579 筆是 schema default 沒明確覆蓋
-- 正確規則：**kit_delivery_option 應對齊 order_clients.kits_options（runtime source of truth）**，0 → NO_DELIVERY
-- 處理：`_apply-vp16423-kit-fix.ts` UPDATE 7 筆 → NO_DELIVERY（pre-check 通過）
-- 預防：(a) PENDING / stub record 不算 same-clinic 既有可 follow；(b) 任何 ehr_integrations.kit_delivery_option 決策都先 check 對應 order_clients.kits_options 對齊
 
 ### **[[VP-16463]]** — `2026-05-13 15:46` — v2 NO_NPI parity break (RED FLAG, awaiting user decision)
 
@@ -330,117 +317,6 @@ Prod pod: `lis-emr-v2-deployment-prod-54d77c8846-c8l9b` (default ns, container `
 
 ---
 
-## DB / migration / backfill <a id='db-migration'></a>
-
-### **[[INCIDENT-20260604-mdhq-stale-connections]]** — `2026-06-04 22:00` — expect spawn syntax error with `{...}` jsonpath
-
-- `kubectl get pods -o jsonpath='{.items[0].metadata.name}'` inside expect's `spawn` argument: expect interprets `{...}` as Tcl array.
-- Fixed by switching to `--no-headers -o custom-columns=NAME:.metadata.name`.
-- Lesson: avoid `jsonpath` with Tcl-significant chars in expect scripts; prefer custom-columns output for single-field extraction.
-
-### **[[VP-16193]]** — `2026-04-17 18:30` — **insert-order-client.ts script bug: customer_id 設為 clinic_id 值**
-
-- 問題: 執行 insert-order-client.ts 後，order_clients.customer_id = 6338（Practice ID）而非 5408（Provider ID）
-- Root cause: script 內部將 customer_id 參數映射到 clinic_id 值，已知 bug
-- 修正: 手動 SQL `UPDATE order_clients SET customer_id = 5408 WHERE id = 2278`
-- 可預防: 是。未來執行 insert-order-client.ts 後必須驗證 customer_id 是否正確
-
-### **[[VP-16232]]** — `2026-04-20 14:30` — **Failure 1: 用 crm.contacts 而非 gRPC**
-
-- Error: 4,480 筆在 crm.contacts 找不到
-- Assumption: crm.contacts 有所有 customer 資料
-- Root cause: crm.contacts 只有部分 customer（可能只有 sales contacts），不是權威資料源
-- Fix: 改用 gRPC GetCustomer
-
-**Failure 2: 命名格式錯誤**
-- Error: 把 patient calendar 改成 "{name}'s Provider Calendar"
-- Assumption: 沒有確認現有命名慣例
-- Root cause: 沒有先查看已存在的 patient calendar 命名格式（應為 "{NAME}'s Patient Calendar"）
-
-**Failure 3: gRPC endpoint 錯誤**
-- Error: CORE_SAMPLE_V2_RPC (10.224.0.53:8084) → ECONNREFUSED
-- Assumption: .env 裡的值可以直接用
-- Root cause: 沒有先讀 lis-code-agent/knowledge/emr-integration.md，那裡明確記載 gRPC endpoint 是 192.168.60.6:30276
-- Fix: 用 knowledge 裡記載的 endpoint
-
-**Failure 4: NestJS createApplicationContext + gRPC**
-- Error: gRPC @Client decorator 在 CLI 模式不初始化，且 PublicBookingService.onModuleInit crash
-- Assumption: 可以用 NestJS context 跑 gRPC migration
-- Root cause: createApplicationContext 不啟動 microservice transport
-- Fix: 改用 @grpc/grpc-js + proto-loader 直接建立 gRPC client
-
-**Failure 5: 沒有使用 lis-code-agent knowledge**
-- Error: 整個過程都沒有查 knowledge 目錄
-- Assumption: 可以靠 .env 和 codebase 自己找到答案
-- Root cause: 不知道/忽略了 lis-code-agent 的知識庫系統
-- Fix: 任何 gRPC/migration 任務先讀 knowledge/
-
-### **[[VP-16329]]** — `2026-04-27 23:00` — **Failure: 第二次重跑 36816 INSERT 觸發 duplicate constraint error。**
-
-Root cause: 第一次跑時我用 `tail -50` 截取 output，後段顯示 record 資料但沒看到「✅ Successfully inserted」字樣（卡在 record dump），誤判沒成功就重跑。
-影響: 無實質影響（script 在 unique check 時擋下，沒 partial insert）。
-教訓: 確認 INSERT 成敗應 grep `Successfully|Error|❌` 而非看 record dump。後續 4 個 INSERT 都用 grep 過濾，順利完成。
-
-### **[[VP-16410]]** — `2026-05-06 02:50` — 誤解 Leo「過去的 event 無需更動」為「rollback backfill」
-
-- **錯誤推理**：Leo 說「過去 event 無需更動」我誤解為「backfill 不應該存在」，提議 DELETE 2350 claim + 2670 audit
-- **正確意思**：「不要 update / delete 既有 v2_event row」— backfill 進 claim 表的 row 是新表新資料、不是 update 既有 event
-- **Leo 糾正**：「未來如果有 accession_id 已經在 claim table 的還要創建 event 需要擋下來」— 暗示 claim table 的歷史資料是必要的（沒 backfill 就沒資料可擋）
-- **教訓**：「過去的 event 無需更動」= 不動 v2_event 表本身，**跟 claim table 是否要 backfill 無關**。下次遇到否定句指令要拆「動什麼 / 不動什麼」維度，不要把 scope 自動擴到無關的 table
-
-### **[[VP-16423]]** — `2026-05-04` — insert-ehr-integration.ts 對 25467 的 transaction 全 rollback
-
-- 錯誤：`Duplicate order_client exists for NPI '1356634760' + clinic_id '19583'`
-- 當時假設：以為 ehr_integrations INSERT 跟 order_clients INSERT 是分開 step，order_clients fail 不會影響 ehr_integrations。實際 script 用 `prisma.$transaction` 包成一包，order_clients duplicate check 拋 → ehr_integrations 也被 rollback。
-- Root cause：script duplicate 檢查依「customer_provider_NPI + clinic_id」（不是 customer_id + clinic_id + ehr_vendor_id），對「同人多 customer_id」case 不友善
-- 處理：Phase 2 raw SQL 繞過 check，ehr_integrations 用 cuid library 自生 ID，order_clients 直接 INSERT。
-- 預防：未來 ticket 若 provider list 有 same-NPI 重複，先警告 script 對 25467 case 的 order_clients 必失敗，預備 raw SQL fallback
-
-### **[[VP-16612]]** — `2026-05-18` — Initial proposed spec was wider than necessary
-
-At Step 4 I proposed `role === 'provider'` (strict). Leo refined to "exclude (clinic_id=150105 AND clinicadmin)". My version would have silently changed patient-role behavior; Leo's preserves it. Lesson: when translating PM natural language ("only X, not Y") into code, prefer narrow exclusion of Y over broad inclusion of X — the former preserves the unconstrained set.
-
-### **[[VP-16664]]** — `2026-05-18` — First-pass YAML schema change
-
-I added `*_timezone` paired fields to both YAML files at Step 5 start, planning to use them in templateModel. Leo immediately reverted with "不能改 yaml file 啊". Root cause: I conflated "BE config describing template variables" with "Postmark template body in Postmark cloud" — Leo treats the YAML AS the template-end contract; adding fields there is an API change even if Postmark template body doesn't reference them. Lesson: when spec says "embed timezone", default to enriching existing values, NOT adding paired fields.
-
-### **[[VP-16720]]** — `2026-06-01` — INSERT 新 row 漏借 same-customer NPI
-
-**症狀**：3 個新建 Anna pair (2930/8003/36290) customer_npi 寫 null（理由：ticket 表沒列 NPI 欄）。Leo 指出 144510 既有 Anna row 的 customer_npi=1073000691 — 同 customer 跨 clinic NPI 應一致，3 個新 row 該借這個值。
-
-**Root cause**：我的 sibling-borrow 邏輯只從 **same-clinic sibling** 取（borrow clinic_name / address / contact 等 clinic-level 欄位），沒考慮 **same-customer sibling**（不同 clinic 但同 customer_id）—— 那裡有 customer-level 欄位（customer_npi）。
-
-**修法**：事後 `UPDATE customer_npi + effective_npi WHERE customer_id='43262' AND clinic_id IN (2930,8003,36290)`。3 row 補上。
-
-**Preventable**：是。INSERT new pair 前應該分兩個 sibling lookup：
-- same-clinic（任一）→ borrow clinic_name, address, contact_*
-- same-customer 任一 LIVE row → borrow customer_npi, clinic_npi, effective_npi（如果有）
-
-### **[[VP-16734]]**
-
-（無實作層失敗）
-
-**Minor procedural slip**:
-- Probe script `_vp16734-check.ts` 初版查 `ehr_integration_status_history` 用 column `ehr_integration_id`（推測），實際是 `integration_id` — 一次 retry 後補上 information_schema 查欄位名再改。教訓：跨表的 FK column 命名不要憑猜，先 `SHOW COLUMNS` / information_schema 看 schema
-
-### **[[VP-16934]]** — `2026-06-10` — 完整 happy-path + exactly-once 在 staging 驗證通過（Leo 提供值）
-
-- 值：orderingProviderId=999997（→fetchById，clinic 10136 帶出）、testCodes=[VAREQUISTION463]、chargeIndicator=C、測試病患 Vptest Dryrun。
-- **happy path：`HTTP 201 {accepted, dryRun:true, sampleId:-1}`** = 全鏈路跑通（auth→customer 999997 解析→patient find/create→VAREQUISTION463 分類成功→定價/best-deal/lab-fee/kit 組裝→finalize dryRun）。沒刷卡/送單/email。
-- **exactly-once：** 同 placerId 兩次 → 1st accepted、2nd `duplicate:true` 短路。
-- ⚠️ dry-run 仍會跑 patient find/create（gRPC），staging 可能新增測試病患 Vptest Dryrun；order_intake 留了 HAPPY/DUP/TEST 測試列（皆 staging 測試資料，可清）。
-- **結論：order intake API 在 staging 可正常下單（dry-run）且 exactly-once 生效。**
-
-### **[[VP-17076]]** — `2026-06-22` — 重大查詢 bug — Prisma $queryRaw IN() 用 join 字串
-
-- 錯誤寫法 `WHERE clinic_id IN (${CLINICS.join(',') as any})` → Prisma 把整串當**單一 bound param** → SQL 變 `clinic_id IN (?)` param='2930,8003,...' → MySQL 字串轉 int 只取開頭 → **只比對到 2930**。
-- 後果: 兩支 check script (_vp17076-check.ts / _vp17076-exist.ts) 全程只看到 2930，誤判「19 clinic 都不存在 / 需新建」。Leo 自己跑 SELECT * 抓到一堆既有 row 才發現。
-- Root cause: 沿用 scripts/check-vp16329.ts 的 hardcode 單值模式，改成 array 時沒用 `Prisma.join()`。
-- 正解: `import { Prisma }` + `IN (${Prisma.join(CLINICS)})`，或對信任的整數陣列直接字串內插建 SQL。
-- 教訓: 多值 IN 查詢務必**先驗證回傳筆數合理**（20 clinic 只回 1 筆就該起疑），不能直接拿來下「不存在」結論。對應 [[feedback_batch_db_verify]] / [[feedback_join_scope_reverse_audit]]。
-
----
-
 ## Other / uncategorized <a id='other'></a>
 
 ### **[[INCIDENT-20260528]]** — `2026-05-28` — 把 hang pod log 燒掉了
@@ -452,18 +328,6 @@ Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`
 ### **[[LBS-1541]]**
 
 (none yet)
-
-### **[[VP-16424]]**
-
-（無實作層失敗）
-
-**記憶層 failure**：Step 4 呈報時引 VP-16423 STM line 173「kit_delivery_option=BOTH_BLOOD_AND_NON_BLOOD（follow 17412 既有值）」當作 same-practice follow 範例 — 但實際 DB query 17412 與其他 6 provider 全部都是 NO_DELIVERY。Root cause：VP-16423 STM Decisions 區段是早期決策草稿，最終 Leo 在 Step 6 review 時把全部 7 筆改 NO_DELIVERY 但 STM Decisions 沒同步 update（LTM `emr-integration.md` line 436 反而有寫對）。教訓：**引 STM 的決策內容前先用 DB 實際值 cross-check**，特別是時間久的 STM。
-
-### **[[VP-16476]]**
-
-_(無 execution failure。Mistakes 在 Retrospective)_
-
----
 
 ### **[[VP-16521]]** — `2026-05-28 17:52` — git stash push 把 MERGE_HEAD 弄丟
 
@@ -536,17 +400,6 @@ Production NestFactory crash at startup: `TypeError: redlock_1.default is not a 
 
 **Detection trigger:** Reading `src/config/grpc.config.ts` for endpoint info — saw `getProtoV2Path` and `package: 'coresamples_service'` for the v2 customer client.
 
-### **[[VP-16410]]** — `2026-05-06 11:00` — 在 repo root scripts/ 放 .ts 檔，破壞 nest build dist 結構
-
-- **症狀**：Leo 跑 `npm run start:dev` 報 `Cannot find module '../../prisma2/generated/client2'`
-- **誤判**：第一波分析以為是 prisma2 client + postbuild 沒 copy prisma2/ 的 repo 既有 bug，提了 quick fix `cp -r prisma2 dist/`
-- **真正根因**：我寫的 `scripts/vp-16410-integration-test.ts` 是放在 repo root `scripts/` 下的 TypeScript file，tsc 預設沒 exclude 這目錄 → 把 `scripts/*.ts` 跟 `src/*.ts` 都 include → 為避免 output 衝突，dist 結構從**扁平**的 `dist/main.js + dist/trans/...` 變成**嵌套**的 `dist/src/main.js + dist/src/trans/... + dist/scripts/...`。`prisma2.service.ts` 用相對路徑 `'../../prisma2/generated/client2'` import，從 `dist/src/trans/` 出發解析 → `dist/prisma2/generated/client2`（不存在）。原本扁平結構從 `dist/trans/` 出發解析 → `LIS-transformer-v2/prisma2/generated/client2`（git tracked，存在）
-- **修法**：把 `.ts` script 移到 `~/vp-16410-integration-test.ts.local-backup`，重 build dist 結構就恢復扁平
-- **教訓**：
-  1. 在 repo root scripts/ 寫 utility 一律用 `.js`（call PrismaClient JS API 即可，不用 ts-node 也能跑）；要寫 TypeScript 就放 `src/` 之外、且加進 `tsconfig.build.json` 的 exclude
-  2. 跟 tsc/nest build 路徑解析有關的 bug：先看 `dist/` **頂層結構**（有沒有多/少一層），比 grep import path 更快
-  3. user 強調「之前能跑」+ `git diff` 空時，要把搜尋範圍擴到 **untracked .ts 檔可能改變 tsc include scope** 這條軸
-
 ### **[[VP-16520]]** — `2026-05-28` — 把自己造成的 prisma client drift 誤判為「stale 假象」
 
 - 現象:LIS-transformer-v2 我的 branch 上 `npm run build` 跑出 18 個 `specialties` 型別錯誤(node_modules/.prisma/client v2_calendar.specialties)。schema.prisma 沒 specialties、Calendar GraphQL model 沒、我 diff 也沒。
@@ -581,6 +434,94 @@ Production NestFactory crash at startup: `TypeError: redlock_1.default is not a 
 
 ---
 
+## DB / migration / backfill <a id='db-migration'></a>
+
+### **[[INCIDENT-20260604-mdhq-stale-connections]]** — `2026-06-04 22:00` — expect spawn syntax error with `{...}` jsonpath
+
+- `kubectl get pods -o jsonpath='{.items[0].metadata.name}'` inside expect's `spawn` argument: expect interprets `{...}` as Tcl array.
+- Fixed by switching to `--no-headers -o custom-columns=NAME:.metadata.name`.
+- Lesson: avoid `jsonpath` with Tcl-significant chars in expect scripts; prefer custom-columns output for single-field extraction.
+
+### **[[VP-16193]]** — `2026-04-17 18:30` — **insert-order-client.ts script bug: customer_id 設為 clinic_id 值**
+
+- 問題: 執行 insert-order-client.ts 後，order_clients.customer_id = 6338（Practice ID）而非 5408（Provider ID）
+- Root cause: script 內部將 customer_id 參數映射到 clinic_id 值，已知 bug
+- 修正: 手動 SQL `UPDATE order_clients SET customer_id = 5408 WHERE id = 2278`
+- 可預防: 是。未來執行 insert-order-client.ts 後必須驗證 customer_id 是否正確
+
+### **[[VP-16232]]** — `2026-04-20 14:30` — **Failure 1: 用 crm.contacts 而非 gRPC**
+
+- Error: 4,480 筆在 crm.contacts 找不到
+- Assumption: crm.contacts 有所有 customer 資料
+- Root cause: crm.contacts 只有部分 customer（可能只有 sales contacts），不是權威資料源
+- Fix: 改用 gRPC GetCustomer
+
+**Failure 2: 命名格式錯誤**
+- Error: 把 patient calendar 改成 "{name}'s Provider Calendar"
+- Assumption: 沒有確認現有命名慣例
+- Root cause: 沒有先查看已存在的 patient calendar 命名格式（應為 "{NAME}'s Patient Calendar"）
+
+**Failure 3: gRPC endpoint 錯誤**
+- Error: CORE_SAMPLE_V2_RPC (10.224.0.53:8084) → ECONNREFUSED
+- Assumption: .env 裡的值可以直接用
+- Root cause: 沒有先讀 lis-code-agent/knowledge/emr-integration.md，那裡明確記載 gRPC endpoint 是 192.168.60.6:30276
+- Fix: 用 knowledge 裡記載的 endpoint
+
+**Failure 4: NestJS createApplicationContext + gRPC**
+- Error: gRPC @Client decorator 在 CLI 模式不初始化，且 PublicBookingService.onModuleInit crash
+- Assumption: 可以用 NestJS context 跑 gRPC migration
+- Root cause: createApplicationContext 不啟動 microservice transport
+- Fix: 改用 @grpc/grpc-js + proto-loader 直接建立 gRPC client
+
+**Failure 5: 沒有使用 lis-code-agent knowledge**
+- Error: 整個過程都沒有查 knowledge 目錄
+- Assumption: 可以靠 .env 和 codebase 自己找到答案
+- Root cause: 不知道/忽略了 lis-code-agent 的知識庫系統
+- Fix: 任何 gRPC/migration 任務先讀 knowledge/
+
+### **[[VP-16329]]** — `2026-04-27 23:00` — **Failure: 第二次重跑 36816 INSERT 觸發 duplicate constraint error。**
+
+Root cause: 第一次跑時我用 `tail -50` 截取 output，後段顯示 record 資料但沒看到「✅ Successfully inserted」字樣（卡在 record dump），誤判沒成功就重跑。
+影響: 無實質影響（script 在 unique check 時擋下，沒 partial insert）。
+教訓: 確認 INSERT 成敗應 grep `Successfully|Error|❌` 而非看 record dump。後續 4 個 INSERT 都用 grep 過濾，順利完成。
+
+### **[[VP-16720]]** — `2026-06-01` — INSERT 新 row 漏借 same-customer NPI
+
+**症狀**：3 個新建 Anna pair (2930/8003/36290) customer_npi 寫 null（理由：ticket 表沒列 NPI 欄）。Leo 指出 144510 既有 Anna row 的 customer_npi=1073000691 — 同 customer 跨 clinic NPI 應一致，3 個新 row 該借這個值。
+
+**Root cause**：我的 sibling-borrow 邏輯只從 **same-clinic sibling** 取（borrow clinic_name / address / contact 等 clinic-level 欄位），沒考慮 **same-customer sibling**（不同 clinic 但同 customer_id）—— 那裡有 customer-level 欄位（customer_npi）。
+
+**修法**：事後 `UPDATE customer_npi + effective_npi WHERE customer_id='43262' AND clinic_id IN (2930,8003,36290)`。3 row 補上。
+
+**Preventable**：是。INSERT new pair 前應該分兩個 sibling lookup：
+- same-clinic（任一）→ borrow clinic_name, address, contact_*
+- same-customer 任一 LIVE row → borrow customer_npi, clinic_npi, effective_npi（如果有）
+
+### **[[VP-16734]]**
+
+（無實作層失敗）
+
+**Minor procedural slip**:
+- Probe script `_vp16734-check.ts` 初版查 `ehr_integration_status_history` 用 column `ehr_integration_id`（推測），實際是 `integration_id` — 一次 retry 後補上 information_schema 查欄位名再改。教訓：跨表的 FK column 命名不要憑猜，先 `SHOW COLUMNS` / information_schema 看 schema
+
+### **[[VP-16934]]** — `2026-06-10` — 完整 happy-path + exactly-once 在 staging 驗證通過（Leo 提供值）
+
+- 值：orderingProviderId=999997（→fetchById，clinic 10136 帶出）、testCodes=[VAREQUISTION463]、chargeIndicator=C、測試病患 Vptest Dryrun。
+- **happy path：`HTTP 201 {accepted, dryRun:true, sampleId:-1}`** = 全鏈路跑通（auth→customer 999997 解析→patient find/create→VAREQUISTION463 分類成功→定價/best-deal/lab-fee/kit 組裝→finalize dryRun）。沒刷卡/送單/email。
+- **exactly-once：** 同 placerId 兩次 → 1st accepted、2nd `duplicate:true` 短路。
+- ⚠️ dry-run 仍會跑 patient find/create（gRPC），staging 可能新增測試病患 Vptest Dryrun；order_intake 留了 HAPPY/DUP/TEST 測試列（皆 staging 測試資料，可清）。
+- **結論：order intake API 在 staging 可正常下單（dry-run）且 exactly-once 生效。**
+
+### **[[VP-17076]]** — `2026-06-22` — 重大查詢 bug — Prisma $queryRaw IN() 用 join 字串
+
+- 錯誤寫法 `WHERE clinic_id IN (${CLINICS.join(',') as any})` → Prisma 把整串當**單一 bound param** → SQL 變 `clinic_id IN (?)` param='2930,8003,...' → MySQL 字串轉 int 只取開頭 → **只比對到 2930**。
+- 後果: 兩支 check script (_vp17076-check.ts / _vp17076-exist.ts) 全程只看到 2930，誤判「19 clinic 都不存在 / 需新建」。Leo 自己跑 SELECT * 抓到一堆既有 row 才發現。
+- Root cause: 沿用 scripts/check-vp16329.ts 的 hardcode 單值模式，改成 array 時沒用 `Prisma.join()`。
+- 正解: `import { Prisma }` + `IN (${Prisma.join(CLINICS)})`，或對信任的整數陣列直接字串內插建 SQL。
+- 教訓: 多值 IN 查詢務必**先驗證回傳筆數合理**（20 clinic 只回 1 筆就該起疑），不能直接拿來下「不存在」結論。對應 [[feedback_batch_db_verify]] / [[feedback_join_scope_reverse_audit]]。
+
+---
+
 ## Deploy / commit / push coordination <a id='deploy-coordination'></a>
 
 ### **[[INCIDENT-20260518]]** — `2026-05-19` — 寫 logging 跟 timeout 但沒先說「現在不用 build」
@@ -610,37 +551,6 @@ Leo caught that /EMR_storage was already the norm since ~June. Data: localDir by
 
 ---
 
-## Test / mock / spec <a id='test-mocking'></a>
-
-### **[[INCIDENT-2604156666]]** — `2026-05-21` — spec 在 HEAD 已壞（pre-existing，Leo 要求併本 hotfix 修）
-
-- `sample-test-result.service.spec.ts` HEAD 是 6/6 fail，多層 stale：
-  1. **DI 缺 provider**：service constructor 注入 AbnormalFlagCalculatorService + ResultStatusMapperService，spec 從來沒提供 mock → `Nest can't resolve dependencies` → 全部 test setup 階段 fail
-  2. **4b10e1a 後 Step 5 primary 變 cloud**：spec 只 mock 了 `getTestResultsDetailedData`（on-prem fallback），`getTestResultsDetailedDataCloud` 沒 mock → 4 個跑 full flow 的 test 在 Step 5 拿到 undefined
-  3. **referenceRange mock shape 過期**：service buildTestResults 讀 `result.normalRange.referenceRange`，spec 寫的是舊 `result.allList[i].referenceRange`
-  4. **`getPatientReferenceRange` 真實 payload 是 snake_case + 帶 `result_value`**，spec 期望 camelCase 不帶 result_value
-  5. **「無 reference range」`abnormalFlag` 預期錯**：Service 對齊 Java `getMasterListInfo()==null` 返回 `''`，但 spec 期望 `'N'`
-- 全部本 commit 一次修齊，6/6 pass
-
-### **[[VP-16154]]** — `2026-05-11 19:00` — - `event.service.spec.ts` 跟 `meeting-request.service.spec.ts` 用 `new ServiceClass(...)` 直接 instantiate（不走 DI），baseline 上已經缺一個 arg（pre-existing），加 settingTool inject 後 spec compile error 浮現。修法：spec 補 mock arg。
-
-
-
-### **[[VP-16612]]** — `2026-05-18` — Pre-existing test broken by env state
-
-`runReminders` test broke during local jest run because Leo's shell `.env` has `platform_type=local`, triggering early-return in `runReminders()`. This wasn't related to my changes but the existing test was env-dependent. Fixed with 1-line `delete process.env.platform_type` in `beforeEach`.
-
-Root cause: VP-16391's test was written assuming `process.env.platform_type` undefined in jest. Works in clean CI/CD, breaks under `.env`-aware shell.
-
-### **[[VP-17076]]** — `2026-06-22` — is_practice 過濾（重要修正，commit a219f82）
-
-- 真相更正：144510 的「重複 Total Baseline」**不是 catalog 重複**，而是 provider 40660 的**個人 shortcut**(is_practice=false, 33-test 含 Magnesium) 與診所 preset(is_practice=true, 727441, 2-test) 同名。Get Shortcuts 回傳 practice + personal 兩種；同一 customer 43262 在 2930/144510 都無碰撞(無個人 shortcut)，只有 40660 有。
-- 修正：resolver 只比對 `is_practice === true`(Leo 一開始就說 clinic-level)。個人 shortcut 忽略 → 永遠用診所 preset。live 驗證 40660@144510 改解析到 727441(PSA+Foundation) 非 724454(33-test)。
-- spec.ts: fetch mock 預設 is_practice:true，加 personal-vs-practice 測試。108 tests pass。
-- 差異清單 doc(2506653698) v2 已更正 Finding 2（個人 vs 診所，emr-v2 已解決，無需 catalog 動作）；Finding 1(Magnesium) 仍是 catalog action。
-
----
-
 ## Redis / cache / pending list <a id='redis-cache'></a>
 
 ### **[[INCIDENT-20260518]]** — `2026-05-18 14:00` — 第一輪 root cause 推錯：Redis emptyDir wipe
@@ -665,22 +575,24 @@ Root cause: VP-16391's test was written assuming `process.env.platform_type` und
 
 ---
 
-## Scope / requirement / PM communication <a id='scope-communication'></a>
+## Test / mock / spec <a id='test-mocking'></a>
 
-### **[[VP-16617]]** — `2026-05-14` — First categorization of 87 dup combos used wrong pattern detection
+### **[[INCIDENT-2604156666]]** — `2026-05-21` — spec 在 HEAD 已壞（pre-existing，Leo 要求併本 hotfix 修）
 
-SQL `COUNT(DISTINCT emr_name)` ignores NULL, so combos with `[NULL, 'PF']` looked like "same emr_name" in audit. Re-wrote categorization with JS `new Set` (treats null as distinct) → revealed 84 combos in "diff emr (one NULL)" pattern previously misclassified as "diff kits".
+- `sample-test-result.service.spec.ts` HEAD 是 6/6 fail，多層 stale：
+  1. **DI 缺 provider**：service constructor 注入 AbnormalFlagCalculatorService + ResultStatusMapperService，spec 從來沒提供 mock → `Nest can't resolve dependencies` → 全部 test setup 階段 fail
+  2. **4b10e1a 後 Step 5 primary 變 cloud**：spec 只 mock 了 `getTestResultsDetailedData`（on-prem fallback），`getTestResultsDetailedDataCloud` 沒 mock → 4 個跑 full flow 的 test 在 Step 5 拿到 undefined
+  3. **referenceRange mock shape 過期**：service buildTestResults 讀 `result.normalRange.referenceRange`，spec 寫的是舊 `result.allList[i].referenceRange`
+  4. **`getPatientReferenceRange` 真實 payload 是 snake_case + 帶 `result_value`**，spec 期望 camelCase 不帶 result_value
+  5. **「無 reference range」`abnormalFlag` 預期錯**：Service 對齊 Java `getMasterListInfo()==null` 返回 `''`，但 spec 期望 `'N'`
+- 全部本 commit 一次修齊，6/6 pass
 
-### **[[VP-16664]]** — `2026-05-18` — Initial date-also-with-TZ assumption
+### **[[VP-17076]]** — `2026-06-22` — is_practice 過濾（重要修正，commit a219f82）
 
-At Step 6 review I included `consult_date: "05/12/2026 PDT"`. Leo corrected to "date does not need TZ; only time-bearing strings do". My reasoning was "dates cross midnight differently in different TZs so date should carry TZ" — technically true but display-copy convention does not write dates with TZ. Lesson: distinguish display-copy convention from technical correctness; the latter does not always require the former.
-
-### **[[VP-17076]]** — `2026-06-23` — 改用 shortcut_id 比對（commit 0ea3cbe，取代 name 比對）
-
-- Leo 定案：EMR 在 OBR-4 送 `VASC{shortcut_id}`（如 VASC727441），emr-v2 用 `shortcut_id` 比對（唯一），不再用 name。
-- shortcut.service: `parseShortcutCode`(VASC{id}) 取代 normalizeName；resolveShortcut 改 `s.shortcut_id === id`；非 VASC → null（不打 API）。is_practice 過濾移除（id 唯一無碰撞，a219f82 的考量被取代）。expand(tests/groups/bundles) 不變。candidatePairs(winner first + NPI fallback) 不變。
-- live 驗證 144510+40660：VASC727441→Total Baseline(MALE)[376+853]、VASC727440→(FEMALE)[853]、VASC999999→null、非VASC→null。109 tests pass。
-- **3 份 Confluence doc 現已過時**（它們寫 by-name；實際是 VASC{id}）：內部 2506326018 / 外部 2506457090 / 差異清單 2506653698。外部 vendor doc 尤其需改成「OBR-4 填 VASC{shortcut_id}」+ 提供 per-clinic shortcut_id 對照（xlsx）。待 Leo 決定如何對 vendor 呈現再更新。
+- 真相更正：144510 的「重複 Total Baseline」**不是 catalog 重複**，而是 provider 40660 的**個人 shortcut**(is_practice=false, 33-test 含 Magnesium) 與診所 preset(is_practice=true, 727441, 2-test) 同名。Get Shortcuts 回傳 practice + personal 兩種；同一 customer 43262 在 2930/144510 都無碰撞(無個人 shortcut)，只有 40660 有。
+- 修正：resolver 只比對 `is_practice === true`(Leo 一開始就說 clinic-level)。個人 shortcut 忽略 → 永遠用診所 preset。live 驗證 40660@144510 改解析到 727441(PSA+Foundation) 非 724454(33-test)。
+- spec.ts: fetch mock 預設 is_practice:true，加 personal-vs-practice 測試。108 tests pass。
+- 差異清單 doc(2506653698) v2 已更正 Finding 2（個人 vs 診所，emr-v2 已解決，無需 catalog 動作）；Finding 1(Magnesium) 仍是 catalog action。
 
 ---
 
@@ -699,18 +611,18 @@ Root cause: LTM had two conflicting statements (mapping table at line 173-176 co
 
 ---
 
-## Error handling / throw vs log <a id='error-handling'></a>
+## Scope / requirement / PM communication <a id='scope-communication'></a>
 
-### **[[VP-16154]]** — `2026-05-11 19:15` — - 第一次 helper 用 `throw new Error('...')` 對 missing header — Leo 要求「沒新 data 不報錯」後改成 try/catch + log.warn + return undefined。
+### **[[VP-16617]]** — `2026-05-14` — First categorization of 87 dup combos used wrong pattern detection
 
+SQL `COUNT(DISTINCT emr_name)` ignores NULL, so combos with `[NULL, 'PF']` looked like "same emr_name" in audit. Re-wrote categorization with JS `new Set` (treats null as distinct) → revealed 84 combos in "diff emr (one NULL)" pattern previously misclassified as "diff kits".
 
+### **[[VP-17076]]** — `2026-06-23` — 改用 shortcut_id 比對（commit 0ea3cbe，取代 name 比對）
 
-### **[[VP-16987]]** — `2026-06-16 18:40` — — pipeline 設計脆弱點 (連帶發現)
-
-1. per-customer `catch` 只 `logger.error(msg, error.message)` 且 error.message 對 Prisma 錯誤為空 → 失敗幾乎不可見、無告警。
-2. 失敗時不寫任何 record（連 failure record 都沒）→ 監控無從得知 0 交付。
-3. upload 成功但 record 失敗 → 狀態不一致。
-4. 自動產的 xlsx 內容 (per-accession csvReport, 7.4MB) 與手動精簡版 (139KB) 差異大 → 正式內容規格需與 PM 對齊。
+- Leo 定案：EMR 在 OBR-4 送 `VASC{shortcut_id}`（如 VASC727441），emr-v2 用 `shortcut_id` 比對（唯一），不再用 name。
+- shortcut.service: `parseShortcutCode`(VASC{id}) 取代 normalizeName；resolveShortcut 改 `s.shortcut_id === id`；非 VASC → null（不打 API）。is_practice 過濾移除（id 唯一無碰撞，a219f82 的考量被取代）。expand(tests/groups/bundles) 不變。candidatePairs(winner first + NPI fallback) 不變。
+- live 驗證 144510+40660：VASC727441→Total Baseline(MALE)[376+853]、VASC727440→(FEMALE)[853]、VASC999999→null、非VASC→null。109 tests pass。
+- **3 份 Confluence doc 現已過時**（它們寫 by-name；實際是 VASC{id}）：內部 2506326018 / 外部 2506457090 / 差異清單 2506653698。外部 vendor doc 尤其需改成「OBR-4 填 VASC{shortcut_id}」+ 提供 per-clinic shortcut_id 對照（xlsx）。待 Leo 決定如何對 vendor 呈現再更新。
 
 ---
 
@@ -728,6 +640,17 @@ After `cd /Users/hung.l/src/EMR-Backend && gh pr view 156`, subsequent Bash call
 
 - 試 2 次都 timeout，改跑 `npx eslint <file>` CLI 直接拿同樣結果
 - 教訓：WebStorm 抓 lint 等於 eslint + prettier；agent 端不要等 IDE diagnostics，CLI 更快更穩
+
+---
+
+## Error handling / throw vs log <a id='error-handling'></a>
+
+### **[[VP-16987]]** — `2026-06-16 18:40` — — pipeline 設計脆弱點 (連帶發現)
+
+1. per-customer `catch` 只 `logger.error(msg, error.message)` 且 error.message 對 Prisma 錯誤為空 → 失敗幾乎不可見、無告警。
+2. 失敗時不寫任何 record（連 failure record 都沒）→ 監控無從得知 0 交付。
+3. upload 成功但 record 失敗 → 狀態不一致。
+4. 自動產的 xlsx 內容 (per-accession csvReport, 7.4MB) 與手動精簡版 (139KB) 差異大 → 正式內容規格需與 PM 對齊。
 
 ---
 

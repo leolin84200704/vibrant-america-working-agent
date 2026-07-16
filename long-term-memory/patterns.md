@@ -1176,3 +1176,21 @@ VP project 的 Bug type 建單必帶：`Environment`、`Impact`（customfield_10
 - **不用 VPN 查 emr-v2 staging DB**：`kubectl exec` 進 AKS staging pod，把 node script 寫進 `/app/temp/` 再跑 — `require('@prisma/client')` 從該目錄向上解析得到（放 `/tmp` 會解析失敗）。
 - zsh 陷阱：shell loop 變數命名 `path` 會 clobber `PATH`（curl 直接消失）。
 - staging 已知 quirk：`generateBarcodeForSampleID` 對每個新 sample 失敗（Go upstream `unknown time zone America/Los_Angeles`）— 非致命（barcode best-effort），staging API order 無 julien_barcode 是預期現象，prod 健康。
+
+### Consult reminder 兩個 producer 並存 — Postmark tag 指紋 + Bull replay class（VP-17421, 2026-07-15）
+Prod 有**兩條**會寄 consult reminder 的管線，排查「不該收到的 reminder」先用指紋分辨是哪條：
+
+| | transv2 dispatcher（健康） | legacy Bull processor（VP-17421 肇事者） |
+|---|---|---|
+| Postmark Tag | `calendar_prod` | `CustomerEventReminder`（template 33802989） |
+| Subject 用語 | "in in N hours"（小寫） | "See You in N Hours"（大寫 Hours） |
+| 稽核 | 每寄一筆寫 `v2_reminder_audit_log`，2-min cron 分批 drip | **不寫** calendar_prod 任何表 |
+| 所在 | LIS-transformer-v2 | **LIS-transformer** `src/calendar/email/reminders.processor.ts`（從已 ARCHIVED 的 Portal-Calendar 遷入）；Bull queues `reminder_24h/48h/15m` 在 on-prem redis `192.168.60.9:4646`，由 `lis-trans-deployment-st`（stprod）pod 消費 — **stprod pod 寄真 prod email**，VP-16921 同款 design smell |
+
+快速判別法：**Postmark 筆數 vs `v2_reminder_audit_log` 同時窗筆數**不符（如 338 vs 1）→ burst 不是走 prod dispatcher。Postmark 查詢用 `tag=` exact（`recipient=` filter 不可靠、subject search 會漏；token 在 noti/notification-center pod `POSTMARK_KEY`）。
+
+**Bull delayed-job replay class**：delayed job 無 `removeOnComplete` 會在 redis 累積；`delay<0` guard 只在 **enqueue** 端，processor 端只查 `deleted=0` 不查 event 還在未來 → redis reconnect / pod restart 時 overdue jobs 整批 replay，對「早已過期的 event」照寄（VP-17421：restart 後 ~2min 爆 338 封、149 人、含 2025-03 的 event）。**紀律：時間敏感的 delayed/scheduled job 必須在 fire time 重驗前置條件（event 仍在未來）**，enqueue-time guard 擋不住 replay。Fix = LIS-transformer PR #562（processor 加 future-date guard）。
+
+排查紀律（VP-16921 → VP-17421 實踩）：
+- **不要繼承上一張 ticket 的 root cause** — 症狀長得像 VP-16921（stale reminder）但機制完全不同（rogue 環境 vs Bull replay）。舊 STM 該讀，結論要重新驗證機制。
+- **restart 時間相關 ≠ 因果** — portal-calendar pods 正好在 burst 時間重啟而被誤指，但它們的 Bull 根本連不上 redis（無 REDIS_URL）。定罪前先證明嫌疑 service 真的持有那條 queue（去 redis 看 key 歸屬）。

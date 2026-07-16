@@ -3,7 +3,7 @@ id: repos
 type: ltm
 category: technical
 status: active
-score: 0.9356
+score: 0.9578
 base_weight: 0.9
 created: 2026-04-22
 updated: 2026-04-22
@@ -72,6 +72,8 @@ links:
 - VP-17222
 - VP-17312
 - VP-17412
+- VP-17421
+- VP-17422
 - business-model
 - business-model-deep
 - failures
@@ -83,6 +85,9 @@ tags:
 - grpc
 summary: 'Active repo reference: tech stack, ports, key areas, setup'
 ---
+
+
+
 
 
 
@@ -219,8 +224,9 @@ summary: 'Active repo reference: tech stack, ports, key areas, setup'
 ### LIS-transformer
 - **Purpose**: NestJS backend, REST (3190) + gRPC (3191)
 - **Tech**: NestJS 10, TypeScript, Prisma
-- **Key Areas**: `src/trans/` (patient data), `src/setting/` (clinic settings)
+- **Key Areas**: `src/trans/` (patient data), `src/setting/` (clinic settings), `src/calendar/email/`（legacy consult-reminder Bull processor，Portal-Calendar 遷入）
 - **Note**: `src/trans/trans.service.ts` ~4000 lines
+- **⚠ Reminder Bull queues（VP-17421）**: `reminder_24h/48h/15m` 在 **on-prem redis `192.168.60.9:4646`**（`calendarRedisOptions`: stprod/mac→on-prem，其他→Azure），由 `lis-trans-deployment-st`（SERVER_ENVIRONMENT=stprod）pod 消費並寄**真 prod email**（VP-16921 同款 smell，已 flag 給 Leo）。processor 的 future-date guard = PR #562。排查指紋見 patterns.md「Consult reminder 兩個 producer 並存」。
 
 ### lis-backend-emr-v2
 - **Purpose**: EMR system backend (AutoIntegrate) — **future replacement for EMR-Backend (Java legacy)**
@@ -309,8 +315,8 @@ summary: 'Active repo reference: tech stack, ports, key areas, setup'
 - **Port**: 6457
 - **Note**: `setting-consumer.controller.ts` ~16K lines
 
-### Portal-Calendar（legacy，VP-16499 specialty 追查 2026-07-14）
-- **Purpose**: legacy portal calendar/clinician service — `/v1/portal/calendar/*/clinicians/first-available` 的真身（**不是** transformer-v2）
+### Portal-Calendar（legacy，VP-16499 specialty 追查 2026-07-14；**repo 已 ARCHIVED**，2026-07-15 確認不可 push/PR）
+- **Purpose**: legacy portal calendar/clinician service — `/v1/portal/calendar/*/clinicians/first-available` 的真身（**不是** transformer-v2）。consult-reminder 程式碼已遷至 LIS-transformer `src/calendar/email/`（見該 section）；on-prem pods 的 Bull 連不上 redis（無 REDIS_URL）— 別再把 reminder 事故算到它頭上（VP-17421 教訓）
 - **Tech**: NestJS + Prisma → MySQL **crm** DB（dev `192.168.10.40:33306/crm`）；prod 跑 **on-prem**（AKS 的 portal-calendar deployments 已 scale to 0 逾 225 天 — 別被雲上物件騙）；repo 另有 schema2 → `va_schedule@192.168.10.213`（此 flow 不用）
 - **Key tables**: `clinicians`（+ `clinicians_on_lab_products` → `lab_products`，soft-delete `deleted_at`；`clinician_availability_settings`）+ `calendar`（events）
 - **⚠ v2_calendar.specialties drift 根因**：first-available API 回的是「照 availability 過濾後的 derived specialties」— 拿它當 seed source 必 drift。正解是直接讀 crm 表（email lowercase match、full-overwrite + 三向 diff）。**2026-07-14 狀態：整個 service 可能整包遷 v2，等 PM 決定 — sync 不要先做**（見 [[VP-16499]]）。

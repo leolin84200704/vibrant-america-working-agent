@@ -5,7 +5,7 @@ related:
 - VP-17421
 - VP-16921
 - VP-16499
-distilled: false
+distilled: true
 ---
 
 # VP-17421 — reminders for a March-2025 appointment
