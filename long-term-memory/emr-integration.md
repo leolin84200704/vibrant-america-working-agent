@@ -3,7 +3,7 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 0.8539
+score: 0.8662
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-07-05
@@ -12,6 +12,7 @@ links:
 - HL7-TRIAGE-20260427
 - INCIDENT-2604156666
 - LBS-1541
+- LBS-1656
 - QH-1660
 - QH-2257
 - QH-2577
@@ -77,6 +78,8 @@ tags:
 summary: EMR/HL7/SFTP integration rules, identity mapping, MSH values, bundle config,
   hl7_file_input triage
 ---
+
+
 
 
 
