@@ -6,7 +6,7 @@ status: active
 score: 0.8662
 base_weight: 1.0
 created: 2026-04-22
-updated: 2026-07-05
+updated: 2026-07-17
 links:
 - FHIR-ONDEMAND-RESULT
 - HL7-TRIAGE-20260427
@@ -761,6 +761,12 @@ ORDER BY received_time DESC;
 - **存取只能走 pod 內**：emr-v2 prod DB 的 grant 綁 pod IP，從 appserver04 直連 `mysql` 會 `Access denied for 'lis_emr'@<appserver04 IP>`。→ 用 **pod 內 node prisma 查 DB + `fs.readFileSync` 讀 raw HL7**（`kubectl exec <prod-pod> -c lis-emr-v2-prod -- sh -c 'echo <b64> | base64 -d | node'`）。
 - **customer_not_found="<First Last>"** = 該 ORC.12 NPI 在 `ehr_integrations` **0 筆**（provider 未 onboard）→ 要建 LIVE+ordering integration 才解析得到。**區別** `emr_code_not_found`：customer 已解析成功，是 battery/bundle code（如 `discountpanel{n}`→官方 bundle map）在該 customer 找不到。
 - **appserver04 SSH 連太多次會被 fail2ban 擋**（接受密碼但指令零輸出）→ 用 `ssh -o ControlMaster=auto -o ControlPath=/tmp/cm.sock -o ControlPersist=15m`（[[reference_appserver04_ssh]]）建一條 master，後續所有查詢重用同 socket、免密碼免重連。
+
+**Raw HL7 archive 全貌（VP-17286 全量 audit 2026-07-15 驗證）：**
+- **On-prem node 直讀**：`ssh leo@192.168.60.5`（appserver04），檔案在 `/mnt/storage/EMR_storage/HL7Message_prod`——DB 存的 `/EMR_storage/...` 是同一個 PV，node 端 mount prefix 是 `/mnt/storage`。批量 audit 比 pod 內逐檔讀快得多。
+- **Archive 佈局 per vendor 不同**：多數 vendor 是 `<VENDOR>/Prod/Order(Archive)/`；**MDHQ 是 per-clinic `<clinic>_InputArchive/`**（沒有單一 OrderArchive）→ 用 DB path 對不上時，改建**全 tree filename index** 再 match（2026 audit：25,716 檔案 index、1884/1898 命中）。
+- **SFTP 端回溯性**：只有 Vibrant 共用 host `45.24.217.155` 留 OrderArchive（THM 等可回抓）；**MDHQ host `34.199.194.51` fetch 後即清空**（clinic /orders 目錄空、無 archive）→ MDHQ raw 只能靠 on-prem PV。`localDir=/tmp/hl7/...` 的 rows 是 pod ephemeral、沒進 archive tree，永久拿不回。
+- **PID-7/8（DOB/sex）在這些 vendor 的 feed 實務上必填**：1884 個 2026 raw 檔 0 缺（每 vendor 都 0）+ 1527 patient record 交叉驗證 0 缺 → eligibility 的 IncompletePatientInfo rule 不會因 gender/DOB 擋 HL7 路徑訂單（address 未 audit）。
 
 ### OBR Prefix → Order Service API Mapping（**先看 prefix 再選 API，不要混用**）
 
