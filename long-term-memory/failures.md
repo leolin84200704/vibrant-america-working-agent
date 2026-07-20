@@ -6,8 +6,8 @@ status: active
 score: 1.1438
 base_weight: 0.9
 urgency: 3
-created: 2026-07-17
-updated: 2026-07-17
+created: 2026-07-18
+updated: 2026-07-18
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -43,14 +43,12 @@ links:
 - VP-16329
 - VP-16337
 - VP-16391
-- VP-16463
 - VP-16499
 - VP-16513
 - VP-16514
 - VP-16516
 - VP-16520
 - VP-16521
-- VP-16617
 - VP-16629
 - VP-16689
 - VP-16720
@@ -95,7 +93,7 @@ tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 57 entries across STM
+summary: Auto-aggregated failure index from 54 entries across STM
 ---
 
 
@@ -152,22 +150,22 @@ summary: Auto-aggregated failure index from 57 entries across STM
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-07-17 — total 57 entries
+> Last updated: 2026-07-18 — total 54 entries
 
 ## Themes
 
-- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 15 entries
+- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 14 entries
 - [Other / uncategorized](#other) — 9 entries
 - [Build / TypeScript / Tooling](#build-tooling) — 8 entries
 - [DB / migration / backfill](#db-migration) — 8 entries
 - [Deploy / commit / push coordination](#deploy-coordination) — 4 entries
 - [Redis / cache / pending list](#redis-cache) — 3 entries
 - [Test / mock / spec](#test-mocking) — 2 entries
-- [Auth / permission / role](#auth-permission) — 2 entries
-- [Scope / requirement / PM communication](#scope-communication) — 2 entries
+- [Auth / permission / role](#auth-permission) — 1 entries
 - [Tool / cwd / branch / repo confusion](#tool-usage) — 1 entries
 - [gRPC / network / timeout](#grpc-network) — 1 entries
 - [Error handling / throw vs log](#error-handling) — 1 entries
+- [Scope / requirement / PM communication](#scope-communication) — 1 entries
 - [GraphQL / API design](#graphql-api) — 1 entries
 
 ---
@@ -213,31 +211,6 @@ Picked `lock.release()` from redlock@5 docs while installing redlock@4. The two 
 - 沒查 `kit_delivery_option` same-clinic 既有 → 預設 `NO_DELIVERY` 與 practice 實際 `BOTH_BLOOD_AND_NON_BLOOD` 不一致
 - 沒查 `order_clients.old_clinic_id` → 新 record null，既有皆 1002859
 Root cause: Step 5c 只查了 integration-level 欄位（report_option / integration_type / sftp paths），沒把 `kit_delivery_option` 和 order_clients 的 `old_clinic_id` 納入 same-practice-follow-existing 檢查清單。
-
-### **[[VP-16463]]** — `2026-05-13 15:46` — v2 NO_NPI parity break (RED FLAG, awaiting user decision)
-
-Two post-expansion files stuck on v2 path with behavioral divergence from v1:
-
-| file id | folder | received | customer_not_found | parse_finished | sample_id | retry_num | pod_name |
-|---|---|---|---|---|---|---|---|
-| 6053 | parsley-la | 2026-05-13 11:45 | NO_NPI | 0 | NULL | 5 | NULL |
-| 6058 | ravelhealth | 2026-05-13 15:30 | NO_NPI | 0 | NULL | 5 | NULL |
-
-**Past 7d MDHQ baseline** (31 success + 9 `no payment method` flags): ALL 40 v1-processed files have `last_update_pod_name='lis-emr-prod-*'` and `parse_finished=1` (even with non-success flags). NO files in entire 7d have `NO_NPI` flag — these 2 are unique.
-
-**Three suspected v2 regressions**:
-1. **NPI-check parity break**: v1 either skips NPI lookup or uses a different fallback. v2 explicitly rejects on missing NPI.
-2. **Terminal-state retry bug**: v2 detected customer_not_found but didn't set parse_finished=1, so worker keeps retrying (5 attempts). v1 sets parse_finished=1 even with flag.
-3. **Audit gap**: v2 worker not persisting `last_update_pod_name` on error path — cannot prove provenance.
-
-**Cutover monitor cadence tightened to 30min** while red flag active.
-
-**User decision options pending**:
-- A: Rollback id=78/201 to use_v2_pipeline=0 (let v1 reprocess)
-- B: Inspect HL7 file content for NPI presence (rule out data vs logic)
-- C: Keep observing
-
-DO NOT auto-rollback without explicit user approval.
 
 ### **[[VP-16720]]** — `2026-06-01` — order_clients 重複 INSERT（Anna 43262 ×4）
 
@@ -603,27 +576,6 @@ Leo caught that /EMR_storage was already the norm since ~June. Data: localDir by
 - `.spec.ts` 文件不能信賴 — 跟 service code 不同步演進（4b10e1a + 多次 service refactor 都沒同步 spec），可能長期沒人跑
 - 應該每個 PR 跑該 service spec；或者 CI gate 上有 spec 必過要求
 
-### **[[VP-16617]]** — `2026-05-14` — kit_delivery_option mis-set on first finalize
-
-Set `kit_delivery_option=NO_DELIVERY` + `kits_options=0` following LTM line 454 and `_apply-vp16424-finalize.ts` template. Both sources were wrong (LTM bug + VP-16424 template propagated the same bug). Caught only after live-applied via cross-check with ParseHL7.java source.
-
-Root cause: LTM had two conflicting statements (mapping table at line 173-176 correct, stub finalize default at line 454 wrong). I followed line 454 without spotting the conflict. Lesson: when LTM has two statements that should agree, verify against authoritative source (Java code here).
-
----
-
-## Scope / requirement / PM communication <a id='scope-communication'></a>
-
-### **[[VP-16617]]** — `2026-05-14` — First categorization of 87 dup combos used wrong pattern detection
-
-SQL `COUNT(DISTINCT emr_name)` ignores NULL, so combos with `[NULL, 'PF']` looked like "same emr_name" in audit. Re-wrote categorization with JS `new Set` (treats null as distinct) → revealed 84 combos in "diff emr (one NULL)" pattern previously misclassified as "diff kits".
-
-### **[[VP-17076]]** — `2026-06-23` — 改用 shortcut_id 比對（commit 0ea3cbe，取代 name 比對）
-
-- Leo 定案：EMR 在 OBR-4 送 `VASC{shortcut_id}`（如 VASC727441），emr-v2 用 `shortcut_id` 比對（唯一），不再用 name。
-- shortcut.service: `parseShortcutCode`(VASC{id}) 取代 normalizeName；resolveShortcut 改 `s.shortcut_id === id`；非 VASC → null（不打 API）。is_practice 過濾移除（id 唯一無碰撞，a219f82 的考量被取代）。expand(tests/groups/bundles) 不變。candidatePairs(winner first + NPI fallback) 不變。
-- live 驗證 144510+40660：VASC727441→Total Baseline(MALE)[376+853]、VASC727440→(FEMALE)[853]、VASC999999→null、非VASC→null。109 tests pass。
-- **3 份 Confluence doc 現已過時**（它們寫 by-name；實際是 VASC{id}）：內部 2506326018 / 外部 2506457090 / 差異清單 2506653698。外部 vendor doc 尤其需改成「OBR-4 填 VASC{shortcut_id}」+ 提供 per-clinic shortcut_id 對照（xlsx）。待 Leo 決定如何對 vendor 呈現再更新。
-
 ---
 
 ## Tool / cwd / branch / repo confusion <a id='tool-usage'></a>
@@ -651,6 +603,17 @@ After `cd /Users/hung.l/src/EMR-Backend && gh pr view 156`, subsequent Bash call
 2. 失敗時不寫任何 record（連 failure record 都沒）→ 監控無從得知 0 交付。
 3. upload 成功但 record 失敗 → 狀態不一致。
 4. 自動產的 xlsx 內容 (per-accession csvReport, 7.4MB) 與手動精簡版 (139KB) 差異大 → 正式內容規格需與 PM 對齊。
+
+---
+
+## Scope / requirement / PM communication <a id='scope-communication'></a>
+
+### **[[VP-17076]]** — `2026-06-23` — 改用 shortcut_id 比對（commit 0ea3cbe，取代 name 比對）
+
+- Leo 定案：EMR 在 OBR-4 送 `VASC{shortcut_id}`（如 VASC727441），emr-v2 用 `shortcut_id` 比對（唯一），不再用 name。
+- shortcut.service: `parseShortcutCode`(VASC{id}) 取代 normalizeName；resolveShortcut 改 `s.shortcut_id === id`；非 VASC → null（不打 API）。is_practice 過濾移除（id 唯一無碰撞，a219f82 的考量被取代）。expand(tests/groups/bundles) 不變。candidatePairs(winner first + NPI fallback) 不變。
+- live 驗證 144510+40660：VASC727441→Total Baseline(MALE)[376+853]、VASC727440→(FEMALE)[853]、VASC999999→null、非VASC→null。109 tests pass。
+- **3 份 Confluence doc 現已過時**（它們寫 by-name；實際是 VASC{id}）：內部 2506326018 / 外部 2506457090 / 差異清單 2506653698。外部 vendor doc 尤其需改成「OBR-4 填 VASC{shortcut_id}」+ 提供 per-clinic shortcut_id 對照（xlsx）。待 Leo 決定如何對 vendor 呈現再更新。
 
 ---
 
