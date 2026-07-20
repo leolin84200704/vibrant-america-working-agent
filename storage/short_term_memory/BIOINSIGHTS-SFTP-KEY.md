@@ -1,6 +1,6 @@
 ---
 id: BIOINSIGHTS-SFTP-KEY
-summary: BioInsights SFTP account is key-only (no password) — added sftp_private_key columns to all 3 credential stores + plumbed privateKey through result-push and order-fetch pipelines. PR #275 (draft, target staging).
+summary: BioInsights SFTP account is key-only (no password) — added sftp_private_key columns to all 3 credential stores + plumbed privateKey through result-push and order-fetch pipelines. PR #275 (draft, target staging). Migration APPLIED to staging+prod 2026-07-20, live-verified.
 status: active
 category: emr_integration
 created: 2026-07-20
@@ -33,10 +33,19 @@ Leo approved: key stored plaintext in DB (same posture as existing passwords; en
 
 Prod is NOT Prisma-managed. Apply migration SQL to staging (192.168.60.11) + prod (lisportalprod2) **BEFORE** deploying code — commits 2/3 `select` the new columns; deploy-first = 500 on those queries (VP-16832 class).
 
+### [2026-07-20 15:40] Migration APPLIED to both DBs (Leo directed)
+
+- Runner: `scripts/_bioinsights-sftp-key-migrate.ts` (mysql2, idempotent pre-check + row-count guard + 100% column verify + dormant check); probe: `scripts/_bioinsights-live-probe.ts` (both gitignored `_*.ts`)
+- **Staging** 192.168.60.11: 3 columns added, TEXT/nullable OK, rows 11/46/3 unchanged, all NULL
+- **Prod** lisportalprod2: 3 columns added, TEXT/nullable OK, rows 33/1268/30 unchanged, all NULL
+- Unit suite re-run on PR branch in fresh worktree: 83/83 suites, 890 passed
+- **Live verify (prod, post-ALTER)**: old-code column-set reads on all 3 tables OK; order-fetch cron 15:45 tick ingested a new hl7_file_input row (received_time 15:45:23 > migration ~15:41) = order pipeline healthy on migrated DB. Result push: no organic traffic since (event-driven, Sunday), but its reads verified via the column-set probe.
+- DB now AHEAD of deployed code (safe direction). PR #275 can merge anytime.
+- Gotcha: `hl7_file_input` has NO created_at — use `received_time` / `updated_time`
+
 ## Open items
 
-- [ ] Leo review/merge PR #275
-- [ ] Apply migration to staging + prod DB before deploy
+- [ ] Leo review/merge PR #275 (DB precondition DONE both envs)
 - [ ] Vendor row setup for BioInsights (ehr_vendors INSERT incl. the PEM key — receive key via secure channel, NOT Jira/Slack)
 - [ ] Possibly file a Jira ticket for the BioInsights integration and link PR
 - [ ] Encryption follow-up: encrypt sftp_password + sftp_private_key at rest (schema comment has flagged this since before)
