@@ -1172,6 +1172,9 @@ LIS-transformer-v2 calendar：customer 預約「能不能 book」要與「getLab
 GitHub **不會**在 parent PR merge 時自動 retarget open child PR — 只有 base branch 被**刪除**才 retarget。#258 (base=staging) 先 merge、#259 (base=feature branch) 後 merge → #259 的 diff 進了 feature branch，staging 完全沒拿到，PR 狀態卻是 MERGED。靠事後 `git log origin/staging` 驗證才抓到，rescue PR #261 補救。
 **紀律**：stacked PR 一律 child-first merge；或 parent merge 時勾 delete branch；或 merge 前手動把 child retarget 到最終 base。**每輪 merge 後必驗 `git log origin/staging`（或目標 branch）** — PR 顯示 MERGED ≠ code 在目標 branch 上。
 
+### Port 時代的 parity 註解不是 ground truth（VP-17408, 2026-07-13）
+emr-v2 是 Java EMR-Backend 的 port，code 裡大量「Java parity」註解 — VP-17408 實證其中至少一處是**錯的**（OBR-16 provider name 註解聲稱對齊 Java，實際 emit NPI^Last^First，legacy 是 NPI^First^Last，已修）。**查 parity 問題一律回 Java 原始碼或 legacy 輸出樣本比對，不要信 port 註解**。
+
 ### VP Jira Bug create 必填欄位（createmeta，2026-07-13/14 兩次確認）
 VP project 的 Bug type 建單必帶：`Environment`、`Impact`（customfield_10492）、`Portal Affected System`（customfield_10487，single-select object，EMR 相關選 `EMR`）、`Detection Method`（customfield_10082）、`duedate`（customfield_10489 亦見）。Priority 名稱是 `"P0 - Highest"`..`"P4 - Lowest"`。RCA 欄位（結案時填）：`customfield_10485` Root Cause（rich text）、`customfield_10490` Root Cause Category（Code Defect / Configuration Error / Infrastructure / Process / Dependency / Requirements-Design / Insufficient Testing）。
 

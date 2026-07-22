@@ -3,11 +3,12 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 0.8662
+score: 0.9034
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-07-17
 links:
+- BIOINSIGHTS-onboarding
 - FHIR-ONDEMAND-RESULT
 - HL7-TRIAGE-20260427
 - INCIDENT-2604156666
@@ -64,6 +65,8 @@ links:
 - VP-17286
 - VP-17344
 - VP-17411
+- VP-17474
+- VP-17475
 - fhir-api
 tags:
 - emr
@@ -78,6 +81,10 @@ tags:
 summary: EMR/HL7/SFTP integration rules, identity mapping, MSH values, bundle config,
   hl7_file_input triage
 ---
+
+
+
+
 
 
 
@@ -1027,3 +1034,20 @@ WHERE (ei.integration_type <> 'FULL_INTEGRATION' OR ei.ordering_enabled = 0)
 - **Eligibility 實測 failure codes**（vs Confluence 2517139459 有 drift）：實際 `PSAMaleOnly`（文件寫 PFSAMaleOnly）、`IncompletePatientInfo`（會點名缺哪個欄位）、`ProzFollowupNoPreviousOrder`；`GeneticTestAlreadyOrdered` 在 staging 連續下兩單**沒有 fire**（rule 觸發條件待 order team 釐清）。
 - **Idempotency 語意**：同 placerId 重送回 `duplicate`（帶真 sampleId、不重複收費）；placement 失敗的 row 現在標 `failed` — follow-up 應允許 failed row 重跑（否則 placerId 永久卡死）。
 - **ConfigMap drift 教訓**：PROD ConfigMap `lis-emr-v2-config-prod` 在 E2E 通過前就已是 `ORDER_INTAKE_MODE: live`（違反 PR #206 的 flag 註記）— 「文件說 disabled」不可信，**查實際 ConfigMap**。
+
+## API order path — catalog external code 解析（VP-17475, PR #284, 2026-07-21）
+
+- **API path 的 testCodes = catalog code**（`GUT_ZOOMER` 等，來自 `GET /v1/pricing/item/catalog/products`），**不是** legacy `VAREQUISTION*`。**API-only、無 legacy fallback**（Leo 定調）。HL7 path 不變。
+- **解析機制**：`enrich()` classify 前呼叫 pricing `POST /v1/pricing/item/catalog/productMap`（`ProductMapClientService`，per-code TTL cache 30min）→ `{item_id, item_type(packagePriceId|TESTGROUP|bundleId), ...}` → 用 `item_id` join 既有 mapping cache（productMap item_id == legacy `PackagePrice.id`，已實證 845=GZ 5.0）。400 unknown_codes → `unrecognized_test_codes` 乾淨拒單。
+- **Auth = platform user JWT**（HS256 `JWT_SECRET`，同 place-order/eligibility）；靜態 `ORDER_API_TOKEN` 會 401 — productMap 跟其他 `ORDER_*_URL` mapping endpoints 的 auth 不同。
+- **code→item 的 source of truth = `lis_pricing.external_codes`**（`code, target_type, item_id, promotion_id, shortcut_id, deprecated_at`）。上線初期只有 `GUT_ZOOMER→item 845`；新 catalog code 要 pricing 補 rows。
+- **`items.unique_emr_code` 不唯一**（GZ 3.0 與 4.0 都是 `VAREQUISTION279`）— downstream 一律 key on `item_id`/`order_type_id`，別用 unique_emr_code。
+- **NY swap 相容**：GUT_ZOOMER→845→VAREQUISTION463，`gz-ny-routing.ts` 的 swap key 就是 463 → catalog 解析後 NY swap 照常觸發（staging E2E 已驗）。
+- **未爆彈**：bundleId 的 cache join（`officialBundleIdToBundleMap` key 是 `oldOrderTypeId`，但 productMap 對 bundle 回 `promotion_id`）**未測** — 第一個 catalog bundle code 上線時要驗。**prod 的 productMap endpoint 尚未部署**（404）— prod rollout gated on pricing。Option B（pricing 擁有 composition）另開 VP-17478。
+
+## SFTP credential 單一來源 — `ehr_vendors`（VP-17385 + VP-17460, 2026-07）
+
+- **教訓（VP-17385 / FOLLOWTHATPATIENT 擱單事故）**：order fetch 曾只讀 legacy `emr_sftp_source`、result push 讀 `ehr_vendors` — 兩套 credential store「靠習慣同步」必然 drift，且失敗模式是**靜默**（folder 每 tick 被跳過，只有 debug-level warn）。**Consolidation > sync discipline**。
+- **現況**：PR #247 先做 vendor-primary + legacy-fallback + drift WARN；VP-17460 之後 main 的 fetch path **只讀 `ehr_vendors`**（`loadVendorCredentials`）。`emr_sftp_source` 表在 prod/staging DB 已不存在。
+- **殘留地雷**：auto-integrate `integration-request.service.ts` 仍 query `prisma.emrSftpSource` — 執行到會 1146。
+- **Key-based auth 已支援**（PR #275, 2026-07-20，BioInsights 首用）：`ehr_vendors.sftp_private_key` / `ehr_integrations.sftp_private_key`（OpenSSH PEM 字串，ppk 要先 `puttygen -O private-openssh` 轉）；order fetch 接受 password-OR-key row，result push pass-through。migration 對 prod（lisportalprod2）要**手動先跑再 deploy**（prod 非 Prisma-managed）。
