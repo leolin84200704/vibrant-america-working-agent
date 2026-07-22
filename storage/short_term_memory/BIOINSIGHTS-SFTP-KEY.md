@@ -1,11 +1,114 @@
 ---
 id: BIOINSIGHTS-SFTP-KEY
-summary: BioInsights SFTP account is key-only (no password) — added sftp_private_key columns to all 3 credential stores + plumbed privateKey through result-push and order-fetch pipelines. PR #275 (draft, target staging). Migration APPLIED to staging+prod 2026-07-20, live-verified.
+summary: BioInsights SFTP account is key-only (no password) — added sftp_private_key
+  columns to all 3 credential stores + plumbed privateKey through result-push and
+  order-fetch pipelines. PR
 status: active
 category: emr_integration
 created: 2026-07-20
 updated: 2026-07-20
+links:
+- BIOINSIGHTS-onboarding
+- FHIR-ONDEMAND-RESULT
+- INCIDENT-2604156666
+- LBS-1541
+- LBS-1656
+- QH-1660
+- QH-2257
+- QH-2577
+- QH-3752
+- QH-4350
+- QH-4352
+- QH-4608
+- QH-5840
+- VP-14787
+- VP-15279
+- VP-15952
+- VP-16014
+- VP-16166
+- VP-16175
+- VP-16186
+- VP-16193
+- VP-16251
+- VP-16271
+- VP-16280
+- VP-16329
+- VP-16685
+- VP-16720
+- VP-16734
+- VP-16765
+- VP-16766
+- VP-16784-87
+- VP-16832
+- VP-16881
+- VP-16885
+- VP-16934
+- VP-16987
+- VP-17076
+- VP-17117
+- VP-17120
+- VP-17136
+- VP-17283
+- VP-17286
+- VP-17344
+- VP-17411
+- VP-17460
+- VP-17466
+- VP-17475
+- emr-integration
+- fhir-api
+score: 0.642
 ---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # BIOINSIGHTS-SFTP-KEY — key-based SFTP auth support
 

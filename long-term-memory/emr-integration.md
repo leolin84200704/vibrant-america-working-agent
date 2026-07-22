@@ -3,11 +3,12 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 0.9034
+score: 0.9405
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-07-17
 links:
+- BIOINSIGHTS-SFTP-KEY
 - BIOINSIGHTS-onboarding
 - FHIR-ONDEMAND-RESULT
 - HL7-TRIAGE-20260427
@@ -65,6 +66,8 @@ links:
 - VP-17286
 - VP-17344
 - VP-17411
+- VP-17460
+- VP-17466
 - VP-17474
 - VP-17475
 - fhir-api
@@ -81,6 +84,10 @@ tags:
 summary: EMR/HL7/SFTP integration rules, identity mapping, MSH values, bundle config,
   hl7_file_input triage
 ---
+
+
+
+
 
 
 

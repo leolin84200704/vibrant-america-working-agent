@@ -6,6 +6,7 @@ status: active
 created: 2026-07-21
 updated: '2026-07-21'
 links:
+- BIOINSIGHTS-SFTP-KEY
 - FHIR-ONDEMAND-RESULT
 - INCIDENT-2604156666
 - LBS-1541
@@ -51,6 +52,8 @@ links:
 - VP-17344
 - VP-17385
 - VP-17411
+- VP-17460
+- VP-17466
 - VP-17475
 - emr-integration
 - fhir-api
@@ -76,8 +79,12 @@ summary: 'New EMR vendor BioInsights — first key-based (non-password) SFTP int
   2026-07-21 email sent to Thomas (perms + dir layout + sample HL7). STATUS: waiting
   on vendor reply.'
 jira_status: none
-score: 0.63
+score: 0.6638
 ---
+
+
+
+
 
 
 
