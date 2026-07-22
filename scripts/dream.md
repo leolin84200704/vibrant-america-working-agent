@@ -17,7 +17,33 @@ python3 scripts/reconcile-jira.py --apply
 
 ---
 
-## Phase 1: Orient (incremental — do NOT read every file)
+## Phase 0.5: Closeout audit (tickets Done within the last 24h)
+
+> Added after the VP-17474 incident (2026-07-22): the ticket was marked Done while prod was
+> broken for ~20h — code requiring a manual DDL auto-deployed to prod without it. "Jira Done"
+> is a claim, not a fact. Audit every fresh closure against the full chain.
+
+For each ticket that transitioned to Done/completed in the last 24h (from Phase 0 flips + Jira
+`status changed to Done` in the window, assignee = Leo/agent), verify the closure chain.
+Every check probes ground truth — never trust the plan of record (STM/PR body/Jira comment):
+
+1. **Find ALL merged PRs in the window** — search each work repo's recently merged PRs by
+   ticket id AND by merge time around the closure. Promotion PRs are often titled
+   "Stage test"-style with NO ticket id in the title — a ticket-id search alone WILL miss them.
+2. **Deploy status** — for every merge into an auto-deploy branch (`main`, `staging`,
+   `stage_test`), confirm the corresponding GitHub Actions deploy run concluded `success`.
+3. **Manual prerequisites** — if the merged diff or PR body mentions a manual step
+   (DDL/migration file, new env var, config toggle), verify it was actually applied on BOTH
+   staging and prod (e.g. `SHOW COLUMNS`, pod env probe). "Requires X before deploy" in a PR
+   body is a red flag until proven done.
+4. **Post-deploy health** — check failure signals for the touched services since the deploy:
+   `failed_notification` growth, error-tagged pod logs, obvious 5xx on the changed endpoints.
+5. **Live verification evidence** — STM must record a live probe/e2e that ran AFTER the final
+   deploy. Builds passing / logic self-checks do not count.
+
+Output one line per ticket in the dream log (`PASS` or `FLAG: <reason>`). Any FLAG goes into
+the daily digest top section so Leo sees it next morning; if the flag indicates active prod
+breakage (health signals firing), stop dreaming and escalate immediately instead.
 
 1. Read `storage/short_term_memory/_index.md`, `long-term-memory/_index.md`, `archive/_index.md`, `journal/_index.md`
 2. Determine the **last dream date**: newest `logs/dream-*.md` filename. If none, use 30 days ago.
@@ -106,6 +132,9 @@ Write a dream log to `logs/dream-YYYY-MM-DD.md`:
 
 ## Ground truth reconciliation
 - Jira reconcile: N flipped to completed / skipped (no credentials) / M need manual review
+
+## Closeout audit (Done < 24h)
+- VP-XXXXX: PASS / FLAG: <reason>  (one line per audited ticket; "none due" if empty)
 
 ## Signals
 - X files in working set (incremental since YYYY-MM-DD)
