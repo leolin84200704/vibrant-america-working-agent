@@ -6,7 +6,7 @@ status: active
 score: 0.9405
 base_weight: 1.0
 created: 2026-04-22
-updated: 2026-07-17
+updated: 2026-07-22
 links:
 - BIOINSIGHTS-SFTP-KEY
 - BIOINSIGHTS-onboarding
@@ -1055,6 +1055,16 @@ WHERE (ei.integration_type <> 'FULL_INTEGRATION' OR ei.ordering_enabled = 0)
 ## SFTP credential 單一來源 — `ehr_vendors`（VP-17385 + VP-17460, 2026-07）
 
 - **教訓（VP-17385 / FOLLOWTHATPATIENT 擱單事故）**：order fetch 曾只讀 legacy `emr_sftp_source`、result push 讀 `ehr_vendors` — 兩套 credential store「靠習慣同步」必然 drift，且失敗模式是**靜默**（folder 每 tick 被跳過，只有 debug-level warn）。**Consolidation > sync discipline**。
-- **現況**：PR #247 先做 vendor-primary + legacy-fallback + drift WARN；VP-17460 之後 main 的 fetch path **只讀 `ehr_vendors`**（`loadVendorCredentials`）。`emr_sftp_source` 表在 prod/staging DB 已不存在。
-- **殘留地雷**：auto-integrate `integration-request.service.ts` 仍 query `prisma.emrSftpSource` — 執行到會 1146。
+- **現況（2026-07-21 完成退役）**：PR #247 先做 vendor-primary + legacy-fallback + drift WARN；VP-17460 PR #277/#278（merged main 2026-07-20）後 fetch path **只讀 `ehr_vendors`**（`loadVendorCredentials`），auto-integrate cred snapshot 也改讀 ehr_vendors（舊的 emrSftpSource query / 1146 地雷已移除）。`emr_sftp_source` 已 **RENAME 成 `emr_sftp_source_retired_20260720`**（staging 3 rows / prod 30 rows 保留；rollback = rename 回來）；07-21 on-prem + AKS 全 pod live-verified 零 table-missing error。
+- **收尾 pending**：舒適窗（~1 週）後 DROP retired 表 + `legacy_raw_emr_sftp_source`（零 code refs 的死表）+ 從 schema.prisma 移除兩個 model。
+- **表退役手法（可複用，VP-17460 確立）**：(1) 先出 reader-removal PR，deploy 驗證後才動表；(2) **RENAME 而非 DROP** 作 instant-rollback probe，觀察窗過後才 DROP；(3) 驗證 legacy 服務（同 DB 帳號、同 NAT，無法直接指紋）真的下線 → 用 DB 側證據：`hl7_file_input.last_update_pod_name` 60 天 writer census + `SHOW PROCESSLIST` 連線數對照各 service connection-pool size 推算。
 - **Key-based auth 已支援**（PR #275, 2026-07-20，BioInsights 首用）：`ehr_vendors.sftp_private_key` / `ehr_integrations.sftp_private_key`（OpenSSH PEM 字串，ppk 要先 `puttygen -O private-openssh` 轉）；order fetch 接受 password-OR-key row，result push pass-through。migration 對 prod（lisportalprod2）要**手動先跑再 deploy**（prod 非 Prisma-managed）。
+
+## Result-ready email deep link（VP-16859 建置 + VP-17474 clinic-scope，2026-07）
+
+- **Token 模型**：`lis_frontend_service.report_email_tokens`（issuance = LIS-setting-consumer；resolve = LIS-transformer `trans-reports.controller.ts`；prod resolve base `/v1/portal/trans-service/trans/deep-link/resolve/:token`）。email href = `portal.vibrant-wellness.com/#/login?report_url=.../r/<24-char-token>`。
+- **Resolve outcome → FE 訊息是判別診斷的 key**：`access_denied`（token 找到但無權）=「This account does not have access」；`invalid`（token 查無）=「This link is invalid」。encoding/QP 損壞只可能產生 `invalid`，不可能產生 `access_denied` — 看到 access_denied 直接查登入者身份，別追 encoding（VP-17474 的 QP 理論就是這樣被推翻的）。
+- **存取模型（2026-07-22 起 prod live）**：`isRecipient OR isSameClinic` — row 的 `recipient_clinic_id`（issuance 用 email routing 的 `clinic_ids[0]` stamp；legacy 21,444 rows 已用 lis_core_v7 `sample→order_info.clinic_id` backfill）與 JWT `clinic_id` 相等即放行；**cross-clinic 一律 denied（by design）**；legacy NULL-clinic rows 維持嚴格 per-customer check。
+- **結構性背景**：result-ready email 常寄到 clinic 共用信箱（office@/info@ — getCustomerEmailBoth 回 clinic-level email），clinic staff 登入常是 `customer_id=null` 的 clinic-role JWT — 舊 per-customer 模型下這群人全部 access_denied，即 VP-17474 誤報的來源。
+- 401（JWT guard）不會留 `deep_link_resolve` log（guard 先 throw）；resolve log 有 `login_clinic_id` + `matched_by(recipient|clinic)`，PHI-free。
+- **Postmark suppression 必查**：result_ready_new 所在 server 有 16,828 個 suppressed addresses；suppression 中的 clinic inbox 收不到**任何** result-ready email（與任何 outage 無關）。Triage「沒收到 email」先查 `/message-streams/outbound/suppressions/dump`。Postmark server token 可從 noti/notification-center pod env（POSTMARK_KEY）取得。
