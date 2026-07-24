@@ -6,11 +6,58 @@ status: completed
 created: 2026-07-23
 updated: '2026-07-23'
 links:
-- VP-16765
+- BIOINSIGHTS-SFTP-KEY
+- BIOINSIGHTS-onboarding
+- FHIR-ONDEMAND-RESULT
+- INCIDENT-2604156666
+- LBS-1541
+- LBS-1656
+- QH-1660
+- QH-2257
+- QH-2577
+- QH-3752
+- QH-4350
+- QH-4352
+- QH-4608
+- QH-5840
+- VP-14787
+- VP-15279
+- VP-15952
+- VP-16014
+- VP-16166
+- VP-16175
+- VP-16186
+- VP-16193
+- VP-16251
+- VP-16271
+- VP-16280
+- VP-16329
+- VP-16685
+- VP-16720
 - VP-16734
+- VP-16765
+- VP-16766
+- VP-16784-87
+- VP-16832
+- VP-16881
+- VP-16885
+- VP-16934
+- VP-16987
+- VP-17076
+- VP-17117
 - VP-17120
+- VP-17136
+- VP-17283
+- VP-17286
 - VP-17312
+- VP-17344
+- VP-17411
+- VP-17460
+- VP-17466
+- VP-17474
+- VP-17475
 - emr-integration
+- fhir-api
 tags:
 - customer-not-found
 - mdhq
@@ -18,15 +65,62 @@ tags:
 - retry-rescan
 summary: 'Two 07-22 hl7_file_input failures (6673 Caroline Xanthakis / 6677 Angela
   Jordan, both MDHQ) were customer_not_found: providers had VA accounts+NPIs but zero
-  ehr_integrations rows. Fixed per VP-16765 playbook: INSERT ehr_integrations x2
-  (mirror practice LIVE peer, msh06=clinic_id per 2026-04+ convention) + order_clients
-  x2, then bump retry_num 0->3; on-prem pod retry-rescan (VP-17120) re-parsed from
-  its retained local file on the next 15-min tick. Samples 2602089/2602090 created,
-  correct customer+clinic, no duplicates. No Jira ticket (Leo direct request);
-  requested_by=customer_not_found-fix-20260723.'
+  ehr_integrations rows. Fixed per VP-16765 playbook: INSERT ehr_integrations x2 (mirror
+  practice LIVE peer, msh06=clinic_id per 2026-04+ convention) + order_clients x2,
+  then bump retry_num 0->3; on-prem pod retry-rescan (VP-17120) re-parsed from its
+  retained local file on the next 15-min tick. Samples 2602089/2602090 created, correct
+  customer+clinic, no duplicates. No Jira ticket (Leo direct request); requested_by=customer_not_found-fix-20260723.'
 jira_status: none
-score: 0.5
+score: 0.6863
 ---
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # HL7FAIL-20260722 — MDHQ customer_not_found x2 (Caroline Xanthakis / Angela Jordan)
 

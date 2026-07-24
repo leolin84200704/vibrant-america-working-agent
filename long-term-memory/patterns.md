@@ -201,6 +201,9 @@ kubectl exec $POD -- ps -eo pid,etimes,cmd | head
 # etimes (秒) 比 pod AGE 短 → process 重啟過
 ```
 
+### `kubectl logs deploy/<name>` 只取樣一個 pod（VP-17474 教訓）
+`kubectl logs deploy/...` 只挑 deployment 的**其中一個** pod。多 replica（如 lis-trans prod x3）時用它統計事件（token 發放數、error 數）會**低估 N 倍**。要全量就 iterate pods：`kubectl get pods -l app=<label> -o name | xargs -I{} kubectl logs {}`，或用 `--prefix -l <selector>` 直接對 label 取 logs。統計型驗證（「有幾筆」）一律先確認 replica 數。
+
 ### Java → TS port 的硬性 parity rules（VP-16463 教訓）
 任何 v2-port over v1 Java 的 service：
 1. **Terminal states 必須 set `parse_finished=true`**（或同等 finished flag）— 否則 BullMQ / 工作 queue 不停 retry terminal error。Java parser 對 `customer_not_found` / `emr_code_not_found` 都 set parse_finished=1 + return。VP-16463 v2 沒設 → retry 5 次 + 浪費 cycle

@@ -3,7 +3,7 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 0.9405
+score: 0.9529
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-07-22
@@ -12,6 +12,7 @@ links:
 - BIOINSIGHTS-onboarding
 - FHIR-ONDEMAND-RESULT
 - HL7-TRIAGE-20260427
+- HL7FAIL-20260722-MDHQ
 - INCIDENT-2604156666
 - LBS-1541
 - LBS-1656
@@ -84,6 +85,8 @@ tags:
 summary: EMR/HL7/SFTP integration rules, identity mapping, MSH values, bundle config,
   hl7_file_input triage
 ---
+
+
 
 
 
@@ -604,6 +607,8 @@ UPDATE hl7_file_input SET retry_num = 3 WHERE id = {X};
 - customer/integration lookup 是 stateless 的，不需要清其他欄位
 - 與「manual payment + order recovery」（HL7 triage）是兩個不同情境：reprocess 是「讓 cron 重試」，recovery 是「人工繞過 cron 補資料」
 - **判斷該失敗單由 emr-v2 還是 Java cron 處理**（決定 reprocess 機制是否適用）：emr-v2 processor 遇 customer_not_found 會設 `parse_finished=true`（停止重試）；若 `parse_finished=0` + customer_not_found + `retry_num=0` → 是 **EMR-Backend Java cron** 處理（該 client 未在 emr-v2 cutover batch），`SET retry_num=3` 重撿適用（VP-16765 驗證）。emr-v2 的 `retry_num` 則是從 `INITIAL_RETRY_NUM=5` 倒數、SFTP 掃檔驅動，不靠 hl7_file_input 重掃。
+- **`last_update_pod_name` 有同名歧義（HL7FAIL-20260722）**：on-prem cluster 的 deployment 與 AKS 同名（都叫 `lis-emr-v2-deployment-prod-*`），看 pod name 無法判斷該 row/檔案屬於哪個 cluster。要判斷 folder 的 owner 用 `sftp_folder_mapping.pipeline_location`（onprem/cloud），不要假設是 AKS。
+- **原始 HL7 只存在 owning pod 的 local file**（`hl7_file_input.order_input` 常為 null；失敗的檔案不會 archive）：`retry_num` bump 讓 owning pod 從本機檔案重讀，是唯一的 re-place 途徑 — 沒有那個 pod 的檔案就無法手工重建訂單。所以 bump 前務必先把 integration 修好（先 INSERT/修正、再 bump，順序不可反）。
 
 ### hl7_file_input 欄位寬度限制（寫入前必 truncate）
 | Column | Type | 易溢出來源 |

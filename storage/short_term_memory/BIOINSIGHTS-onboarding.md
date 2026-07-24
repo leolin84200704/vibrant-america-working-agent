@@ -8,6 +8,7 @@ updated: '2026-07-23'
 links:
 - BIOINSIGHTS-SFTP-KEY
 - FHIR-ONDEMAND-RESULT
+- HL7FAIL-20260722-MDHQ
 - INCIDENT-2604156666
 - LBS-1541
 - LBS-1656
@@ -79,8 +80,10 @@ summary: 'New EMR vendor BioInsights — first key-based (non-password) SFTP int
   2026-07-21 email sent to Thomas (perms + dir layout + sample HL7). STATUS: waiting
   on vendor reply.'
 jira_status: none
-score: 0.642
+score: 0.675
 ---
+
+
 
 
 

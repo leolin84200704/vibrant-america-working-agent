@@ -6,10 +6,11 @@ summary: BioInsights SFTP account is key-only (no password) — added sftp_priva
 status: active
 category: emr_integration
 created: 2026-07-20
-updated: '2026-07-22'
+updated: '2026-07-23'
 links:
 - BIOINSIGHTS-onboarding
 - FHIR-ONDEMAND-RESULT
+- HL7FAIL-20260722-MDHQ
 - INCIDENT-2604156666
 - LBS-1541
 - LBS-1656
@@ -57,8 +58,10 @@ links:
 - VP-17475
 - emr-integration
 - fhir-api
-score: 0.6638
+score: 0.675
 ---
+
+
 
 
 
@@ -150,6 +153,6 @@ Prod is NOT Prisma-managed. Apply migration SQL to staging (192.168.60.11) + pro
 ## Open items
 
 - [x] PR #275 MERGED to staging + promoted to main (PR #276) 2026-07-20; prod runs 2a33fe1 (dream resolve 2026-07-22, source: VP-17460 env facts + BIOINSIGHTS-onboarding)
-- [ ] Vendor row setup for BioInsights (ehr_vendors INSERT incl. the PEM key — receive key via secure channel, NOT Jira/Slack) — blocked on vendor-side provisioning (zero perms as of 07-21), see BIOINSIGHTS-onboarding
+- [x] Vendor row setup DONE 2026-07-23: perms fixed by vendor (Serdar), ehr_vendors id=46 (key-based, is_public=0) + sftp_folder_mapping id=281 (pipeline_location=cloud) inserted + live-verified — details in BIOINSIGHTS-onboarding (dream resolve 2026-07-23)
 - [ ] Possibly file a Jira ticket for the BioInsights integration and link PR
 - [ ] Encryption follow-up: encrypt sftp_password + sftp_private_key at rest (schema comment has flagged this since before)
