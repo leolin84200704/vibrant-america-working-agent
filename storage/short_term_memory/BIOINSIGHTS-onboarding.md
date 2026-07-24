@@ -4,7 +4,7 @@ type: stm
 category: emr_integration
 status: active
 created: 2026-07-21
-updated: '2026-07-21'
+updated: '2026-07-23'
 links:
 - BIOINSIGHTS-SFTP-KEY
 - FHIR-ONDEMAND-RESULT
@@ -167,9 +167,26 @@ score: 0.642
 - Our side fully ready: PR #275 deployed prod+staging, migration applied, egress from AKS pod to sftp.bioinsights.com:2022 verified.
 - NEXT ACTION when Thomas replies: re-run connectivity test (ls + put probe), inspect dir layout, review sample HL7 → decide transformer mapping + integration scope (order/result/bidirectional, which practices) → then gated ehr_vendors INSERT.
 
+### [2026-07-23 10:50] Vendor perms fixed — E2E connectivity PASS + vendor/mapping rows INSERTED (prod)
+- Serdar SANRI (Head of Eng, serdar@bioinsights.com — new contact, was Thomas) fixed server perms, created `incoming/` + `outgoing/` at root.
+- Local E2E test ALL PASS: ls root/incoming/outgoing OK; put+get roundtrip diff-verified in BOTH folders. Test files `vibrant_test.txt` left on server as evidence (harmless: fetch filter only picks `.hl7,.HL7`).
+- Key recovered: ppk still at `~/Downloads/bioinsights_key.ppk` (macOS TCC blocks *listing* Downloads — direct full-path access works; earlier "file gone" was a sandbox illusion). Converted to OpenSSH PEM via puttygen; pubkey matches recorded fingerprint.
+- **Prod INSERTs applied 2026-07-23 ~10:47 PT** (single transaction, pre-check guards, in-tx 100% verify; runner `scripts/_tmp-bio-apply.js` pattern):
+  - `ehr_vendors` id=46: code=BIOINSIGHTS, sftp.bioinsights.com:2022, user vibrant-wellness, sftp_password=NULL, sftp_private_key=PEM(444 chars), ordering_path=/outgoing/, result_path=/incoming/, **is_public=0** (flip at go-live), created_by/updated_by=Leo
+  - `sftp_folder_mapping` id=281: /outgoing/ -> /BIOINSIGHTS/Prod/Order/, emrName=BIOINSIGHTS, use_v2_pipeline=1, **pipeline_location=cloud** (FIRST cloud order folder ever — all other 197 rows are onprem; chosen because AKS egress verified, on-prem egress NOT verified; doubles as VP-17312 order-side canary)
+- **ASSUMPTION pending vendor confirm**: direction convention = we PICK UP orders from `/outgoing/`, DROP results into `/incoming/` (from BioInsights server's perspective). Asked Serdar in reply draft. If reversed: 1-column UPDATEs (mapping.server_folder + vendor paths swap).
+- Safety: even if files arrive now, no ehr_integrations rows exist -> parse fails at customer_not_found, no orders placed.
+
+### [2026-07-23 11:10] Pipeline LIVE-verified + archive dir created + reply email SENT — WAITING ON VENDOR
+- 11:00 PT cron tick (AKS cloud pod): "Scanning 1 v2-enabled SFTP folder(s) [cloud]" -> connected sftp.bioinsights.com:2022 with the DB-stored key (1/3 attempt, 1621ms) -> "fetch complete: 0 file(s) from 1/1 folder(s)". Order pipeline is live-scanning BioInsights every 15 min.
+- Created `/outgoing/archive/` on vendor server + verified rename into it (= fetcher's exact post-fetch move). Default HL7_REMOTE_POST_FETCH_ACTION=archive flow works with zero config. Test file now at `/outgoing/archive/vibrant_test.txt` (+ one in `/incoming/`).
+- Leo SENT the reply email to Serdar 2026-07-23: connectivity confirmed, archive explained, asked to confirm direction convention (orders=outgoing/, results=incoming/) and to have clinical team prep sample HL7.
+- STATUS: waiting on Serdar — (a) direction confirm, (b) sample HL7 files. When samples land in /outgoing/ the pipeline auto-ingests; they will fail safely at customer_not_found (no ehr_integrations yet) and be visible in hl7_file_input for parse/mapping review.
+- NEXT ACTION on vendor reply: review ingested sample rows in hl7_file_input + raw files in /BIOINSIGHTS/Prod/Order/; if direction reversed, UPDATE mapping.server_folder + swap vendor ordering/result paths + mkdir archive under the other folder; then define practice scope -> ehr_integrations INSERTs (gated) -> flip is_public=1 at go-live.
+
 ## Open items (go-live checklist)
-1. BLOCKER: Thomas/BioInsights must provision account permissions (home dir readable/writable) + tell us directory layout (orders pickup dir, results drop dir).
-2. Scope unclear: orders inbound only, results outbound only, or bidirectional? Which practices/clinics? (drives ehr_integrations + order_clients rows — order gate is order_clients per VP-16968)
-3. DB rows to insert (GATED, prod change): ehr_vendors BIOINSIGHTS row (host/port/username + sftp_private_key PEM); ehr_integrations per practice.
+1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
+2. Scope unclear: orders inbound only, results outbound only, or bidirectional? Which practices/clinics? (drives ehr_integrations rows — order gate is ehr_integrations LIVE+ordering per VP-16968 cutover)
+3. ~~ehr_vendors row~~ DONE 2026-07-23 (id=46, is_public=0 — flip at go-live). ~~sftp_folder_mapping~~ DONE (id=281, cloud). STILL PENDING: ehr_integrations per practice (needs scope from #2).
 4. Need sample HL7 files from vendor to decide transformer mapping needs.
 5. Move/secure the private key (unencrypted in ~/Downloads); consider filing a VP ticket for tracking.
