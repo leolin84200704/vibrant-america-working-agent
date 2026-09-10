@@ -3,9 +3,9 @@ id: INCIDENT-20260908-grpc-dead-node-ip
 title: emr-v2 result generation outage — every GRPC_*_CLOUD_HOST / GRPC_V2_*_HOST pointed at a
   recycled AKS node IP (10.224.0.199); repointed to 10.224.0.10, pods restarted, 58 pushes re-driven
 category: technical
-status: completed
+status: in_progress
 created: 2026-09-08
-updated: 2026-09-08
+updated: 2026-09-09
 tags:
 - incident
 - emr-v2
@@ -83,3 +83,23 @@ related:
   filter on transmission_status, not on error_message alone. 2617279 (ATHENA) instead got a NEW row; its old
   TRANSMISSION_ERROR row stays as history.
 - Staging pods on both clusters restarted onto the new ConfigMaps as well.
+
+## Order-side collateral found by hl7_fail DailyJob (2026-09-09 11:01Z)
+
+### [2026-09-09 11:05]
+- The 09-08 outcome only covered result pushes (rtr). The same dead target (coresamples-v2 NodePort 32100) also
+  serves order-intake customer/patient gRPC lookups, and **8 inbound orders exhausted their retries on
+  `connect ETIMEDOUT 10.224.0.199:32100` before the 19:07Z fix**: hl7_file_input 7047–7054 (THM /Prod/Orders/ ×3
+  → Ocenture customer 17565; MDHQ ×5 → customers 5794, 15181, 4953, 47715, 9889). All quarantined as
+  `quarantined_orders` id 3–10, status OPEN, failure_class `retry_exhausted`, expiring 09-14/09-15 → EXPIRED, no
+  auto-replay. Provider resolution had succeeded (matched_integration_id set); failure was downstream gRPC.
+- Pipeline healthy after fix: 7055–7058 (received ≥ 20:31Z) all parse_finished=1 with sample_id; no dead-IP errors
+  after 18:18Z.
+- Proposed re-place (NOT executed, awaiting Leo): `UPDATE hl7_file_input SET retry_num = 3 WHERE id IN
+  (7047..7054) AND parse_finished = 0 AND retry_num = 0 AND last_error LIKE '%10.224.0.199%'`; all 7 folders are
+  `pipeline_location=onprem` so the on-prem pod retries. Pre-checks: on-prem pod local file still present after the
+  19:07Z rollout restart (else replay from `quarantined_orders.raw_hl7_message`), and no manual/vendor re-order for
+  the same patient+DOB in lis_core_v7.sample. Then mark quarantine 3–10 RESOLVED.
+- Lesson for follow-ups: after any shared-gRPC-target incident, sweep BOTH result pushes and `hl7_file_input`
+  (`last_error LIKE '%<dead ip>%'`), and `retry_exhausted` quarantines need a post-fix replay path instead of
+  waiting 7 days to expire. Full detail: DailyJob/hl7_fail/triage_2026-09-09.md.

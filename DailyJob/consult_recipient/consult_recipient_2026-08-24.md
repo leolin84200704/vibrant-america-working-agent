@@ -1,8 +1,9 @@
 # Consult recipient check — 2026-08-24
 
-Window: next 48h from 2026-08-24T22:13:35.753Z
+Window: next 48h from 2026-08-24T22:21:11.057Z
 Consults scheduled: 63 (internal clinical-team blocks skipped: 12)
-**Unreachable: 1**
+**Unreachable and actionable: 1**
+No address anywhere (informational, nothing to populate): 0
 
 | event | start | reason | calendars |
 |---|---|---|---|
