@@ -2,7 +2,7 @@
 id: INCIDENT-20260910-emr-v2-di-crashloop
 type: stm
 category: technical
-status: active
+status: resolved
 score: 0.9
 base_weight: 0.9
 created: 2026-09-10
@@ -39,6 +39,9 @@ jira_status: n/a
 - 23:11 Leo merged #414 → staging (d8e4c9b); 23:12 #415 staging → main (c6d823a). Jenkins roll
   awaited; the deploy monitor now also alarms on "image switched but not ready after 3 min" and
   on restartCount > 0 for the new pods.
+- 23:21 hotfix pods up (d8e4c9b / c6d823a), old ReplicaSets retired, 0 restarts, health 200.
+  RESOLVED. Follow-on (not a crash): first T request per pod start was 503 store_unavailable
+  (ioredis lazyConnect + enableOfflineQueue=false) → #416 → live 23:41Z, verified 13/13.
 - 23:07 detected by the agent's own "ok 了嗎" check (the deploy monitor only reported "not ready
   yet"; a 10-minute 1/2 should itself have been treated as a signal).
 - 23:09 logs dumped to scratchpad before anything else (Gate 9). 23:10 reproduced locally with a
