@@ -36,6 +36,9 @@ jira_status: n/a
 - Old pods `lis-emr-v2-deployment-prod-c4549bc86-r96rj` / `-staging-544ddb486f-7w6k2` stayed
   Running + Ready (strategy maxSurge 1 / maxUnavailable 0) — `/api/v1/health` 200 via the old
   prod pod at 23:08. No customer-visible impact observed; rollout stuck at ready=1 unavailable=1.
+- 23:11 Leo merged #414 → staging (d8e4c9b); 23:12 #415 staging → main (c6d823a). Jenkins roll
+  awaited; the deploy monitor now also alarms on "image switched but not ready after 3 min" and
+  on restartCount > 0 for the new pods.
 - 23:07 detected by the agent's own "ok 了嗎" check (the deploy monitor only reported "not ready
   yet"; a 10-minute 1/2 should itself have been treated as a signal).
 - 23:09 logs dumped to scratchpad before anything else (Gate 9). 23:10 reproduced locally with a
