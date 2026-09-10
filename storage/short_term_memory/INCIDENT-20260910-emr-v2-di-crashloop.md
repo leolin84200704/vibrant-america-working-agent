@@ -3,6 +3,7 @@ id: INCIDENT-20260910-emr-v2-di-crashloop
 type: stm
 category: technical
 status: resolved
+follow_up: lesson PR + DI boot-smoke hook (factory session, BOOTSTRAP L89 rule)
 score: 0.9
 base_weight: 0.9
 created: 2026-09-10
@@ -88,3 +89,44 @@ Harmless in PR-A (#410) because nothing imported the module; fatal on the first 
 - Gate 6 "verify on live" was applied to PR-A (dist present, health 200) but PR-A had no import;
   the equivalent check for PR-B had to wait for the roll — which is when it broke. A local
   `nest start` smoke (or the module-compile spec) before push would have caught it in 5 seconds.
+
+## Leo 2026-09-10 16:50: "這是嚴重的失誤，要記起教訓" — enforcement proposal (for the FACTORY session)
+
+BOOTSTRAP §89: framework / hooks / lesson distillation are done in a `$FACTORY` session, not
+in the instance session. Everything the factory session needs is below; nothing else is missing.
+
+### Measured facts that make a level-5 mechanism possible
+- `nest build && env -i PATH HOME NODE_ENV=test node dist/main.js` with NO env, on the crashing
+  build 4b6f619: 6 modules "dependencies initialized", then `UnknownDependenciesException ...
+  RedisJtiStore` within ~1 s. On the fixed build e2252a1: 14 modules, 0 DI errors, dies on
+  `JWT_SECRET environment variable is required`.
+- With `.env.example` keys set to placeholders (+ JWT_SECRET/ADOBE dummies, ORDER_INTAKE_MODE
+  disabled, PORT 39999): 15 modules, 0 DI errors, dies on `Missing required configuration:
+  CLICKHOUSE_HOST` — i.e. the DI graph is fully resolved before the first hard config check.
+- So the discriminator is deterministic and needs no network: PASS = no
+  `UnknownDependenciesException|can't resolve dependencies` in the first 30 s; FAIL otherwise.
+  Whether it reaches "Nest application successfully started" is NOT the criterion (it needs DB).
+
+### Proposed lesson entries (CONTRIBUTING format, ≤50-char principle + 適用)
+1. **DI 圖要用真容器解析一次再 push** — 新增 provider / constructor 依賴的變更，push 前必有一個
+   spec 用 `Test.createTestingModule` 編譯真 module，或跑一次 boot smoke；手動 `new` 與 stub 掉新
+   service 的 TestingModule 都測不到 injector。適用: NestJS/Spring/Angular 類 DI 框架的任何
+   provider 變更；在唯一的 TestingModule spec 裡「stub 掉新依賴讓它過」就是這條的反例。
+   `enforced-by:` → framework/hooks/validate-nest-di-smoke.sh（待建，見下）。
+2. **可選建構子參數要 `@Optional() @Inject(TOKEN)`** — `param?: Interface` 在 Nest 是必要的 `Object`
+   依賴，整個 app 起不來。適用: 為測試留「可注入假物件」口的 @Injectable 類。
+3. **冷啟動後第一個請求是獨立的測試案例** — 部署驗證要在新 pod 上打第一發，lazy connect / 連線
+   池 / 快取預熱的 bug 只在那一發出現。適用: 任何 lazyConnect、offline-queue、warm-up 相關設定；
+   ioredis 的 `enableOfflineQueue:false` + `lazyConnect` 就是這樣第一發必 503。
+
+### Proposed mechanism (level 5, PreToolUse hook on `git push`, factory repo)
+- `framework/hooks/validate-nest-di-smoke.sh`: on `git push` from a repo whose package.json has
+  `@nestjs/core`, require marker `.git/di-smoke-ok-<HEAD sha>`; else exit 2 with the one-liner to
+  produce it. Marker is written by `framework/hooks/lib/nest-di-smoke.sh`: `nest build`, boot
+  `dist/main.js` for 30 s with `env -i` + `.env.example` placeholders, grep the DI-error pattern,
+  write marker on PASS. Test file `framework/hooks/tests/validate-nest-di-smoke.test.sh` with a
+  fake repo (marker present / absent / stale sha). Wire in each Nest product repo's
+  `.claude/settings.local.json` like the other hooks. Product-repo-side alternative (needs team
+  acceptance, so only as a proposal): `npm run smoke:di` + CI step.
+- Second-layer, cheaper, per-PR habit until the hook exists: the module-compile spec pattern
+  (`platform-assertion.module.spec.ts`) for every new module.
