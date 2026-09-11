@@ -3,11 +3,11 @@ id: INCIDENT-20260910-emr-v2-di-crashloop
 type: stm
 category: technical
 status: resolved
-follow_up: lesson PR + DI boot-smoke hook (factory session, BOOTSTRAP L89 rule)
+follow_up: factory PRs #74 (lesson 1 + pre-push DI smoke) / #75 (lesson 2) / #76 (lesson 3) awaiting Leo merge; after merge `git pull` factory main — githooks are global, no wiring needed
 score: 0.9
 base_weight: 0.9
 created: 2026-09-10
-updated: '2026-09-10'
+updated: '2026-09-11'
 links:
 - VP-18034
 - VP-18032
@@ -130,3 +130,13 @@ in the instance session. Everything the factory session needs is below; nothing 
   acceptance, so only as a proposal): `npm run smoke:di` + CI step.
 - Second-layer, cheaper, per-PR habit until the hook exists: the module-compile spec pattern
   (`platform-assertion.module.spec.ts`) for every new module.
+
+## [2026-09-11 10:20] Factory session — proposal executed
+- PR #74 `lesson/lis/di-graph-real-container-before-push`: lesson entry (enforced-by) + `framework/githooks/lib/nest-di-smoke.sh`
+  wired into `framework/githooks/pre-push` after "build OK" for gated Nest repos; `validate-git-push.sh` now blocks
+  `git push --no-verify` for the agent. Deviation from the proposal above: no PreToolUse marker hook — the factory
+  pre-push build gate is the gate that passed #412, so the smoke lives there.
+- Measured on real builds (scratch worktrees): 4b6f619 FAIL in 3 s (6 modules), origin/main 5e67339 PASS in 2 s
+  (40 modules); no-env run also PASS 40 modules, so `.env.example` is not read by default (it carries real gRPC/Kafka hosts).
+- PR #75 lesson 2 (`@Optional() @Inject(TOKEN)`), PR #76 lesson 3 (first request after cold start) — one lesson per PR.
+- Open for Leo: whether to add the other Nest repos (transformer-v2, results-web, ...) to `BUILD_GATE_REPOS`.
