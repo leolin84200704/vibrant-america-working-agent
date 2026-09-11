@@ -7,7 +7,7 @@ score: 1.4044
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-09-03
+updated: 2026-09-11
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -111,6 +111,7 @@ links:
 - VP-18055
 - VP-18066
 - VP-18080
+- VP-18085
 - VP-9299
 - business-model
 - business-model-deep
@@ -125,21 +126,21 @@ tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 98 entries across STM
+summary: Auto-aggregated failure index from 101 entries across STM
 ---
 
 # Failure Index
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-09-03 — total 98 entries
+> Last updated: 2026-09-11 — total 101 entries
 
 ## Themes
 
-- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 26 entries
+- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 27 entries
 - [Build / TypeScript / Tooling](#build-tooling) — 16 entries
-- [Other / uncategorized](#other) — 14 entries
-- [Deploy / commit / push coordination](#deploy-coordination) — 11 entries
+- [Other / uncategorized](#other) — 15 entries
+- [Deploy / commit / push coordination](#deploy-coordination) — 12 entries
 - [DB / migration / backfill](#db-migration) — 9 entries
 - [Scope / requirement / PM communication](#scope-communication) — 5 entries
 - [Redis / cache / pending list](#redis-cache) — 4 entries
@@ -177,17 +178,6 @@ of grepping whole configmaps.
 ### **[[VP-15460]]** — `2026-04-28` — redlock Lock API confusion (#90)
 
 Picked `lock.release()` from redlock@5 docs while installing redlock@4. The two versions have different Lock prototypes (`unlock` vs `release`). Cosmetic in production (TTL covered the leak) but log noise + would have been a real bug if TTL was raised.
-
-### **[[VP-16164]]** — `2026-05-27` — v1 schema 過度簡化（照 PRD 沒做完整盤點）
-
-- v1 只給 practice 單一 sftp_path，漏掉 order/result pipeline 真正會用的十幾個欄位（傳輸方式/分開的 order/result path/enabled flags/legacy fields）。沒考慮 CharmEMR HTTP 模式。
-- Root cause：照 PRD 的精簡 schema 直接做，沒先盤點「pipeline 實際讀 ehr_integrations 哪些欄位」。
-- 修法：Leo 質疑後派 explore 做完整 pipeline 欄位盤點 + 真實資料 COUNT(DISTINCT) per-group 一致性分析，才知道哪些該 practice / 哪些 per-provider。
-- **教訓**：要「取代既有表」的 schema，先盤點既有表在所有 pipeline 被讀的完整欄位清單，再設計。不要信 PRD 的精簡 schema。
-
-### **[[VP-16164]]** — `2026-05-27` — COUNT(DISTINCT) 把 null 當一致的陷阱
-
-一致性分析說 legacy_result_send_type「always consistent」，但 pipeline parity 抓到 1 個 group 有 [null, SFTP]。COUNT(DISTINCT) 忽略 null，所以判為一致。實際 backfill 把 null 正規化成 group 值。本案 pipeline 等價（null→SFTP）無害，但要記得 null 在一致性分析會被低估。
 
 ### **[[VP-16166]]** — [2026-08-26 14:2x PDT] 用錯檔名 → 錯的根因寫進了 Jira 票
 
@@ -526,6 +516,26 @@ for (PatientAddress a : patient.getPatient_address())
 - Pricing-team note (in PR body): staging pricing deployment matches no repo
   commit — needs rebuild/redeploy from the real staging branch.
 
+### **[[VP-18085]]** — `2026-09-09` — - First staging run used Nan's patient 477769 -> every case came back patient_not_found (getPatient
+
+decode failure, see side finding). Switched to patient 3076377 (VP-17628 E2E patient). Lesson: pick
+  the E2E patient from a KNOWN-GOOD prior run, and read the pod log on the first unexpected reason —
+  `patient_not_found` was hiding a gRPC decode error.
+- Negative control T3 placed a real order (expected it to stop at eligibility; patient 3076377 IS
+  orderable under 999997/10136). Cancelled within 30 s. Staging placements share the prod sample
+  sequence — treat every 201 as real.
+
+### **[[VP-16164]]** — `2026-05-27` — **
+
+- v1 只給 practice 單一 sftp_path，漏掉 order/result pipeline 真正會用的十幾個欄位（傳輸方式/分開的 order/result path/enabled flags/legacy fields）。沒考慮 CharmEMR HTTP 模式。
+- Root cause：照 PRD 的精簡 schema 直接做，沒先盤點「pipeline 實際讀 ehr_integrations 哪些欄位」。
+- 修法：Leo 質疑後派 explore 做完整 pipeline 欄位盤點 + 真實資料 COUNT(DISTINCT) per-group 一致性分析，才知道哪些該 practice / 哪些 per-provider。
+- **教訓**：要「取代既有表」的 schema，先盤點既有表在所有 pipeline 被讀的完整欄位清單，再設計。不要信 PRD 的精簡 schema。
+
+### **[[VP-16164]]** — `2026-05-27` — **
+
+一致性分析說 legacy_result_send_type「always consistent」，但 pipeline parity 抓到 1 個 group 有 [null, SFTP]。COUNT(DISTINCT) 忽略 null，所以判為一致。實際 backfill 把 null 正規化成 group 值。本案 pipeline 等價（null→SFTP）無害，但要記得 null 在一致性分析會被低估。
+
 ### **[[VP-16720]]** — `2026-06-01` — **
 
 **症狀**：我 INSERT 24 order_clients（per pair），但 Anna 43262 跨 4 clinic 同 customer_id → 4 個重複 oc rows（ids 2303/2306/2309/2312）。
@@ -733,6 +743,10 @@ Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`
 
 (none yet)
 
+### **[[PH-847]]** — `2026-09-11` — Dream closeout audit — PASS (PM-owned ticket)
+
+- PH-847 Done 09-10 13:13 PDT; assignee Xiaoye (PM). Implementation shipped under VP-18080 (order half, Leo) and VP-18066 (envelope), both audited PASS on 2026-09-03. Nothing further owed by this STM.
+
 ### **[[PO-256]]**
 
 - az CLI MFA expired — could not inspect RBAC Container App directly; bounded diagnosis at the coresamples→container-app hop via error strings and timing.
@@ -927,6 +941,22 @@ sample=2609199 retry=5 err="" code=""`
 
 **但這不證明 ticket 症狀修好** —— address 不在 emr-v2 送出的 payload 裡，元兇在
 billing（見上一節）。這是本次驗證的範圍上限，已在 PR #316 與此處明確標示。
+
+### **[[VP-17766]]** — [2026-09-05 00:50Z] Gate 3 tripped on STAGING (self-inflicted sequencing gap)
+
+- Symptom: st pod logs every 2 min `PrismaClientKnownRequestError P2022: The column
+  v2_event.contact_email does not exist` from `ReminderService.dispatchReminderType`
+  (reminder.service.ts:131) — i.e. every v2_event read on staging failed from ~20:34Z until the
+  ALTER at ~00:54Z (~4.3h). Staging only; prod pods run pre-change code.
+- Root cause: the PR body / SQL header said "apply the SQL BEFORE deploying", but stage_test
+  merge == auto-deploy, and nobody (me included) applied the staging ALTER before Leo merged.
+  I had left "who runs the ALTER" as an open question instead of doing the staging half myself
+  before opening the PR.
+- Lesson (candidate for ENGINEERING-LESSONS / hot lessons refinement): for push-to-deploy
+  branches, "schema before deploy" means the agent applies the STAGING schema change BEFORE
+  opening the stage_test PR (staging schema is agent-safe, additive, idempotent), and the PR
+  body states "staging ALTER already applied; prod ALTER must precede the main merge". Leaving
+  it as a question to the human converts a mechanical step into a race.
 
 ### **[[VP-18055]]** — [2026-09-01 ~20:50Z] Second failure (#285) diagnosed WITHOUT Jenkins access — transient prod-deploy connection, NOT code
 
