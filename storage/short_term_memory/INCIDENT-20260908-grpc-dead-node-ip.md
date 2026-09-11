@@ -1,11 +1,12 @@
 ---
 id: INCIDENT-20260908-grpc-dead-node-ip
-title: emr-v2 result generation outage — every GRPC_*_CLOUD_HOST / GRPC_V2_*_HOST pointed at a
-  recycled AKS node IP (10.224.0.199); repointed to 10.224.0.10, pods restarted, 58 pushes re-driven
+title: emr-v2 result generation outage — every GRPC_*_CLOUD_HOST / GRPC_V2_*_HOST
+  pointed at a recycled AKS node IP (10.224.0.199); repointed to 10.224.0.10, pods
+  restarted, 58 pushes re-driven
 category: technical
-status: in_progress
+status: resolved
 created: 2026-09-08
-updated: 2026-09-09
+updated: '2026-09-11'
 tags:
 - incident
 - emr-v2
@@ -20,6 +21,12 @@ related:
 - VP-18095
 - INCIDENT-20260518
 - INCIDENT-20260817-onprem-stale-deploy
+links:
+- INCIDENT-20260518
+- INCIDENT-20260910-emr-v2-di-crashloop
+- VP-17217
+- VP-17312
+score: 0.1575
 ---
 
 # INCIDENT 2026-09-08 — result pushes failing: gRPC targets pointed at a dead AKS node IP
@@ -103,3 +110,8 @@ related:
 - Lesson for follow-ups: after any shared-gRPC-target incident, sweep BOTH result pushes and `hl7_file_input`
   (`last_error LIKE '%<dead ip>%'`), and `retry_exhausted` quarantines need a post-fix replay path instead of
   waiting 7 days to expire. Full detail: DailyJob/hl7_fail/triage_2026-09-09.md.
+
+## Outcome — order-side collateral closed via VP-18185
+### [2026-09-11]
+- The 8 retry_exhausted orders (hl7 7047-7054) were replayed 09-10 00:47-01:02Z (retry_num=3 topped up, on-prem pod), 8/8 have sample_id; quarantines 3-10 RESOLVED. Ticket VP-18185 Done.
+- Still open (no ticket): stable service addresses (internal LB / DNS) + code defaults still 10.224.0.199 in grpc.config.ts / k8s yaml; Sentry alert on GENERATION_ERROR rate. Status set to resolved by dream.

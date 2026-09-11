@@ -6,7 +6,7 @@ status: active
 score: 0.1126
 base_weight: 0.7
 created: 2026-04-22
-updated: 2026-04-22
+updated: 2026-09-11
 links:
 - rules
 tags:
@@ -42,6 +42,13 @@ summary: Ticket keyword to repo/module routing table
 | sample, order, patient (core data) | LIS-backend-v2-coreSamples | `service/` |
 | notification, email, SMS, push | LIS-setting-consumer | `src/setting-consumer/` |
 | result ready, shipment, kit, billing event | LIS-setting-consumer | Kafka topics |
+| quarantined order, retry_exhausted, replay HL7 order | lis-backend-emr-v2 | `hl7_file_input.retry_num` re-place + `quarantined_orders`（emr-integration.md 2026-09-11） |
+| duplicate integration, remove / deactivate integration, provider left practice | lis-backend-emr-v2（data-only） | `ehr_integrations` LIVE→REJECTED via SQL + status_history（LBS-1784 / LBS-1785 recipe） |
+| same test twice, DBS twin, mixed collection method (Partner API) | lis-backend-emr-v2 | `order-intake/order-intake-duplicates.ts` + `CatalogMenuClientService` |
+| chargeIndicator T, platform pays, payment assertion, X-Payment-Authorization | lis-backend-emr-v2 | `src/modules/platform-assertion/` + order-intake controller / finalizer |
+| order summary PDF, requisition alongside result, attachment on SFTP | lis-backend-emr-v2 | `src/modules/result/services/result-attachment.service.ts` + `ehr_vendors.deliver_order_summary_pdf` |
+| consult email recipient, To/CC, booking form email, reminder went to wrong address | LIS-transformer-v2 | `src/calendar/shared/consult-recipients.util.ts` + event/reminder services |
+| "Sample not found" from Shipping for an EMR order id | LIS-Shipping（agent 無 push 權） | `orders.service.ts validateSampleId`（死的 `LIS_EMR_GRPC_URL`） |
 
 ---
 

@@ -21,6 +21,8 @@ links:
 - LBS-1656
 - LBS-1762
 - LBS-1773
+- LBS-1784
+- LBS-1785
 - LIS-7716
 - PH-847
 - QH-1660
@@ -99,6 +101,12 @@ links:
 - VP-18030
 - VP-18034
 - VP-18055
+- VP-18066
+- VP-18080
+- VP-18085
+- VP-18086
+- VP-18138
+- VP-18185
 - emr-integration
 - fhir-api
 tags:
@@ -114,7 +122,7 @@ summary: 'Two 07-22 hl7_file_input failures (6673 Caroline Xanthakis / 6677 Ange
   retained local file on the next 15-min tick. Samples 2602089/2602090 created, correct
   customer+clinic, no duplicates. No Jira ticket (Leo direct request); requested_by=customer_not_found-fix-20260723.'
 jira_status: none
-score: 0.2885
+score: 0.238
 ---
 
 # HL7FAIL-20260722 — MDHQ customer_not_found x2 (Caroline Xanthakis / Angela Jordan)

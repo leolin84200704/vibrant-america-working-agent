@@ -1,13 +1,18 @@
 # Journal Index (Episodic Memory — L3a)
 
 > Auto-maintained by the dream pipeline. One line per entry, newest first.
-> Last updated: 2026-09-03. +4 entries distilled — vp18030-list-mode, vp18048-internal-notes,
-> vp18050-closeout, vp18080-vp18066-taxonomy-envelope (→ emr-integration.md / patterns.md /
-> leo-working-rules.md). Three of the four had no frontmatter at all; added tonight.
-> Archived 3 distilled >30d entries (2026-08-03, 2026-08-04 x2) → archive/journal/.
+> Last updated: 2026-09-11. +5 entries distilled — vp-17766-consult-recipients, vp-17766-deploy-e2e,
+> vp18138-order-summary-pdf, vp18085-menu-section, vp18034-pr-b-wiring (→ emr-integration.md / patterns.md /
+> repos.md / ticket-routing.md / leo-working-rules.md). Four of the five had no `distilled:` key; added tonight.
+> Archived 3 distilled >30d entries (2026-08-06 x3) → archive/journal/.
 
 | Date | Slug | Related | Distilled |
 |------|------|---------|-----------|
+| 2026-09-10 | vp18034-pr-b-wiring | VP-18034, VP-18032, VP-18031, VP-18089, INCIDENT-20260910-emr-v2-di-crashloop | true |
+| 2026-09-09 | vp18085-menu-section | VP-18085, PH-871, VP-17724 | true |
+| 2026-09-08 | vp18138-order-summary-pdf | VP-18138, PH-904, VP-17812, INCIDENT-20260908-grpc-dead-node-ip | true |
+| 2026-09-08 | vp-17766-deploy-e2e | VP-17766, VP-17765 | true |
+| 2026-09-04 | vp-17766-consult-recipients | VP-17766, VP-17765, VP-17759 | true |
 | 2026-09-02 | vp18080-vp18066-taxonomy-envelope | PH-847, PH-844, VP-18080, VP-18081, VP-18066, QH-6962, QH-6947, VP-17691, VP-17760, LIS-7690 | true |
 | 2026-09-02 | vp18050-closeout | VP-18050, VP-18051, VP-17868, PH-898, QH-6939, SIIR-279 | true |
 | 2026-09-02 | vp18048-internal-notes | VP-18048, VP-18049, VP-17359, PH-822, QH-6934 | true |
@@ -25,9 +30,9 @@
 | 2026-08-16 | native-auto-memory-retirement | framework-sync, RETRIEVAL.md, ENFORCEMENT-LADDER.md | true |
 | 2026-08-14 | vp17715-report-group-push | VP-17715, VP-17723, VP-17344, VP-17493, VP-17441 | true |
 | 2026-08-14 | vp17714-clinician-switch-zoom-room | VP-17714, VP-16520, VP-16521, VP-16410, VP-16881, VP-17065 | true |
-| 2026-08-06 | vp17628-default-provider | VP-17628, VP-17472, VP-17499, VP-17450, VP-17283, VP-17290 | true |
-| 2026-08-06 | vp17524-out-of-result-tags | VP-17524 | true |
-| 2026-08-06 | vp17503-placeholder-pdf-removal | VP-17503, VP-17493, VP-17342 | true |
+| ~~2026-08-06~~ | ~~vp17628-default-provider~~ | VP-17628, VP-17472, VP-17499, VP-17450, VP-17283, VP-17290 | archived 2026-09-11 → `archive/journal/` |
+| ~~2026-08-06~~ | ~~vp17524-out-of-result-tags~~ | VP-17524 | archived 2026-09-11 → `archive/journal/` |
+| ~~2026-08-06~~ | ~~vp17503-placeholder-pdf-removal~~ | VP-17503, VP-17493, VP-17342 | archived 2026-09-11 → `archive/journal/` |
 | ~~2026-08-04~~ | ~~onprem-decom-audit~~ | (none) | archived 2026-09-03 → `archive/journal/` |
 | ~~2026-08-04~~ | ~~dob-sex-interception-and-address-chain~~ | VP-17544, VP-17587, VP-17584, VP-17598, VP-17591, VP-17480 | archived 2026-09-03 → `archive/journal/` |
 | ~~2026-08-03~~ | ~~blocked-verdict-shelf-life~~ | (none) | archived 2026-09-03 → `archive/journal/` |

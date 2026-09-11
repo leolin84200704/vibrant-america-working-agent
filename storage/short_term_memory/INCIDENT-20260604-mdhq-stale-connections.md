@@ -3,7 +3,7 @@ id: INCIDENT-20260604
 type: stm
 category: technical
 status: resolved
-score: 0.0243
+score: 0.0193
 base_weight: 0.9
 urgency: 5
 created: 2026-06-04
@@ -13,6 +13,7 @@ links:
 - INCIDENT-20260529
 - INCIDENT-20260601-followup-sftp-verify
 - INCIDENT-20260601-sftp-hang
+- INCIDENT-20260910-emr-v2-di-crashloop
 - QH-862
 - VP-15460
 - VP-16169

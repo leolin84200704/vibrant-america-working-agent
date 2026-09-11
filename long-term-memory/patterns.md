@@ -6,7 +6,7 @@ status: active
 score: 0.2079
 base_weight: 0.8
 created: 2026-04-22
-updated: 2026-07-22
+updated: 2026-09-11
 links:
 - INCIDENT-20260528
 - INCIDENT-20260529
@@ -95,6 +95,8 @@ summary: Build/deploy patterns, investigation flows, DB connections, known issue
 - `.env` 裡 `CORE_SAMPLE_V2_RPC` 是 cluster DNS（`...svc.cluster.local:8084`），只在 cluster 內可達
 - **VPN 開時** `192.168.60.6:30276`（v1）跟 `10.224.0.199:32100`（v2 coreSamples）兩個內網 IP 從本機都可達，可直接跑 verify script — 用 IP 不要用 cluster DNS
 - **【2026-08-20 更新, VP-17810】on-prem v1 `192.168.60.6:30276` 已死** — ECONNREFUSED，連 prod pod 內都連不到；emr-v2 靠 `GRPC_CLOUD_FALLBACK_ENABLED=true` 活著。`lis.*` package 的 RPC 改打 **cloud mirror `10.224.0.199:30276`**（本機 VPN 也可達——先前「local 不可達」是誤診：只試過死掉的 v1，且 `nc` timeout 3s 給了 false negative，**探測用 ≥5s**）。transformer 本地 `.env` 的 `CORE_RPC_STAGE=192.168.60.6:30276` 同樣是死的（VP-17825 實測）。本檔與 emr-integration.md 其他寫 `192.168.60.6:30276` 的段落一律以本條為準。
+
+- **【2026-09-08 更新, INCIDENT-20260908】cloud mirror `10.224.0.199` 已死**（被回收的 AKS node IP）——上下文裡所有 `10.224.0.199:{30276,30600,32100}` 一律讀作 **`10.224.0.10`** 同 port；六份 emr-v2 ConfigMap 09-08 已 patch，code default / repo yaml 仍寫 .199 待 PR。
 
 ### lis-backend-emr-v2 雙 proto 樹
 v1 跟 v2 的 RPC 各有獨立 proto 檔，**改 RPC 前先看 `src/config/grpc.config.ts` 對應的 path**，避免改錯邊：
@@ -1118,6 +1120,8 @@ done > jobs.ndjson
 | Reference range (detailed) | v1 `192.168.60.6:30276` (lis-core, 卡 Azure Redis) | cloud `10.224.0.199:30276` 或 `10.224.0.236:5900`（後者 prod pod 路由不通） | `lis.ReferenceRangeService` |
 | Test results detailed data | v1 `192.168.60.6:30600` (lis-test-connect, 卡 Azure Redis) | cloud `10.224.0.199:30600` ← INCIDENT-20260518 後改為 primary | `testresult.TestResultInfoGrpcService` |
 | Self-exposed for manual retrigger | emr-v2 `192.168.60.6:31317` | — | `resultgeneration.ResultGenerationService` |
+
+> ⚠ 表中 `10.224.0.199` 自 2026-09-08 起全部改為 `10.224.0.10`（INCIDENT-20260908，node IP 回收）。
 
 env var pattern：`GRPC_<SERVICE>_HOST` / `GRPC_<SERVICE>_PORT` (v1) + `GRPC_<SERVICE>_CLOUD_HOST` / `_PORT` (cloud) + `GRPC_V2_<SERVICE>_HOST` / `_PORT` (v2 coresamples)。
 
@@ -2326,6 +2330,7 @@ provider/clinicadmin calendar 抄一次**，之後**永不再同步**。
   `ssl:{rejectUnauthorized:false}`，否則 `--require_secure_transport=ON` 直接拒連。
 - on-prem coresamples gRPC `192.168.60.6:30276` 從本機 ECONNREFUSED 時，cloud
   `10.224.0.199:30276` 是可用替代。
+  （2026-09-08 起 .199 已死，改用 `10.224.0.10:30276`。）
 
 ## 【蒸餾 2026-08-24】provenance / 部署 / 驗證 gotchas（VP-17870, VP-17825, VP-17868）
 
@@ -2519,3 +2524,66 @@ Atlassian MCP 斷線時的 fallback：`~/src/credential/atlassian-api-token.md`�
   `summary: … APPLIED 2026-09-04: ehr_integrations …`（plain scalar 內的 `: `）。
 - 規則：STM `summary:` 一律單引號包；dream 跑 scoring 前用 `yaml.safe_load` 掃全部 frontmatter（本次 267 檔全過後才跑）。
   修復 = `git show HEAD:<file>` 取回 frontmatter 再套 flip。腳本層修法（parse 失敗要 raise / skip，不能 `{}`）屬 automation 變更，要走 PR。
+
+## 【蒸餾 2026-09-11】emr-v2 PR/deploy 慣例、AKS kubelogin、Nest DI 部署教訓、worktree/jest、transv2 schema、dream 停擺（VP-18085 / VP-18138 / VP-18034 / INCIDENT-20260910 / VP-17766 / VP-18185）
+
+### emr-v2 的 PR 與部署慣例（VP-18085 retrospective 點名要進 LTM）
+- **feature → `staging` PR，再開 `staging → main` 的 release PR（標題一律 "Staging"，無 ticket id）**。emr-v2 沒有 `stage_test` branch（開 PR 會回 "Base ref must be a branch"）。
+  closeout audit 找 promotion PR 要用 merge 時間對，不能用 ticket id 搜。
+- 部署 = **Jenkins**（commit status `continuous-integration/jenkins/branch`），GitHub Actions 在 main 只跑 CodeQL——「Actions 綠」不代表部署。AKS roll 通常 merge 後 11–25 分鐘；
+  部署證據 = pod image SHA + `kubectl exec … ls /app/dist/modules/<mod>`（或 grep 新常數），不是 badge。09-08 VP-18138：code 已 merge、DDL 兩邊都沒跑，image 6 分鐘後才落地——PR body 的
+  「apply DDL before deploy」不是機制。
+- Health 路徑是 `GET /api/v1/health`（裸 `/health` 404）；pod 沒有 curl/wget → `kubectl exec … node -e "http.get('http://localhost:3000/api/v1/health')"`；`kubectl port-forward` 3 秒內 HTTP 000，別依賴。
+- Deploy 後**第一個請求**要單獨打（INCIDENT-20260910：ioredis `lazyConnect` + `enableOfflineQueue:false` 讓每個新 pod 的第一發 T 請求 503；第二發就好）。
+
+### AKS 存取現況（2026-09-08 起）
+- `lisportalprod` cluster 停用 local accounts → kubeconfig 要 **Azure kubelogin**：`az aks install-cli --kubelogin-install-location ~/bin/kubelogin` + `kubelogin convert-kubeconfig -l azurecli`
+  （或 `az aks get-credentials` 後把 exec 指到絕對路徑）。`brew install kubelogin` 是 int128 的 OIDC 工具，不是這個。`az` MFA 過期（AADSTS50078）要 Leo `az login`。
+- 這個身分的權限（實測）：get/list、patch configmaps、delete pods 可；patch deployments、list nodes 不可；`pods/exec` 09-08 不可、09-10 可——每 session 重試一次再下結論。
+  Node hostIP 用 `kubectl get pods -A -o custom-columns=NODE:.spec.nodeName,HOSTIP:.status.hostIP` 繞過 list nodes。
+- macOS 沒有 `timeout` binary：`timeout 30 kubectl …` 靜默失敗、看起來像 cluster 不通——用 Bash tool 的 timeout 參數。zsh：`custom-columns=…[0]…` 含中括號要整段加引號，
+  `--include=*.ts` 要加引號，`echo ====X` 會變 "not found" 且整行後半消失。
+- rollout 卡在 `ready=1 unavailable=1` 超過 3 分鐘**就是告警**，不是「還在部署」；`maxUnavailable=0` 讓舊 pod 撐著所以沒有流量影響，但也讓人以為沒事。
+
+### Nest DI 只有真容器看得到（INCIDENT-20260910，factory PR #74/#75/#76 已 merge 09-11）
+- 新增 provider / constructor 依賴的 PR，至少一個 spec 用 `Test.createTestingModule({imports:[ConfigModule.forRoot({ignoreEnvFile:true,isGlobal:true}), <Module>]}).compile()`
+  解析真 module（pattern：`platform-assertion.module.spec.ts`）。手動 `new Service(...)` 與「在唯一的 TestingModule spec 裡 stub 掉新依賴讓它過」都測不到 injector——後者正是 #412 溜過去的方式。
+- `constructor(config: ConfigService, client?: SomeInterface)`：interface 型別在 `emitDecoratorMetadata` 下是 `Object` → Nest 當成必要 provider → 整個 app 起不來。要 `@Optional() @Inject(TOKEN)`。
+- 本機 5 秒重現：`nest build && env -i PATH HOME NODE_ENV=test node dist/main.js`——DI 問題在 ~1 s 內 `UnknownDependenciesException`；正常 build 會走到 `JWT_SECRET environment variable is required`
+  才死（DI 圖已全部解析）。factory pre-push 現在對 gated Nest repo 跑這個 smoke（`framework/githooks/lib/nest-di-smoke.sh`、`BUILD_GATE_REPOS`），`git push --no-verify` 被擋。
+- 事故時序留證：先 dump 新 pod logs（Gate 9）再做任何事；`kubectl rollout undo` 是秒級回到舊 ReplicaSet 的選項，但屬 prod 狀態變更、Leo 決定。
+
+### worktree / jest 陷阱（VP-18138、VP-18085、VP-18034）
+- fresh worktree 除了 `npm ci`（patterns 既有）還要 `npx prisma generate --schema prisma/schema.test.prisma`，否則 5 個 sqlite suite "Cannot find module .prisma/test-client"；
+  切 branch 後新增 model 會讓 `tsc` 報 PrismaService 缺屬性 → `npx prisma generate`。
+- 在 `*.worktrees/` 裡 `--testPathIgnorePatterns=worktrees` 會忽略**所有**測試；用 `'\.claude/worktrees'`。`npx jest <path>` 是 regex，會順便撈到 `.claude/worktrees/*` 下的舊 spec。
+- `parser.service.spec` 3 個 NY-swap case 在本機失敗是因為 gitignored `test-data/prod-fixture/` 存在，clean main 也一樣——用丟棄式 `git worktree` + symlink node_modules 驗證再怪自己的改動。
+- 主 checkout 可能停在 stale bugfix branch（VP-18138 時 main checkout 落後 15 commits）：從 `origin/main` 開 worktree，不從本機 main。
+
+### transv2 schema / 測試 / 部署（VP-17766）
+- schema 是**手寫 SQL**（`prisma/manual-migrations/`）+ `schema.prisma` + `npx prisma generate`（PG calendar + MySQL client2 兩個 client）；GraphQL `Calendar`（calendar.model.ts）與 `V2Calendar`
+  （schedule.model.ts）`implements v2_calendar`，每個新欄位都要補 `@Field`；`autoSchemaFile: true`，checked-in `schema.gql` 是舊的別改。
+- **stage_test merge = st pod 自動部署** → staging ALTER 要在開 stage_test PR **之前**由 agent 自己跑（staging schema 是 additive/idempotent、agent-safe），PR body 寫「staging 已 apply、prod ALTER 在 main merge 前」。
+  09-04 沒這樣做 → st pod 每 2 分鐘 `P2022 column does not exist` 4.3 小時。factory lesson PR #73 已 merge。st pod schema `calendar_dev_new`、prod `calendar_prod`。
+- 全量 jest 在 main 上本來就有 6 個 suite 失敗（practice-event-type graphql specs 缺 TimezoneSettingService provider 等）；證明 pre-existing 用 `git stash push -- src prisma` → 跑 → `git stash pop`。
+  `eslint --fix` 會重排沒動過的 code → revert 那些 hunk 讓 diff 可 review。
+- 機密位置：transv2 env 在 configMap `lis-transv2-config` / `-st`（secretOrKeyProd/Dev、platform_type、SERVER_ENVIRONMENT）；notification-center `noti/lis-notification-config`
+  有 `POSTMARK_KEY`（+ `_ZYMEBALANZ`）與雲端 DB URL（10.224.1.185:3306，需 ssl，從筆電查 >120 s timeout）。repo `.env.prod` 的 192.168.60.9 MySQL 是死的 legacy DB（最後一列 2024）。
+  自鑄 staging JWT：HS256 用 secretOrKeyDev，payload `{user_id/customer_id 999997, clinic_id 10136, user_roles:[clinicadmin]}`。
+- Postmark 手動補寄：`POST /email` 用 configMap 的 prod server token，Tag `calendar_prod`，Metadata 帶 `manual_resend_of/event_id/accession_id`；不寫 audit row。
+
+### Atlassian MCP 掉線時的 Jira REST 後路
+- repo `.env` 的 `JIRA_SERVER / JIRA_EMAIL / JIRA_API_TOKEN`（reconcile-jira.py 用的同一組）+ `GET /rest/api/3/issue/{key}`（description 是 ADF，要小走訪器攤平）；
+  `PUT` summary/description 回 204 可用。09-04 / 09-08 兩個 session 全程靠這條。
+
+### Dream pipeline 停擺的無聊原因 + reconcile 的狀態盲區
+- `run-dream.sh` 對任何 dirty 的 tracked memory 檔直接 ABORT。09-04 起一份 STM 沒 commit → **連續 6 夜沒有 dream**，index 凍在 09-03，closeout audit 全部延後。
+  **每個 session 結束都 commit memory repo，包含「什麼都沒 ship」的 session**。
+- `reconcile-jira.py` 只翻 `active/blocked/paused/pending/vendor-pending…` 這些 local status；STM 寫 `in_progress`（VP-18185）或 `done`（VP-18085）時 Jira Done 也不會翻成 completed，
+  由 dream 手動修。開票時 status 用 `active`。
+
+### 其他 gotchas
+- `scripts/get-customer-rpc.ts` 被 stale 的 `scripts/node_modules` 弄壞（protobufjs fetch 缺）——從 repo root 的 node_modules 跑 grpc-js。
+- LIS-Shipping：agent GitHub 帳號 `push:false`、org `allow_forking:false` → 交付物只能是 `git format-patch`；`npm ci` 在 origin/master 會失敗（lock 缺 `vibrant-oauth2-client`）。
+- VP-18055 monitor（PR #401 evidence gate）：`practice_level_declared` 單獨成立時會對 2026-05-27 seed batch 的每一列 page（25 個 Cerbo clinic / 91 個 ORDER_ONLY provider 的結果被
+  06-11 backfill 的設計靜默丟掉）——這是 AM/產品決定不是 25 次 INSERT；需要 recent_integration 或 previously_delivered 當 co-signal。

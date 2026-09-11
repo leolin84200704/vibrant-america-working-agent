@@ -27,6 +27,8 @@ links:
 - LBS-1656
 - LBS-1762
 - LBS-1773
+- LBS-1784
+- LBS-1785
 - LIS-7716
 - PH-847
 - QH-1660
@@ -102,9 +104,15 @@ links:
 - VP-18030
 - VP-18034
 - VP-18055
+- VP-18066
+- VP-18080
+- VP-18085
+- VP-18086
+- VP-18138
+- VP-18185
 - emr-integration
 - fhir-api
-score: 1.1475
+score: 0.9478
 ---
 
 # HL7FAIL-20260903 — Everspan customer_not_found (Mary Jo Allen)

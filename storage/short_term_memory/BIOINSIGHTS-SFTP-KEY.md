@@ -23,6 +23,8 @@ links:
 - LBS-1656
 - LBS-1762
 - LBS-1773
+- LBS-1784
+- LBS-1785
 - LIS-7716
 - PH-847
 - QH-1660
@@ -98,10 +100,17 @@ links:
 - VP-17827
 - VP-17914
 - VP-18030
+- VP-18034
 - VP-18055
+- VP-18066
+- VP-18080
+- VP-18085
+- VP-18086
+- VP-18138
+- VP-18185
 - emr-integration
 - fhir-api
-score: 0.2857
+score: 0.238
 ---
 
 # BIOINSIGHTS-SFTP-KEY — key-based SFTP auth support

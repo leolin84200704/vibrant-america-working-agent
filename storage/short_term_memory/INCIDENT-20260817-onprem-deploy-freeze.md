@@ -30,6 +30,7 @@ summary: VP-17559 moved the Event Hub SAS to Key Vault (2026-07-30); the on-prem
 links:
 - INCIDENT-20260518
 - INCIDENT-20260817-onprem-stale-deploy
+- INCIDENT-20260910-emr-v2-di-crashloop
 - QH-1130
 - QH-1159
 - QH-1591
@@ -62,6 +63,7 @@ links:
 - VP-17714
 - VP-17753
 - VP-17754
+- VP-17766
 - VP-17825
 - VP-17870
 - VP-18048
@@ -70,7 +72,7 @@ links:
 - failures
 - repo-catalog
 - repos
-score: 0.3548
+score: 0.2822
 ---
 
 # INCIDENT 2026-08-17 — on-prem emr-v2 deploy freeze

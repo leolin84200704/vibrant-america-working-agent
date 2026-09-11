@@ -3,16 +3,17 @@ id: repos
 type: ltm
 category: technical
 status: active
-score: 1.136
+score: 1.1694
 base_weight: 0.9
 created: 2026-04-22
-updated: 2026-04-22
+updated: 2026-09-11
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
 - INCIDENT-20260601-sftp-hang
 - INCIDENT-20260604
 - INCIDENT-20260817-onprem-deploy-freeze
+- INCIDENT-20260910-emr-v2-di-crashloop
 - LBS-1487
 - LBS-1547
 - PO-222
@@ -29,6 +30,7 @@ links:
 - QH-862
 - QH-918
 - QH-919
+- TRANS-OPTIMIZATION-20260911
 - VP-15460
 - VP-16009
 - VP-16154
@@ -83,6 +85,7 @@ links:
 - VP-17754
 - VP-17755
 - VP-17765
+- VP-17766
 - VP-17825
 - VP-17868
 - VP-17870
@@ -154,6 +157,7 @@ summary: 'Active repo reference: tech stack, ports, key areas, setup'
 - **Purpose**: EMR system backend (AutoIntegrate) — **future replacement for EMR-Backend (Java legacy)**
 - **Tech**: NestJS, TypeScript, MySQL 8.0, Prisma, Kafka, BullMQ (sidecar Redis `emptyDir`)
 - **Port**: 3000 (HTTP) / 5000 (gRPC self-server)。on-prem NodePorts：prod gRPC `192.168.60.6:31317`、prod HTTP `31318`（31316 是死的 legacy port，yaml 註解已改、Jenkinsfile echo 仍殘留）；staging gRPC `31319` / HTTP `31320`。**另有兩個 repos 先前漏記的 live gRPC NodePorts（LIS-7690 cluster 實測 2026-08-18）**：`28305`（`lis-emr-v2-grpc-service-prod`）、`28301`（`lis-emr-v2-grpc-service`），都 → container 5000；in-cluster 另有 `lis-emr-v2-internal-{prod,staging}` 與舊 ClusterIP `lis-emr-v2-http-service{,-prod}`（28300/28302→3000）。公開 HTTPS 端點全表在 **emr-v2 README「Service Endpoints」section（PR #377）**，全部 live 驗證過。⚠ on-prem prod image tag 是 **`:latest` 非 SHA-pinned** — INCIDENT-20260817 十三天 silent drift 的結構性成因，未修。
+- **PR / deploy 慣例（2026-09-09 實測）**：feature → `staging` PR → `staging → main` release PR（標題 "Staging"）；沒有 `stage_test` branch。部署是 Jenkins（commit status），GH Actions 只跑 CodeQL。健康路徑 `GET /api/v1/health`。詳 patterns.md 【蒸餾 2026-09-11】。
 - **⚠️ `.env DATABASE_URL` 指 prod**: `lisportalprod2.mysql.database.azure.com / lis_emr`，不是 dev。`prisma migrate deploy` / `db execute` / `db push` 前要先 verify schema element 存在。`_prisma_migrations` table **不存在於 prod**，所以 `prisma migrate status` 會報所有 migration 未 applied（schema 早已 manual SQL apply）— 別誤信 status，個別 `SHOW COLUMNS` / `SHOW TABLES` 驗證。
 - **Repo convention `/scripts/` 在 `.gitignore`**：one-shot ts-node ops scripts（`_apply-*.ts`, `seed-*.ts`）不入版控。deploy-required 的 seed 改放 `prisma/seed.ts` 或 dump SQL fixture 進 migration folder；ad-hoc script 留 local。
 - **JWT auth `isAdmin` derive 規則**：`auth.service.ts:36-41` 從 `internal_user_role` 比對 allowlist `['admin','super_admin','system_admin']` (lowercase) 算 isAdmin — payload 內直接寫 `isAdmin: true` 會被覆蓋。Bypass `validateCustomerAccess` / `validateApply` 要設 `internal_user_role: 'admin'`，不是 `'sales'`。Auth header 用 JWT_SECRET 從 .env 簽出來即可（HS256）。
@@ -215,6 +219,7 @@ summary: 'Active repo reference: tech stack, ports, key areas, setup'
 - **Endpoints**:
   - on-prem prod: `192.168.60.6:30600` (NodePort → svc `lis-test-connect-grpc-service` → 2 replicas)
   - cloud: `10.224.0.199:30600` (same proto/service, currently healthy — emr-v2 用作 primary)
+    （**2026-09-08 起 `10.224.0.199` 已死，cloud 位址改 `10.224.0.10:30600`**；INCIDENT-20260908）
 - **Key file**: `src/features/grpc/grpc.controller.ts` (`getTestsResultsDetailData` handler entry)
 - **Server log entry signature**: `service: "tests results with sampleId or barcode with detail parse"` 印一行後若無下文 → handler hang 在 Redis lookup（INCIDENT-20260518 root cause）
 - **Known weakness**: handler 內走 Azure Redis `vibrant-cloud-cache.redis.cache.windows.net` 的 cache lookup 無 timeout；當 Redis NXDOMAIN 時 handler 永遠不返回。Readiness probe 是 `/swagger` HTTP，不檢查 Redis，所以 K8s 仍認為 pod 健康繼續吃流量
@@ -287,3 +292,8 @@ sudo prompt 用 `echo <pw> | sudo -S <cmd>`。Heredoc 內含 `[^...]` 之類 exp
 
 ## Inactive/Empty
 - EHR-backend, LIS-backend-billing, LIS-backend-coreSamples, LIS-backend-v2-order-management — empty or minimal
+
+## 【更新 2026-09-11】存取權限備忘
+- **LIS-Shipping**（Vibrant-America/LIS-Shipping）：agent GitHub 帳號 `permissions.push=false`，org `allow_forking=false` → 不能開 branch 也不能 fork PR；
+  交付 = `git format-patch`（VP-18185 patch 存於 `storage/short_term_memory/VP-18185-lis-shipping-aa65b0b3.patch`）。`LIS_EMR_GRPC_URL` 指向死的 legacy emr port 31316（詳 emr-integration.md 2026-09-11）。
+- 跨 repo 計畫前先 `gh api repos/{owner}/{repo} --jq .permissions.push`（同 va-portal 教訓）。emr-v2 `push:true`。

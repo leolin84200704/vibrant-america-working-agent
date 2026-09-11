@@ -27,6 +27,8 @@ links:
 - LBS-1656
 - LBS-1762
 - LBS-1773
+- LBS-1784
+- LBS-1785
 - LIS-7716
 - PH-847
 - QH-1660
@@ -103,6 +105,12 @@ links:
 - VP-18030
 - VP-18034
 - VP-18055
+- VP-18066
+- VP-18080
+- VP-18085
+- VP-18086
+- VP-18138
+- VP-18185
 - emr-integration
 - fhir-api
 tags:
@@ -110,7 +118,7 @@ tags:
 summary: 'Deleted all 3 VEJO integrations (vendors 17/18/43) from prod lis_emr: 41
   rows across 7 tables, transaction with count guards, full backup at ~/src/credential/vejo-deletion-backup-20260804.json.
   Zero activity ever (0 hl7, 0 results, 0 samples). Reverse-audit clean.'
-score: 0.4304
+score: 0.355
 ---
 
 # VEJO integration deletion — 2026-08-04

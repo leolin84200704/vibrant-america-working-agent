@@ -3,7 +3,7 @@ id: repo-catalog
 type: ltm
 category: technical
 status: active
-score: 0.891
+score: 0.9244
 base_weight: 0.9
 created: 2026-06-07
 updated: 2026-06-07
@@ -13,6 +13,7 @@ links:
 - INCIDENT-20260601-sftp-hang
 - INCIDENT-20260604
 - INCIDENT-20260817-onprem-deploy-freeze
+- INCIDENT-20260910-emr-v2-di-crashloop
 - LBS-1547
 - PO-222
 - QH-1104
@@ -27,6 +28,7 @@ links:
 - QH-862
 - QH-918
 - QH-919
+- TRANS-OPTIMIZATION-20260911
 - VP-15460
 - VP-16009
 - VP-16154
@@ -70,6 +72,7 @@ links:
 - VP-17714
 - VP-17753
 - VP-17765
+- VP-17766
 - VP-17825
 - VP-17870
 - VP-18048

@@ -3,10 +3,10 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 1.5345
+score: 1.5964
 base_weight: 1.0
 created: 2026-04-22
-updated: 2026-07-22
+updated: 2026-09-11
 links:
 - BETA-E2E-20260729
 - BIOINSIGHTS-SFTP-KEY
@@ -25,6 +25,8 @@ links:
 - LBS-1656
 - LBS-1762
 - LBS-1773
+- LBS-1784
+- LBS-1785
 - LIS-7716
 - PH-847
 - QH-1660
@@ -116,7 +118,10 @@ links:
 - VP-18055
 - VP-18066
 - VP-18080
+- VP-18085
 - VP-18086
+- VP-18138
+- VP-18185
 - fhir-api
 tags:
 - emr
@@ -937,6 +942,7 @@ payload = {
 - **Host migration (安全)**：cloud mirror @ 同 port、同 proto package、同 backend code。例：
   - `10.224.0.199:30276` 鏡像 `192.168.60.6:30276` (`lis` package, Java) — VP-16685 wrap (`tryCloudThenOnPrem`)
   - `10.224.0.199:30600` 鏡像 `192.168.60.6:30600` (`testresult` package) — INCIDENT-20260518 既有 fallback
+  - **【2026-09-08 更新, INCIDENT-20260908】`10.224.0.199` 是被回收的 node IP，已死；上面兩個 mirror 現在是 `10.224.0.10:30276` / `10.224.0.10:30600`（同 port 同 package）。本檔其他 `10.224.0.199` 一律讀作 `10.224.0.10`。**
   - Wrap 設計：`primary cloud → on transient error fallback on-prem`，business error 直接 throw。helper：`grpc-client.service.ts` 的 `tryCloudThenOnPrem` (EMR) / `with-cloud-fallback.util.ts` (Calendar)
 - **Service migration (要當全新 integration 處理)**：換 port / 換 package / 換 backend language — 是平行 service 不是 upgrade。例：
   - v1 `lis` (`:30276`, Java) vs v2 `coresamples_service` (`:32100`, Go) 是 **平行兩個 service**，不是 v1→v2 upgrade
@@ -1807,3 +1813,95 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
   先 `lsof | grep <file>` / `/proc/fs/cifs/open_files`。
 - 結果：7012 於 2026-09-03 20:47Z parse_finished=1 → sample 2629319 / barcode 2609036689 / emr_order_id 0000008832。
   `last_error` 欄位**不會被成功清掉**（仍顯示 customer_not_found=MARY JO ALLEN）——判斷成功看 parse_finished + sample_id。
+
+## 【蒸餾 2026-09-11】gRPC 目標搬家 + quarantine replay + integration 去重 + Partner API 同測試/混菜單規則 + Order Summary PDF + 諮詢收件人（INCIDENT-20260908 / VP-18185 / LBS-1784 / LBS-1785 / VP-18085 / VP-18138 / VP-17766 / VP-18034 / VP-18086）
+
+### Cloud gRPC mirror 位址：`10.224.0.199` 已死，一律讀作 `10.224.0.10`（2026-09-08 起）
+- `10.224.0.199` 是被回收的 AKS node IP，它是三個 NodePort 的入口：lis-core v1 gRPC `:30276`、lis-test-connect `:30600`、
+  coresamples-v2 `:32100`。09-06 04:48Z 起 rtr 開始 ETIMEDOUT，09-08 17h 起 100% GENERATION_ERROR，AKS 與 on-prem 兩個 prod pod 都中。
+- 修法：六份 emr-v2 ConfigMap（AKS ns emr-v2 ×2、AKS ns default ×2 = Jenkins 每次 deploy 同步到兩 cluster 的來源、on-prem ns default ×2）
+  的 8 個 key（`GRPC_{CUSTOMER,PATIENT,SAMPLE,TEST_RESULT,REFERENCE_RANGE}_CLOUD_HOST`、`GRPC_V2_{CUSTOMER,PATIENT,SAMPLE}_HOST`）
+  `kubectl patch` 成 `10.224.0.10`（systemonly pool node，三個 port 從 on-prem 60.5 都 OPEN），pods 重啟，58/58 卡住的 sample 重推。
+  **code default（`src/config/grpc.config.ts`）與 repo yaml 仍寫 .199，待 PR**；node IP 不是穩定 service 位址——下次 node image 升級會重演。
+  coresamples-v2 已有 internal LB `coresamplesv2-loadbalancer` 10.224.1.113:80→8084（on-prem 可達）；lis-core-grpc / lis-test-connect 沒有。
+- **共用 gRPC 目標出事後要掃兩邊**：09-08 只修了 result push（rtr）；同一個死目標也服務 order intake 的 customer/patient 查詢，
+  **8 筆 inbound order 在修好前耗盡 retry**（hl7_file_input 7047–7054，THM ×3 → Ocenture 17565、MDHQ ×5），全部進 `quarantined_orders`
+  `retry_exhausted` OPEN，隔天 hl7_fail DailyJob 才發現，已變成 Zendesk 754019 / VP-18185。掃法：`hl7_file_input.last_error LIKE '%<dead ip>%'`
+  + `result_transmission_records.error_message LIKE '%<dead ip>%'`。
+- 手動 GenerateResultHl7 重推會 **UPDATE 既有 rtr row 並保留舊 error_message 文字**（TRANSMITTED + 舊 "PERMANENT FAILURE ... 10.224.0.199"）；
+  以 error text 查故障一律要加 `transmission_status` 條件。ATHENA 例外：新開一列。Power2Practice SFTP handshake 對 burst 敏感，10 s 間隔會偶發失敗、20–30 s 全過。
+- 沒有任何告警接住「連續數小時 100% GENERATION_ERROR」——result_fail DailyJob 是隔天早上。缺口：Sentry 對 GENERATION_ERROR rate 或 `14 UNAVAILABLE` 的 alert。
+
+### `quarantined_orders` retry_exhausted 的 replay 手法（VP-18185）
+- quarantine 只有 capture，**沒有 auto-replay、沒有 auto-resolve**（後續成功也不會自動關）；`resolution_action` enum 沒有 "replayed" 值 → 留 NULL、寫 `internal_notes`。
+- Replay = `UPDATE hl7_file_input SET retry_num = 3 WHERE id IN (...) AND parse_finished = 0 AND retry_num = 0 AND last_error LIKE '%<ip>%'`：
+  fetch tick 會把自己 owner 的 `parse_finished=0 AND retry_num>0` 列重新 enqueue（jobId `hl7-{id}-r{retry_num}`），processor 重讀本機檔
+  （on-prem prod pod 的 PV `/EMR_storage/HL7Message_prod/{VENDOR}/Prod/Order/` 跨 restart 保留；`localDir` 欄指這裡）。走完整正常 pipeline 含付款，**不需要也不可請 vendor 重送**。
+- Replay 前 dedupe：同患者 name+DOB 掃 lis_core_v7.patient/sample + emr_sample + 同 vendor order id 第二個檔。09-09 的 CAMPBELL 案：實驗室把檢體 accession 到
+  2025 年的舊 order（同 MDHQ 患者），隔天新 HL7 被 quarantine → replay 後該患者有兩個 sample（2368564 已收檢體 / 2632278 未收）。這是 accessioning 的決定，agent 不動。
+- 8 筆全部 replay 成功（09-10 00:47–01:02Z，由 on-prem pod 執行）；quarantine 3–10 手動 RESOLVED（WHERE 綁 id 範圍 + OPEN + retry_exhausted + JOIN parse_finished=1 AND sample_id NOT NULL）。
+
+### LIS-Shipping 的「Sample not found」其實是死掉的 EMR lookup 目標（VP-18185 ask 3，未修）
+- LIS-Shipping `LIS_EMR_GRPC_URL=192.168.60.6:31316`（configmap `lis-shipping-config-prod`, ns shipping）→ on-prem svc `emr-prod` → selector `app=lis-emr-result-prod`
+  = legacy Java deployment **replicas 0**（ENDPOINTS none、RS 166 天）。每次 `getSampleIdByEmrOrderId` 都 `14 UNAVAILABLE`，`validateSampleId` 的 catch 翻成 HTTP 404 "Sample not found with input id"。
+- **全系統沒有 `emr.EMRResultGrpcService` 的活 implementer**（emr-v2 只註冊 `resultgeneration` package）。修選項：(a) emr-v2 註冊 `emr` package 用 `emr_sample` 回答
+  （2026-02 之後的 order 才有 100% 覆蓋，2025 Java 時代 0%）再 repoint；(b) Shipping 直接查 DB（舊資料在 `emr_tracking_data`，DB 未知）。是跨 repo 決定，Leo 未定。
+- 已寫好的 patch（UNAVAILABLE/DEADLINE → 503 + 明講「不是 sample 不存在」，11 cases spec）：`storage/short_term_memory/VP-18185-lis-shipping-aa65b0b3.patch`（`git am`）。
+  **agent 帳號對 LIS-Shipping 無 push 權且 org 禁 fork**，要 Leo 自己推。
+
+### Integration 去重 / 移除的資料事實（LBS-1784 / LBS-1785）
+- **NPI 不是 customer 身分**：lis_core 同一個 NPI 常掛多個 customer 帳號（一個 NPI 6 個帳號）。prod 寫入一律綁 `customer_id`（+ clinic + vendor + 現況 status），
+  NPI 只拿來 discovery / reporting。LBS-1784 的 "OR NPI" guard 抓到 order_clients 1961（customer 14738，同 NPI，無 ehr_integrations）——不在票上、留著、回報。
+- **重複 LIVE 列的根因**：auto-integrate `IntegrationRequestService.create()` 是裸 prisma create，沒有 (customer_id, clinic_id, vendor) 唯一性檢查 → 7 秒內雙擊送出 = 兩列、
+  兩次 approve、兩封 Integration Live 信（LIS-7716 開著的 follow-up）。prod 已有 15+ 組 (customer_id, clinic_id) 多於一列 LIVE（999997/10136 ×3、2065/1652、9075..9086/13505 …）。
+- 重複列**今天不會雙送**：result push 以 `(legacy_emr_service, sftp_result_path)` 去重；order routing 取 `updated_at` 最新列。真正的害處是 per-integration 設定
+  （report_option PATCH、deferred groups、push level）會落在任意一列（LIS-7716 教訓）。Cerbo approve post-hook 會先查 `sftp_folder_mapping` 是否存在 → 第二次 approve 沒建第二筆 mapping。
+- **LIVE → REJECTED 是唯一出口**（REJECTED → PENDING 可重送）。admin reject endpoint = 同兩筆 DB 寫 + 寄「Request Update」拒絕信給 contact_email——去重時用 raw SQL
+  跳過那封信（保留 `requested_by` = 真實送出者，`last_modified_by='Leo'`，history `changed_by=<ticket>`，理由寫保留的 id）。標準流程與 LTM「EMR Integration Removal」一致；
+  REJECTED 列 `result_enabled` 仍 1，gate 是 status，別把它讀成 intent。
+- LBS-1784 結果：practice 124546 LIVE 15 → 12 + REJECTED 3，order_clients 1953/1954/1958 刪除，history 178–180。LBS-1785：cmtud5yik REJECTED（history 186）、cmtud5sn1 唯一 LIVE，
+  `ehr_integration_notes` 第一次有資料（ids 1/2）。兩票 09-11 夜 prod 讀回仍如記錄。LBS-1773 補證點（53041 第一份結果）到 09-11 仍 0 rtr。
+
+### Partner API POST /orders：同一測試兩次 / 混菜單規則（VP-18085，prod 09-09 87ce490）
+- 兩個新 422 reason：`duplicate_test_codes`（同 item_id 重複、或 pricing `dbs_mapping` 的 serum/DBS 雙胞胎）與 `mixed_collection_methods`
+  （`section` at_home vs not_at_home 同單；`both` 類 item 中立）。資料來源 = pricing `GET /item/price/getAllTestsAndDiscountPanels/{currency}`
+  （`atHomeMappings` 20 列：16 test + 4 bundle；`section` 取自 item.description），`CatalogMenuClientService` 30 分鐘 snapshot、miss 60 s 重抓、失敗用舊值、沒有就 throw。
+  這正是 va-portal 的機制（portal 不 dedup；全域 `isDbsVersion` 切換 + dbsMap 交換），所以「API 放不進 portal 組不出來的單」。
+- 事實：15 組 `_DBS` 代碱全部解析成**不同** packagePriceId、test id 集合零交集（NEURAL 178/665、WHEAT 60/586 …）→ 「同 lab test id」抓不到雙胞胎。
+  `FOOD_ADDITIVES 165→620` 不在 dbs_mapping(is_new)，靠 section 規則補到。productMap external code **大小寫敏感**（`neural_zoomer_dbs` = unrecognized_test_codes）。
+  優先序：unrecognized/unsupported → duplicate/mixed → mapping-cache join。NEURAL_ZOOMER + FOOD_ZOOMER_DBS 現在 422（PH-870 / VP-17724 的規則在這裡落地）。
+- `patient_not_found` 在 API 路徑可能蓋住 coresamples GetPatient 的 decode 錯（患者 477769：`13 INTERNAL invalid wire type 7` — 該患者某欄位 vendored proto 解不開），
+  先看 pod log `v2 getPatient failed` 再信 reason。**api-sandbox partner 路徑由 on-prem prod pod 服務**（AKS log 看不到 placerId）；staging 下單共用 prod sample 序號，每個 201 都是真的、立刻 cancel。
+
+### Order Summary PDF 隨 HL7 result 一起落 SFTP（VP-18138，prod 09-08 03637bc，只開過 canary）
+- 開關 = `ehr_vendors.deliver_order_summary_pdf`（vendor 層；FOLLOWTHATPATIENT=44 仍 0，ZYMEBALANZ=2 canary 後歸 0）。HL7 TRANSMITTED 後（ChARM 二次投遞同一位置）
+  抓 order-management `GET /pdf/generateNormalOrderPdfBundles?sample_id=`（TokenHelperService HS256、30 s cap、不重試、`%PDF-` magic 檢查）→ `{accession}_ordersummary.pdf`
+  用同一個 `sftpService.uploadHL7File` 放同一個 `sftp_result_path`；只做 whole-order push（`push_scope_key` NULL）；每次 push 重丟；**永不 throw**（否則 BullMQ 重推 HL7 5 次）。
+  審計表 `result_attachment_records`（append-only，DELIVERED / FETCH_ERROR / UPLOAD_ERROR；目前只有 3 筆 canary DELIVERED）。
+- 為什麼 key 是 sample_id：Next-Health（FOLLOWTHATPATIENT，33 LIVE / 20 clinic / 單一資料夾）90 天 382/382 result push **全是 portal 下單、沒有 emr_sample**，
+  `emr_order_id` 不可用。Prospera 沒有 vendor row。同一份「Complete Order Summary」有兩個實作：legacy Java LIS-backend-billing（transformer / statement 頁還在叫）
+  與 Go order-management（order 頁叫）；選 Go。payment 文字只看 `orders.charge_method`。order-management `/pdf/*` 沒有 per-order authz；`GET /orders/info?accession_id=` 找不到回 500。
+- 開給 vendor 44 前要 PM / Prospera 書面確認：檔名、amended result 是否重發、franchise 範圍（vendor 層 gate 已自動涵蓋新 franchise）。result_fail DailyJob 尚未納入 `result_attachment_records`。
+
+### 諮詢預約信件收件人 To + CC（VP-17766，transv2 BE，prod 09-08 17:23Z）
+- 欄位：`v2_event.contact_email`、`v2_event.cc_emails text[]`、`v2_calendar.notification_cc_emails text[]`、`v2_reminder_audit_log.cc_emails`。
+  `resolveConsultRecipients(event, seekerCalendar)`：To = `event.contact_email ?? calendar_owner_email`，Cc = 去重(event ∪ calendar) − To；舊的逗號/分號多址 `calendar_owner_email`
+  → 第一個 To、其餘 Cc；只覆寫 patient-role 參與者；clinician-switch reschedule 會 clone 新 row（欄位已帶上）；所有 seeker 送信點改 guard 在 resolved To。
+- **FE（va-portal）還沒送 `contact_email`**，所以新預約仍寄到 calendar 快照。90 天 1,384 筆有打字 email 的諮詢中 28% 與快照不同（event 12934：表單 saadia@，快照 cleo@，
+  三封含 Zoom link 的 reminder 全寄錯）。Leo 把票縮成 BE-only 後 Done；FE、35082/36760 遷移（36760 第 4 個位址在上游就截斷）、staging 模板、backfill 都沒開票。
+- **staging transv2 發到跟 prod 同一個 notification topic** → staging 預約寄真信（只有 clinician 位址是內部的），跑前先列出收件人。staging seeker 模板 39038615 / 39028650
+  用 `{{# English}}` 包住 → 空白信（pre-existing；reminder.service 有 wrapper、event.service 沒有），prod 模板沒包。Postmark 證據：notification-center pod log 的 webhook
+  + `/messages/outbound/{id}/details`；`recipient=` 搜尋會延遲。沒 log 時的 prod dispatcher 健康法：下一個 cron tick 的 `v2_reminder_audit_log` 對到期 event。
+
+### chargeIndicator T（平台付款）— emr-v2 半邊已在 prod，但 T 是關的（VP-18034 / VP-18032，main 5e67339 09-10 23:41Z）
+- 契約：`T` 必帶 `platformId` + `X-Payment-Authorization: Bearer <RS256 JWT>`（iss=sub=platformId、aud、exp ≤ 300 s、jti 單次使用 via Redis SET NX；kid 對 platform 的註冊 key）。
+  在 controller、寫 intake row **之前**驗（同一張 assertion 重送 = 401 replayed，不是 duplicate；dryrun 也燒 jti）。`T → customerPay` 在 **enrichment** 做，不在 mapper
+  ——mapper 的 IN1.2 規則與 HL7 共用，HL7 `IN1.2=T` 必須維持 patientPayLater。扣款走 charging `allSharedPaymentMethods?account_type=platform&account_id=`（回 `account_payment_method`）
+  + `transaction/pay account_type=platform`；charging 回 `charging_v2_pending_batch_*` 對平台視為未完成 → fail-closed。
+- prod ConfigMap 沒有 `PLATFORM_PUBLIC_KEYS` → 任何合格 assertion = 400 unknown_platform（T OFF）。staging 留測試平台 9001 + key `vp18034-2026-09` 給 QA。
+  上線還缺（都不在 emr-v2）：VP-18031 平台紀錄 + public key（Rui，Dev To Do）、charging 補 Stax MIT/unscheduled meta 並讓 platform 跳過 IsBatchPayment（VP-18089 QA Review）、
+  一張真的 platform 卡。side：staging `order-cancel` 對沒付款的 P 單回 500 `[CANCEL_REFUND_FAILED]`（charging staging refund lookup，pre-existing）。
+
+### VP-18086 結局：ADDITION_ENABLE 規則維持，票轉給 Fangyuan 後關
+- Xiaoye 09-10 把票轉給 Fangyuan「through exception」；Fangyuan + Jiafan 確認 API 與 portal 一致（saliva add-on 任一非血 host 都可選），09-11 隨 PH-872 resolved。
+  09-03 baseline 的另一個發現——quote 端 add-on 被 silent drop（`["APOE_SALIVA"]` 單獨 → eligible:true、lineItems 空、total 0）——**仍是沒人認領的 pricing 缺陷**。

@@ -3,6 +3,7 @@ date: 2026-09-04
 type: journal
 tickets: [VP-17766]
 tags: [consult-reminder, multi-recipient, transformer-v2, to-cc, debate]
+distilled: true
 ---
 # 2026-09-04 — VP-17766 booking-form email as consult recipient (To + CC)
 

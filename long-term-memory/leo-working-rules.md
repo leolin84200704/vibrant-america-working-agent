@@ -7,7 +7,7 @@ score: 0.1615
 base_weight: 0.9
 urgency: 4
 created: 2026-08-16
-updated: 2026-08-20
+updated: 2026-09-11
 summary: Leo's working rules for this instance — reporting, ticket handling, Jira
   mechanics, and repo hygiene. The job-specific residue of the native auto-memory
   store; universal engineering discipline lives in factory ENGINEERING-LESSONS.
@@ -355,3 +355,35 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 - BE 票的 AC 自己看像已 live（VP-17868 早就送了 consultDate），真正的新需求藏在 FE 票 VP-18051（row-level label 需要整張
   list 的 claim status）。拆票的一半常省略讓另一半成立的需求；AC 寫「在 search response 裡」是講 UI 面，不是講哪個 service——
   先 grep FE 實際打哪個 endpoint 再設計。
+
+## 【Leo 指令 2026-09-10】絕不在別人的 ticket 上留 comment——連「草稿給 Leo 貼」都不要
+- VP-18034 session：agent 起草了要貼到 VP-18089（Fangyuan）/ VP-18031（Rui）的 go-live gap comment。Leo：「不要 comment 給其他人」。
+  規則：**Leo 只在自己的票上 comment，並在那裡 tag PM**；跨團隊需求走 Leo 自己的票（VP-18034 / VP-18032）或 Leo 當面講。agent 對別人票的觀察寫進 STM / 回報即可。
+- 補充（同日）：Leo 的心智模型常是「上游做完 ⇒ 我這張可以 ship」；agent 回報時要把「emr-v2 code 完成」與「go-live 還缺哪些不在我們 repo 的東西」分開列。
+
+## 【紀律 2026-09-10】每個 session 結束都 commit memory repo
+- 一份 STM 從 09-04 掛著沒 commit → `run-dream.sh` 連續 6 夜 ABORT，index 凍在 09-03、closeout audit 全部延後、STM index 在 session 裡被當成 stale 回報。
+  「什麼都沒 ship」的 session 也要 commit。
+
+## 結案的溝通缺口 + 綠燈量錯東西（cross-ticket review 2026-09-11；證據 LBS-1784 / LBS-1785 / VP-17766 / VP-18085 / VP-18185 / PH-847 / VP-18086）
+
+本輪 7 張 Done，ground truth 全部對上（prod 讀回 100%），但三張的**票面**看不出來：
+- **LBS-1785**：Leo 直接 Open → Done，零 comment。reporter（Tianhao，Zendesk 754315）在票上看不到「哪一列保留、哪一列 REJECTED、為何沒有 E2E」。
+- **VP-18185**：Leo 09-09 17:58 PDT 關；reporter Zhenhe 09-10 11:16 **重開**（Done → QA Rejected → Dev In Progress）並問「order 0000128300 不在 DB，請查」；
+  12 分鐘後再被轉 Done，**票上沒有任何回覆**。事實上 sample 2632267 在 09-10 00:48Z 就 replay 出來了——reporter 查的是舊 emr_order_id 找不到。
+  另外 ask 3（LIS-Shipping 誤導性 404）的修法只存在於 patch 檔（agent 無 push 權）、lookup 目標怎麼恢復沒定案、CAMPBELL 一患者兩 sample 沒人決定——票已 Done。
+- **VP-17766**：Leo 決定 BE-only 後 Done，四個 out-of-scope 項目寫在 description、不開 follow-up 票（Leo 的決定，不是缺口——但 FE 不送 contact_email 前，功能對用戶還沒生效）。
+
+規則：
+1. **reporter 重開 = 一個問題**。再關之前一定要在票上回答（一句：查了什麼、結果是什麼、在哪裡可以自己看到）。agent 起草、Leo 貼——這是 Leo 自己的票，不違反 09-10 規則。
+2. **LBS（service desk）票的 Done 必附結案 comment**：reporter 是 support 人員，看不到 prod DB；沒有 comment 等於沒交付。
+3. **Done 時未完成的部分寫在 comment 裡並點名 owner**（既有 09-03 規則，再犯一次：VP-18185 三件事都沒 owner）。
+
+第二個系統性樣態：**單元測試全綠、live 一跑就露餡，一週三次**——
+- VP-18085：mock 測試 399 全過；live matrix 才發現 productMap 大小寫敏感、患者 477769 decode 錯被 `patient_not_found` 蓋住。
+- VP-17766：196 測試綠；staging E2E 寄出的是空白信（模板 gating，pre-existing 但沒人知道）。
+- INCIDENT-20260910：395 測試綠、build 綠；第一次 import 真 module 就 crash-loop，修好後第一發請求又 503（真 socket）。
+規則：結案至少一條 **real-runtime leg**（真容器 / 真 socket / 真上游資料），並在 STM 明講證到哪層。DI 那層現在有機制（factory #74 pre-push boot smoke）；
+另兩層（外部模板、上游資料形狀）仍靠這條紀律。
+
+第三：兩張 prod data-fix 票都撞到**票外的鄰居**（LBS-1784 的 NPI 雙胞胎 oc 1961；LBS-1785 發現 15+ 組重複 LIVE）——照 09-03 規則：回報、不動、Leo 決定。兩票都做對了。

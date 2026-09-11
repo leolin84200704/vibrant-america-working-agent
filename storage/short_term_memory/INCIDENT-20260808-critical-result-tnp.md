@@ -3,7 +3,7 @@ id: INCIDENT-20260808-critical-result-tnp
 type: stm
 category: emr_integration
 status: active
-score: 0.661
+score: 0.5505
 base_weight: 1.0
 created: 2026-08-08
 updated: '2026-08-14'
@@ -23,6 +23,8 @@ links:
 - LBS-1656
 - LBS-1762
 - LBS-1773
+- LBS-1784
+- LBS-1785
 - LIS-7716
 - PH-847
 - QH-1660
@@ -98,7 +100,14 @@ links:
 - VP-17827
 - VP-17914
 - VP-18030
+- VP-18034
 - VP-18055
+- VP-18066
+- VP-18080
+- VP-18085
+- VP-18086
+- VP-18138
+- VP-18185
 - emr-integration
 - fhir-api
 relations:

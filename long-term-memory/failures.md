@@ -3,7 +3,7 @@ id: failures
 type: ltm
 category: technical
 status: active
-score: 1.361
+score: 1.4044
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
@@ -15,6 +15,7 @@ links:
 - INCIDENT-20260604
 - INCIDENT-20260604-mdhq-stale-connections
 - INCIDENT-20260817-onprem-deploy-freeze
+- INCIDENT-20260910-emr-v2-di-crashloop
 - INCIDENT-2604156666
 - LBS-1541
 - LIS-7690
@@ -33,6 +34,7 @@ links:
 - QH-862
 - QH-918
 - QH-919
+- TRANS-OPTIMIZATION-20260911
 - VP-15460
 - VP-16164
 - VP-16166
@@ -97,6 +99,7 @@ links:
 - VP-17755
 - VP-17760
 - VP-17765
+- VP-17766
 - VP-17812
 - VP-17825
 - VP-17827

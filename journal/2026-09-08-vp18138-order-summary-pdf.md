@@ -3,7 +3,7 @@ date: 2026-09-08
 slug: vp18138-order-summary-pdf
 related_tickets: [VP-18138, PH-904, VP-17812]
 tags: [emr-v2, order-management, sftp, result-push, next-health, prospera, followthatpatient, schema-change]
-distilled: false
+distilled: true
 ---
 
 # 2026-09-08 — VP-18138: Complete Order Summary PDF next to HL7 results (analysis -> PR #403)

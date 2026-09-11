@@ -3,11 +3,12 @@ id: business-model-deep
 type: ltm
 category: technical
 status: active
-score: 0.3118
+score: 0.3341
 base_weight: 0.9
 created: 2026-06-07
 updated: 2026-06-07
 links:
+- INCIDENT-20260910-emr-v2-di-crashloop
 - VP-15460
 - VP-16410
 - VP-16520
@@ -18,6 +19,7 @@ links:
 - VP-17559
 - VP-17753
 - VP-17765
+- VP-17766
 - VP-17825
 - VP-17870
 - VP-18048
