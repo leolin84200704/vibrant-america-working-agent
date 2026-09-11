@@ -3,14 +3,73 @@ id: INCIDENT-20260910-emr-v2-di-crashloop
 type: stm
 category: technical
 status: resolved
-follow_up: factory PRs #74 (lesson 1 + pre-push DI smoke) / #75 (lesson 2) / #76 (lesson 3) awaiting Leo merge; after merge `git pull` factory main — githooks are global, no wiring needed
-score: 0.9
+follow_up: factory PRs
+score: 0.7763
 base_weight: 0.9
 created: 2026-09-10
 updated: '2026-09-11'
 links:
-- VP-18034
+- INCIDENT-20260518
+- INCIDENT-20260601-sftp-hang
+- INCIDENT-20260604
+- INCIDENT-20260817-onprem-deploy-freeze
+- INCIDENT-20260908-grpc-dead-node-ip
+- QH-1104
+- QH-1130
+- QH-1159
+- QH-1591
+- QH-1775
+- QH-211
+- QH-2259
+- QH-680
+- QH-862
+- QH-918
+- QH-919
+- TRANS-OPTIMIZATION-20260911
+- VP-15460
+- VP-16169
+- VP-16172
+- VP-16232
+- VP-16391
+- VP-16499
+- VP-16513
+- VP-16514
+- VP-16516
+- VP-16520
+- VP-16521
+- VP-16629
+- VP-16785
+- VP-16787
+- VP-16859
+- VP-16921
+- VP-16945
+- VP-16968
+- VP-17065
+- VP-17217
+- VP-17222
+- VP-17312
+- VP-17422
+- VP-17559
+- VP-17577
+- VP-17714
+- VP-17753
+- VP-17754
+- VP-17755
+- VP-17765
+- VP-17766
+- VP-17825
+- VP-17868
+- VP-17870
 - VP-18032
+- VP-18034
+- VP-18048
+- VP-18050
+- VP-9299
+- business-model
+- business-model-deep
+- failures
+- repo-catalog
+- repos
 tags:
 - incident
 - emr-v2
@@ -18,12 +77,13 @@ tags:
 - crashloop
 - deploy
 - vp-18034
-summary: 'PR #412/#413 (VP-18034 wiring) crash-looped BOTH AKS emr-v2 pods on boot: RedisJtiStore
-  had an optional interface-typed ctor param (client?: RedisSetNxClient) which Nest treats as a
-  required provider. No traffic impact: maxUnavailable=0 kept the old pods (staging d67f029,
-  prod 10ecea0) serving; deployments stuck 1/2. Root cause = no spec ever compiled the real
-  module through Nest (all specs hand-construct or stub). Hotfix PR #414 (@Optional @Inject token
-  + real-module compile spec) opened 23:12Z, awaiting Leo.'
+summary: 'PR #412/#413 (VP-18034 wiring) crash-looped BOTH AKS emr-v2 pods on boot:
+  RedisJtiStore had an optional interface-typed ctor param (client?: RedisSetNxClient)
+  which Nest treats as a required provider. No traffic impact: maxUnavailable=0 kept
+  the old pods (staging d67f029, prod 10ecea0) serving; deployments stuck 1/2. Root
+  cause = no spec ever compiled the real module through Nest (all specs hand-construct
+  or stub). Hotfix PR #414 (@Optional @Inject token + real-module compile spec) opened
+  23:12Z, awaiting Leo.'
 jira_status: n/a
 ---
 
@@ -140,3 +200,21 @@ in the instance session. Everything the factory session needs is below; nothing 
   (40 modules); no-env run also PASS 40 modules, so `.env.example` is not read by default (it carries real gRPC/Kafka hosts).
 - PR #75 lesson 2 (`@Optional() @Inject(TOKEN)`), PR #76 lesson 3 (first request after cold start) — one lesson per PR.
 - Open for Leo: whether to add the other Nest repos (transformer-v2, results-web, ...) to `BUILD_GATE_REPOS`.
+
+## [2026-09-11 11:00] Gate expanded to every LIS Nest repo (factory PR #77, merged by agent under Leo's session authorisation)
+- `BUILD_GATE_REPOS` now: emr-v2, transformer-v2, transformer, coreSamples, dashboard, results-web, results-core,
+  results-grpc, Sample, interactive-report, notification-center, setting-consumer, Shipping, Portal-Calendar.
+  Every `git push` from these repos on this Mac runs prisma generate (repo script preferred) -> `npm run build` ->
+  Nest DI smoke. The agent cannot `git push --no-verify` (PreToolUse hook); Leo can.
+- Smoke evidence is now logger-independent (`node -r nest-di-smoke-preload.js` wraps NestFactory.create) — needed
+  because transformer-v2 boots with `logger: false`.
+- **Per-machine env files** live in `~/.config/nest-di-smoke/<origin-repo>.env` (outside every product repo, shared by
+  all worktrees). Created on this Mac: `LIS-backend-coreSamples.env` (JWT_SECRET, JWT_EXPIRATION_TIME, run_mode=app,
+  unreachable AZURE_REDIS_*, and `DI_SMOKE_ALLOW_SILENT=1` because its DI phase awaits Redis/Kafka). If a push in
+  another repo dies INCONCLUSIVE with "Config validation error", the report prints the file path and keys to add.
+- Known state per repo at gate time: transformer-v2 PASS; coreSamples accepted (silent); setting-consumer / Shipping /
+  Portal-Calendar tsc OK in the real clones; **LIS-transformer's clone is missing `@google-cloud/bigquery`
+  (declared, not installed) — run `npm install` there before the next push or the build gate will block it**;
+  dashboard / results-* / Sample / interactive-report / notification-center have no node_modules here (unverified).
+- Dream pipeline: yesterday's (09-10) run FAILED after 3 attempts (API errors). Manual run started 10:24 PDT today,
+  detached with nohup; log `~/.lis-agent-state/dream/manual-2026-09-11.out`.
