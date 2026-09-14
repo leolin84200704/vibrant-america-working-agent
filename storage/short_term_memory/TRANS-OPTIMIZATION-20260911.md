@@ -17,7 +17,7 @@ tags:
 - vp-18152
 - core-v1-retirement
 created: 2026-09-11
-updated: 2026-09-11
+updated: 2026-09-14
 links:
 - INCIDENT-20260518
 - INCIDENT-20260601-sftp-hang
@@ -122,3 +122,6 @@ Spawned 2 subagents (Leo asked to delegate): Phase 0.1 Datadog Top-20 (running) 
 
 ### [2026-09-11 14:45]
 Phase 0.1 subagent done -> phase0-top20-endpoints.md (+appendix). Method: trace metrics via analyze_datadog_logs DDSQL dd.metrics_scalar() (100% of requests; search_datadog_spans is ~2% indexed and biased). Services: v1 `lis-trans-deployment`, v2 `lis-transv2-deployment`, both env:prod; -st deployments also env:prod. 11 endpoints p95>2s & >=100 hits/7d. Peak hours are NOT the cause (Top-10 peak vs weekly p95 within ±5%). Top pain: v2 POST /graphql (PatientProfileSlow p95 3.1s), v1 /dashboard/user/timeline (2.9s, downstream lis-dashboard - cross-team, not in plan), v1 /utility/getSetting (310k hits, 9 core gRPC fixed, amplifier: PDF calls it 4x), v1 findPatient (14 core gRPC N+1 + HTTP to itself; p95 trending down after VP-18197), PDF proxies (11-14s, in lis-order/pdf-engine; pdf-engine peer looks like lis-shipping-deployment-STAGING - verify), patientTestResultnewrange (365 core gRPC per request, err 1.87%). Structural causes: core N+1, public-ingress round trip to base-report (0.8-3.8s per call), trans calling itself over HTTP. PLAN.md Phase 0.1 marked done, Phase 2 candidate table replaced with measured ranking.
+
+### [2026-09-14 11:30]
+Leo: "直接修 plan 裡要等最久的一個（是 S1 嗎？）". Answer: the longest lead-time item is cloud-local-proxy retirement (Phase 1.6 / D8: callers repointed -> 30 days zero traffic -> scale-to-0 -> 30 days -> archive); S1 (transv2 `checkIfPersonalizedReportCanBeCreated` via cloud-local-proxy) is the only known caller of the cloud-side proxy, so it gates that clock. Walked lis-prod-change-gate. Facts: proxy route is a pure pass-through (`res.status(code).send(body)`), target value with suffix is `http://192.168.60.77:8081/secure/nologin/CheckIfPersonalizedReportCanBeCreated?sampleId=` (LIS-transformer docs/proxy-migration-configmap.md:25; same as v1 prod); on-prem endpoint ignores Authorization header (curl with/without -> `200 false`); transv2 already reaches 192.168.60.x (Kafka brokers); Datadog 7d: hop ~70-110 ms, all 200, resolver error log count 0. Deliverables: `docs/plans/trans-optimization/phase1-s1-runbook.md`, `scripts/phase1-s1-repoint.sh` (dry-run default, --apply/--rollback, backup to ~/.trans-opt-backups, in-pod env + http readback), PLAN.md row 1.1 updated. BLOCKED on execution: kubectl -> AADSTS50078 (Azure MFA expired, interactive `az login` needed, Leo only). Also noted: LIS-transformer-v2 origin/main moved to be8344c (PR #623) since the 09-11 baseline; an untracked `config.yaml` in ~/src/LIS-transformer-v2 is a full ConfigMap dump with secrets (not tracked, left alone, but should be deleted).

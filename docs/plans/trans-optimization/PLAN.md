@@ -1,6 +1,6 @@
 # Trans v1 / v2 優化計劃（草案 v0.3）
 
-- 日期：2026-09-11（v0.2 追加 cloud-local-proxy / web-homepage-api；v0.3 依 Jira 實讀改寫 Phase 3）
+- 日期：2026-09-11（v0.2 追加 cloud-local-proxy / web-homepage-api；v0.3 依 Jira 實讀改寫 Phase 3；2026-09-14 Phase 1.1 S1 runbook 備妥，見 §8）
 - 狀態：**draft**。code 側只加了 `TRANS-OPT` 註解（四個 repo 的 `feature/leo/TRANS-OPT` branch，零行為變更，見 §9）；未開 PR、未留 Jira comment。等 Leo review。
 - 範圍：`LIS-transformer`（trans v1，REST + gRPC）與 `LIS-transformer-v2`（trans v2，GraphQL + REST）；v0.2 起追加 `cloud-local-proxy`（退役對象）與 `web-homepage-api`（去向待決，見 §2.9 / Phase 5 Track W）
 - 最高原則：**功能零改變**。所有變更都必須能證明「對外回應相同、副作用相同」，否則不做。
@@ -173,7 +173,7 @@ cloud-local-proxy 本身（`cloud-local-proxy-config` 55 keys）前面擋的是�
 
 | # | 工作 | 類別 | 驗證 | 回滾 |
 |---|---|---|---|---|
-| 1.1 | S1：transv2 `checkIfPersonalizedReportCanBeCreated` 從 cloud-local-proxy 改直指 `http://192.168.60.77:8081/secure/nologin/CheckIfPersonalizedReportCanBeCreated`（與 v1 prod 值一致） | A | staging（`-st` 目前指 `www.vibrant-america.com/lisapi/...`，先在 staging 換成同型直連）→ 比對 response → prod | 改回舊值 + rollout restart |
+| 1.1 | S1：transv2 `checkIfPersonalizedReportCanBeCreated` 從 cloud-local-proxy 改直指 `http://192.168.60.77:8081/secure/nologin/CheckIfPersonalizedReportCanBeCreated?sampleId=`（與 v1 prod 值一致）。**2026-09-14 已備妥**：runbook `phase1-s1-runbook.md` + `scripts/phase1-s1-repoint.sh`（dry-run / apply / rollback / in-pod readback）；on-prem 端點對 Authorization header 不敏感已實測；proxy 零轉換已讀 code 確認。**卡在本機 kubectl 的 Azure MFA 過期，需 Leo `az login`** | A | staging（`-st` 目前指 `www.vibrant-america.com/lisapi/...`，先在 staging 換成同型直連）→ 比對 response → prod | 改回舊值 + rollout restart |
 | 1.2 | S6 / S7：清 v1 14 個、v2 8 個「0 處讀取」的殘留 key | A | grep 確認 0 read（已做）；staging 先刪、跑一輪 smoke | 從基線檔還原 |
 | 1.3 | S8：v1 公網回繞改 in-cluster svc DNS。分批（每個目標服務一批）：base-report → shipping → accounting/charging → samples → interactive-report → 其他。**每批先確認**：(a) 目標服務有 in-cluster svc（v2 的 CM 已給出對應值可直接沿用）；(b) 公網 ingress 是否注入 header / 做 auth（in-cluster 打不到就會 401）；(c) http vs https 差異 | A | staging 先；Datadog 比對該端點 p95 與 error rate；shadow diff | 換回公網 URL |
 | 1.4 | S2：transv2 對 `proxy_getkit` / `proxy_getteststatus` / `proxy_getQuestionaire` 改為直接用 v2 自己的 gRPC client（邏輯以 v1 `src/proxy/proxy.service.ts` 為準，277 行，逐行對照搬移） | C | shadow diff（v1 proxy HTTP 回應 vs v2 gRPC 直取的映射結果必須 byte-equal） | env flag 切回 HTTP 路徑 |
@@ -342,6 +342,7 @@ Phase 3 的 20 個 core v1/v2 切換點**沒有**標，因為不屬「緊急」�
 - Appendix A：會議轉錄摘要（`appendix-a-transcript-summary.md`），原始逐段轉錄在 `raw-transcript/`（p1_00 ~ p1_04 為第一段每 5 分鐘一檔，p2_00 ~ p2_01 為第二段）。
 - Phase 0.1 報告：`phase0-top20-endpoints.md` + `phase0-top20-endpoints-appendix.md`（subagent，2026-09-11）。
 - Phase 3.1 報告：`phase3-core-v1-http-traffic.md`（subagent，2026-09-11）。
+- Phase 1.1 runbook：`phase1-s1-runbook.md` + `scripts/phase1-s1-repoint.sh`（2026-09-14，待 az login 後執行）。
 - Appendix C：VP-17348 epic 與 Core v1 REST Retirement 子票全文 dump（`appendix-c-jira-vp17348.md`）。
 - Appendix B：AKS 唯讀盤點（`appendix-b-k8s-inventory.md`）：4 個 ConfigMap 的 URL key 分桶、cloud-local-proxy 前面擋的目標、4 個 deployment 的 replicas / resources / probes。
 - 證據檔位（repo 內）：
