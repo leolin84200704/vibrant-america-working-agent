@@ -47,3 +47,18 @@
 - shadow log 只記 diff 的路徑與 sample_id，不記值（避免 tracking number 等內容進 log）。
 - gRPC 失敗在 `grpc` 模式包成 `upstreamGraphQLError`，`func = proxy_grpc_<method>`、`upstreamPath = /<method>`，Sentry 會與 HTTP 時代的 `get_pns_info` 分開分組，這是刻意的。
 - `daily-report.service.spec` 在整包平行跑時仍偶爾超過 15 s（單跑 6 s 全過），與本 PR 無關，但 Phase 0.2 的 timeout 調整沒有根治，需另查。
+
+## 5. 執行紀錄
+
+- 2026-09-14 22:56 UTC PR #629 merge → 23:06 prod image `832ce95`，預設 `http` 模式驗證：spans 仍走 v1 proxy、shadow log 0、pod 錯誤 0、env 無模式變數。
+- 23:08–23:10 UTC prod ConfigMap `TRANS_PROXY_GRPC_MODE=shadow` + rollout（備份 `~/.trans-opt-backups/*.pre-shadow.yaml`）。staging 未設（`stage_test` 沒有 #629）。
+- **shadow 前 40 分鐘（23:10–23:52 UTC，121 次比對，全部 prod 真實流量）**：
+
+| method | n | equal | http_ok | grpc_ok | HTTP 經 v1 p50 / p95 | 直連 gRPC p50 / p95 | 每次中位數省 |
+|---|---|---|---|---|---|---|---|
+| getKitStatus | 61 | 61 | 61 | 61 | 247 / 432 ms | 229 / 440 ms | 23 ms |
+| getQuestionaireBySampleId | 30 | 30 | 30 | 30 | 97 / 257 ms | 76 / 160 ms | 18 ms |
+| getTestStatus | 30 | 30 | 30 | 30 | 215 / 327 ms | 208 / 268 ms | 5 ms |
+
+  判讀：等價 100%（0 筆 diff、0 筆任一路失敗）；速度上每次呼叫只省 5–23 ms（約 2–20%），因為兩條路最後都是同一個 shipping / test-connect gRPC，v1 那一層的成本本來就只有 HTTP + JWT 驗證。**這與計劃的定位一致：S2 是去套娃，不是 p95 手段。** 決定切 `grpc` 的依據是 equal 100%，不是速度。
+- 注意 shadow 模式下兩路同時發出、互相競爭連線，量到的差距略被壓縮；切 `grpc` 後 v1 `/proxy/grpc/*` 的進站量會歸零，v1 pod 少掉這部分 CPU 與 JWT 驗證。
