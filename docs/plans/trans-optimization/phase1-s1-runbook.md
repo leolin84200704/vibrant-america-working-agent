@@ -1,7 +1,7 @@
 # Phase 1.1 — S1 runbook：transv2 `checkIfPersonalizedReportCanBeCreated` 去套娃
 
 - 日期：2026-09-14
-- 狀態：**已備妥、尚未執行**。本機 `kubectl` 因 Azure MFA 過期（AADSTS50078）無法取得 token，ConfigMap 讀寫與 rollout 都做不到；需要 Leo 在終端跑一次 `az login`（見 §5）。
+- 狀態：**已執行完成**（2026-09-14；Leo `az login` 後由 agent 執行；st 11:25、prod 11:40 PT）。執行紀錄見 §6。
 - 為什麼先做這一個：cloud-local-proxy 退役（Phase 1.6 / D8）是整份計劃前置等待最長的一項——「已知 caller 全部改指向 → 兩集群流量歸零 30 天 → scale-to-0 → 再 30 天 → 封存」。雲上那艘 proxy 唯一已知 caller 就是 transv2 的 S1，S1 不改，30 天的計時器根本不會開始。
 
 ## 1. 四段分析（change gate Gate 1）
@@ -55,3 +55,26 @@
 az login --tenant "e5dd0b3e-e7fe-4892-b807-43591e72c9ea" --scope "6dae42f8-4368-4678-94ff-3960e28e3630/.default"
 ```
 在 Claude Code 提示列用 `! ` 前綴執行即可（互動式 MFA）。登入後告訴 agent 一聲，agent 接著跑 §3 步驟 2–7。
+
+## 6. 執行紀錄（2026-09-14 PT）
+
+| 步驤 | 結果 |
+|---|---|
+| 改前實讀 | prod 值 `http://cloud-local-proxy-service.cloud-local.svc.cluster.local:3047/old-report/checkIfPersonalizedReportCanBeCreated?sample_id=`；st 值 `https://www.vibrant-america.com/lisapi/v1/lis/cloud-proxy-st/old-report/checkIfPersonalizedReportCanBeCreated?sample_id=` |
+| 網路預檢 | 改之前從 st pod 與 prod pod 各 `node http.get` 直打 60.77:8081 → `200 false`，72–77 ms |
+| staging apply | 11:25 backup → patch → rollout（1 replica）→ 新 pod `lis-transv2-deployment-st-55d4994694-cjn5g` env 正確、GET `200 false` |
+| 等價比對（prod pod 內，舊路帶 pod 內 `token` 過 proxy 的 UnifiedAuthGuard） | 39 個最近被存取的 sample：38 個 `200 false` 兩路全同；`abc` 兩路皆 500（proxy 回空 body、on-prem 回 HTML 錯頁；v2 `getPnsData` 非 200 一律 throw → resolver 回 `null`，行為相同）。掃 2100000/2300000/2450000/2550000 各 150 個 id 找到 31 個回 `true`，取 20 個比對兩路全同。avg 單跳 73 ms → 41 ms |
+| prod apply | 11:40 backup → patch → rollout restart（3 replicas RollingUpdate，約 2.5 分鐘，全程有 ready pod）→ 新 pod `66b88c9f56-*` ×3 Running；readback env 正確、GET 2100012 → `200 true`、2634446 → `200 false` |
+| 注意 | 腳本第一版 readback 選到了正在終止的舊 pod（status 短暫顯示 Error，是舊 replica 收 SIGTERM 的退出碰；pod 隨即被回收，未能保留其 log）。已改為選最新 pod |
+| after 驗證 | 見 §7（Datadog） |
+
+## 7. After 驗證（Datadog，prod rollout 完成後 12 分鐘內，2026-09-14 18:28–18:40 UTC）
+
+| 檢查 | 結果 |
+|---|---|
+| 新路 span | `service:lis-transv2-deployment env:prod @http.url:*CheckIfPersonalizedReportCanBeCreated*` 12 筆（indexed），`http.host:192.168.60.77`，全部 200，40–70 ms |
+| 舊路 span | `@http.url:*cloud-local-proxy*checkIfPersonalizedReportCanBeCreated*` 最後一筆 18:26:31 UTC（rollout 進行中、來自尚未終止的舊 pod），之後 0 筆 |
+| resolver / HTTP helper 錯誤 | `"Error checking if personalized report can be created" OR "Error getting requestv2"` 15 分鐘內 0 筆 |
+| pod log | 三個新 pod 起來後 8 分鐘內 0 筆 personalized-report / ECONNREFUSED / EHOSTUNREACH / ETIMEDOUT |
+
+結論：S1 去套娃完成，雲上 cloud-local-proxy 的已知 caller 歸零。Phase 1.6(d) 的「流量歸零 30 天」計時自 2026-09-14 起算；未知 caller 仍要靠 ingress access log（D5）確認。

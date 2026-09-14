@@ -1,4 +1,4 @@
-# Appendix B — AKS read-only inventory (2026-09-11)
+# Appendix B — AKS read-only inventory (2026-09-11; transv2 `checkIfPersonalizedReportCanBeCreated` baseline updated 2026-09-14 after Phase 1.1)
 
 > Source: kubectl (context lisportalprod), read-only. Values reduced to scheme://host[:port]/first-3-path-segments; no secrets, no query strings.
 > Buckets: 'cloud-local-proxy' = value host is the proxy svc; 'onprem 192.168.*' = on-prem address; 'public api.vibrant-*' = public ingress hostname; 'in-cluster svc' = *.svc.cluster.local.
@@ -220,7 +220,7 @@
 =============== ConfigMap transv2/lis-transv2-config
   total keys: 152 | url/address-valued keys: 89
   -- cloud-local-proxy: 1
-     checkIfPersonalizedReportCanBeCreated -> http://cloud-local-proxy-service.cloud-local.svc.cluster.local:3047/old-report/checkIfPersonalizedReportCanBeCreated
+     checkIfPersonalizedReportCanBeCreated -> http://192.168.60.77:8081/secure/nologin/CheckIfPersonalizedReportCanBeCreated  [changed 2026-09-14 Phase 1.1; was cloud-local-proxy-service.cloud-local.svc.cluster.local:3047/old-report/...]
   -- onprem 192.168.*: 12
      Get_Requisition -> http://192.168.10.153:8081/secure/nologin/FetchScannedRequisition
      KAFKA_BROKER_carlos1 -> 192.168.60.9:9095
@@ -340,7 +340,7 @@
      WEBHOOK_BASE_URL -> https://api.vibrant-america.com/v2/portal/trans-service-st
      ZOOM_API_URL -> https://www.vibrant-america.com/lisapi/v1/lis
      ZOOM_REDIRECT_URI -> https://api.vibrant-wellness.com/lis-sure-script-staging/routing
-     checkIfPersonalizedReportCanBeCreated -> https://www.vibrant-america.com/lisapi/v1/lis
+     checkIfPersonalizedReportCanBeCreated -> http://192.168.60.77:8081/secure/nologin/CheckIfPersonalizedReportCanBeCreated  [changed 2026-09-14 Phase 1.1; was https://www.vibrant-america.com/lisapi/v1/lis/cloud-proxy-st/old-report/...]
      dashboard_noti -> https://www.vibrant-america.com/secure/nologin/SendDashboardContent
      fedx_shipments -> https://www.vibrant-america.com/lisapi/v1/lis
      get_check_shipping_address -> https://www.vibrant-america.com/lisapi/v1/lis

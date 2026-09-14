@@ -67,8 +67,10 @@ $K rollout status deployment/"$DEPLOY" --timeout=300s
 
 # Consumer-layer readback: the env var as the new pod actually sees it, and a
 # real GET from inside the pod to the new target (proves network path from ns).
+# Pick the NEWEST ready pod: right after a rollout the old ReplicaSet's pods can
+# still be listed (Terminating / Error) and would otherwise be chosen.
 POD="$($K get pods -l app=$( [ "$ENV" = st ] && echo lis-transv2-st || echo lis-transv2 ) \
-        --field-selector=status.phase=Running -o jsonpath='{.items[0].metadata.name}')"
+        --sort-by=.metadata.creationTimestamp -o jsonpath='{.items[-1:].metadata.name}')"
 echo "readback pod: $POD"
 $K exec "$POD" -- sh -c "env | grep '^$KEY='"
 $K exec "$POD" -- node -e "
