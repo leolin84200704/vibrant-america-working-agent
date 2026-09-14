@@ -160,7 +160,7 @@ cloud-local-proxy 本身（`cloud-local-proxy-config` 55 keys）前面擋的是�
 | # | 工作 | 類別 | 產出 / DoD |
 |---|---|---|---|
 | 0.1 | ~~Datadog Top-20~~ → **已做（2026-09-11，subagent，`phase0-top20-endpoints.md` + appendix）**。資料源是 trace metrics（100% 請求，非 indexed spans 抽樣），7 天 09-04 ~ 09-11。Service 名：v1 `service:lis-trans-deployment env:prod`、v2 `service:lis-transv2-deployment env:prod`（`-st` 部署也打 env:prod，用 service 名排除）。p95 > 2 s 且 ≥ 100 hits 共 **11 支**（v1 REST 9、v1 gRPC 1、v2 GraphQL 1 = `PatientProfileSlow` 3,101 ms）。**高峰不是原因**：Top-10 的高峰 p95 與全週 p95 差在 ±5% 內，慢是結構性的。仍缺：常駐 dashboard（VP-18141 是 core 側的，trans 要自己一份）。 | 量測 | 完成（dashboard 待建） |
-| 0.2 | 修 baseline 紅燈：v1 `npm ci`、兩 repo 的 stale mock（`createMetadataForCoresampleV2`、`createOAuth2Metadata`）、v2 `prisma.service.spec.ts` 改名為 `.integration.spec.ts` 或補 ignore | C（僅測試碼） | 兩 repo `npm test` 全綠（可接受少數標記 skip 並開票） |
+| 0.2 | 修 baseline 紅燈：v1 `npm ci`、兩 repo 的 stale mock（`createMetadataForCoresampleV2`、`createOAuth2Metadata`）、v2 `prisma.service.spec.ts` 改名為 `.integration.spec.ts` 或補 ignore。**v2 已完成（2026-09-14）**：main `be8344c` 10 紅 → 54/54 綠、731 pass，PR 見 §9；真正成因是 5 個 suite 在 import 時因缺 Kafka env 根本載不進來、其餘是 constructor 多了依賴而 spec 沒跟上。v1 待做 | C（僅測試碼） | 兩 repo `npm test` 全綠（可接受少數標記 skip 並開票） |
 | 0.3 | CI gate：兩 repo 的 deploy workflow 加 `npm ci` + `tsc --noEmit` + `jest --ci` job，紅燈不 build image | 流程 | PR 到各 repo；**這是 automation 行為變更，走 PR 不直推** |
 | 0.4 | 契約快照：v1 Swagger JSON、v2 `schema.gql` 由 CI 產生並 diff（新增允許、刪除/型別變更 fail） | 流程 | 快照檔入 repo |
 | 0.5 | ConfigMap 基線與 drift 偵測：把 4 個 ConfigMap（prod/st × v1/v2）去 secret 後存檔（Appendix B 即第一版）；腳本每日 diff cluster vs 基線並通知 | A | 腳本 + 團隊規範（§3.8）公告 |
@@ -194,7 +194,7 @@ cloud-local-proxy 本身（`cloud-local-proxy-config` 55 keys）前面擋的是�
 
 | # | 端點 | hits/7d | p50 / p95 / p99 (ms) | 時間花在哪（trace） | 手法 |
 |---|---|---|---|---|---|
-| 1 | v2 `POST /graphql`（全部 operation） | 119,413 | 203 / 1,568 / 2,656 | 最慢 operation：`PatientProfileSlow` p95 3,101、`PatientProfileFast` 1,918、`PatientPNS` 1,747 | 3（request-scoped memo / DataLoader）+ 1.4（proxy_getkit 直連 gRPC） |
+| 1 | v2 `POST /graphql`（全部 operation） | 119,413 | 203 / 1,568 / 2,656 | 最慢 operation：`PatientProfileSlow` p95 3,101、`PatientProfileFast` 1,918、`PatientPNS` 1,747。**2026-09-14 實測修正**：`PatientProfileSlow` 只選 `order` + `sample_with_questionnaire_report` 兩個 field；後者對每個 sample 用一個 `Promise.all` 同時打 14 個下游，wall time = 最慢那支。7 天 transv2 outbound p95：shipping `/orders/samples/horm-qnr/status` **2.7 s**（p50 1.2 s）、interactive-report `/questions-data/getBarcodeQuestionnairesStatus` **1.9 s**、三支 zoomer-qnr 各 1.1 s；S2 三跳只有 0.25–0.52 s 且並行 → **拔掉 S2 對這支 p95 幾乎無效**。代表 trace `6aa840e3…`（3.8 s）：horm-qnr 3.42 s、getBarcodeQuestionnairesStatus 3.65 s，其餘全部 < 0.5 s。Redis GET p95 10 ms（trace 內 1 s 那筆是 max 2 s 的極端值） | trans 側能做的有限：samples 迴圈由串行改並行（多 sample accession 才有感）、request-scoped memo；根治在 shipping / interactive-report 的那兩支 API（跨團隊）。1.4（S2 直連）仍值得做但定位為去套娃，不是 p95 手段 |
 | 2 | v1 `GET /dashboard/user/timeline` | 46,845 | 1,568 / 2,915 / 4,295 | 2.6 s 在下游 lis-dashboard `UserTimelineFetch` | **跨團隊**：計畫原本沒列；trans 側只能加 timeout / cache，根治在 dashboard 服務 |
 | 3 | v1 `GET /utility/getSetting` | 310,636（v1 有效流量 38%） | 190 / 333 / 1,831 | 固定 9 支 core gRPC；p99 時 9 支同時卡 ~1.5 s 而 core 自身下游只 0.3 s → 瓶頸疑在 trans→core 這一跳（連線 / channel）。又被 PDF、lis-order 回頭呼叫（一份 PDF 打 4 次 → 37 支 core gRPC），是**放大器** | 4（cache）+ 1（9 支並行）+ 查 gRPC channel 設定 |
 | 4 | v1 `POST /trans/findPatient` | 29,189 | 1,016 / 2,826 / 5,254 | 14 次 core gRPC（N+1）+ 經 HTTP 打自己 `/utility/GetSampleInfo`；VP-18197 上線後 09-11 p95 2,826（前一週 3,150 ~ 3,621），有下降跡象但樣本只 1.5 天 | 1、2、去除自己打自己 |
