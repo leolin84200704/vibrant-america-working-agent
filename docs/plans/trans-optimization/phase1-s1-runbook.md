@@ -78,3 +78,21 @@ az login --tenant "e5dd0b3e-e7fe-4892-b807-43591e72c9ea" --scope "6dae42f8-4368-
 | pod log | 三個新 pod 起來後 8 分鐘內 0 筆 personalized-report / ECONNREFUSED / EHOSTUNREACH / ETIMEDOUT |
 
 結論：S1 去套娃完成，雲上 cloud-local-proxy 的已知 caller 歸零。Phase 1.6(d) 的「流量歸零 30 天」計時自 2026-09-14 起算；未知 caller 仍要靠 ingress access log（D5）確認。
+
+## 8. Customer-agnostic 比對（Leo 要求，2026-09-14 20:50 UTC）
+
+不挑客戶、不挑 sample，用 Datadog indexed spans 全量聚合 transv2 → 該端點的 outbound span：
+
+| 路徑 | 樣本數 | p50 | p95 | p99 | max |
+|---|---|---|---|---|---|
+| 改前：經 cloud-local-proxy（7 天） | 292 | 91 ms | 123 ms | 154 ms | 163 ms |
+| 改後：直連 192.168.60.77（18:29 UTC 起） | 21+ | 65 ms | 73 ms | 73 ms | 78 ms |
+
+這一跳 p50 快約 26 ms、p95 快約 50 ms（約 40%）。**但它不在 PatientProfileSlow / Fast 的 critical path 上**（該欄位的 resolver 與其他欄位並行，且 PatientProfileSlow 的 query 根本沒選這個欄位），所以 operation 層級的 p95 不會因 S1 改變；逐日 p95 表（09-06 ~ 09-14）在 2.3–4.0 s 之間波動，屬雜訊。注意 indexed spans 是抽樣（diversity / retention filter），非 100% 請求；方向可信，絕對值僅供參考。
+
+### 8.1 PR #628（Phase 0.2，test-only）merge 後的 prod 部署驗證（2026-09-14 20:50 UTC）
+
+- merge `905a4cb` 20:39 UTC → GitHub Actions run 34894298892 success 20:49 → 3 個新 pod（`7749dff975-*`）image = `905a4cb`，rollout 完成。
+- 每個新 pod 內 `checkIfPersonalizedReportCanBeCreated` env 仍為直連值（ConfigMap 不受 image 部署影響），pod 內 GET 各 200 / 77–89 ms。
+- 中間另有 PR #624 於 20:04 部署過一次（image `00d74e3`），同樣未影響 ConfigMap。
+- 因為 #628 零 runtime 變更，operation 層級延遲不應改變，也確實沒有改變；速度差異只來自 S1 那一跳（§8 表）。
