@@ -1,0 +1,54 @@
+但我们不打算,首先券子吧。
+最开始的目的是为了Core而成功,
+而为了Core和成功而成功。
+因为我们的Core打算出于安全考虑,
+而不是出于Performance考虑,
+要把整个Core变成纯RPC的一个服务。
+就是因为Core自己的方式是PSI,
+现在所谓Penture Health Information 这个东西
+他们会比较相当于越来越颜色
+为了不是处于API快的防御
+对于PHI相关的数据
+我们并不是为了快
+所以HOR本身会扯发提醒
+这样的话没有任何的外界的服务能够直接去打破
+前端的话想要反观PHI就是Transport
+这是Chance的第一个主要作用,第二个主要作用就是主要为了读前段,因为前段相当于是一次从Chance里拿,然后Chance顾着去做个下游去拿,但是在这个过程中,这个是Chance最主要的两个目的,但是在这个过程中Chance的解法会偏偏,就比如我现在在Share Screen,如果你能看到的话,就是机械号位有让我们去做到,我们一直没有时间,就是
+跟他做的这个P95Trends,基本上来讲,是特别特别高的。
+尤其是在高峰期,一天之内可能稍微还好一点,P95会盖进去。
+如果是过去四个小时,就是纯粹是高峰期,
+如果是一般来讲的话,他的好像会有很多慢的吧?
+但是,其中就包括了一些跟你们的report相关的,
+但是关于跟report我们也有所谓的。
+你不想要是有需要期待的
+不知道,反正我们都没有时间去看,我们要知道为什么,我们就搜了
+所以就是没有时间去看,所以浩哥我们自己也可能不时间搜,比如说我搜报报
+但浩哥只是这么看,他也不知道为什么,我们也没有去看
+然后一个是这个,还有一个是搜
+之前,包括说是在2023年的时候,当时刚开Azuri的时候,Azuri跟我们的本地网络本地的服务器之间并没有联通DNS,也没有联通纸网。
+所以当时雨萱的作法是起了一个repo叫做
+雨萱当时起了一个repo叫做Cloud Local Brompy
+其作用就是因为HGTP的服务上是北部小达的
+但是如果云上的服务想要访问地上的GRPC,
+或者是反过来,地上的服务想要访问云上的GRPC,
+当时都不同,只是当时,
+我们现在雲上可以直接192.1,28.0,1.6,直接打地上,地上也不太平均,但是这个在当时是不行的嘛。
+但是后来浩哥他们打通了这个地上和雲上之间的DMS网络之后,这个Cloud和Groxy已经有一定的流量了,但是我们看这个。
+现在相当于Trans有很多这种套娃的现象存在,相当于是一层套一层一层一层一层一层一层,位置实际没有一样。
+我举一个例子,Trans其实最关键的是包RPC的,但如果你发现有一个Trans,它纯粹从头到尾都在包HGPP,
+你完全没有这个必要,为什么不能调用方直接去调那个,比如说他调一个report,他为什么要进过Trans呢?
+完全可以直接调查你们的report用,就举一个例子,之前这里也有一个order summary的问题,
+它这里呢,之前是LIS的Chrome Lab,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trends,Trend
+就是HDDG
+对 那个是不一样的
+那个相当于是它FindFation
+它既有POR的RPC
+又有HDDG
+它不会全是HDD
+它打POR还是那个RPC
+我刚刚那个例子
+它从头到尾都不出闻
+就是刚刚那个例子套娃那个例子
+就是当时发现的是
+它从头到尾根本就没有任何的RPC
+就是

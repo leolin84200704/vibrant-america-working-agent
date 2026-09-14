@@ -1,0 +1,36 @@
+From 12828a433ae652db795417eb6934b5e5f7cb973a Mon Sep 17 00:00:00 2001
+From: Hung Fan Lin <leolin84200704@gmail.com>
+Date: Fri, 11 Sep 2026 15:02:40 -0700
+Subject: [PATCH] [TRANS-OPT] Annotate urgent optimization sites (comments
+ only, no behavior change)
+
+Marks every code site the Trans v1/v2 speed refactoring plan classifies
+as urgent, with a grep-able TRANS-OPT tag: live cloud-local-proxy /
+trans-v1 HTTP hops, residual core v1 HTTP calls (VP-18156), dead
+coreSampleV2Url, full-body request/response logging, and routes that
+are being retired. Comments only; no runtime change.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+---
+ .../service/service_implements/ProZOrderServiceImpl.java     | 5 +++++
+ 1 file changed, 5 insertions(+)
+
+diff --git a/src/main/java/com/vibrant_america/billing/service/service_implements/ProZOrderServiceImpl.java b/src/main/java/com/vibrant_america/billing/service/service_implements/ProZOrderServiceImpl.java
+index 09ebd1f0a..c93390ca8 100644
+--- a/src/main/java/com/vibrant_america/billing/service/service_implements/ProZOrderServiceImpl.java
++++ b/src/main/java/com/vibrant_america/billing/service/service_implements/ProZOrderServiceImpl.java
+@@ -112,6 +112,11 @@ public class ProZOrderServiceImpl implements ProZOrderService {
+                                 String comments, String julienBarcode, String auth,
+                                 Integer sampleId
+     ) {
++        // TRANS-OPT URGENT: hardcoded call through the on-prem cloud-local-proxy, a 2023 network-bridge workaround
++        // that is being retired. Repoint to the trans v1 equivalent route
++        // POST /proxy/grpc/sendSkinPlacePatientOrders (public prefix /v1/portal/trans-service), same request
++        // shape; it requires a trans JWT - confirm which identity billing uses. Blocks cloud-local-proxy scale-to-0.
++        // Ref: Slack #trans-transv2-speed-refactoring, plan doc PLAN.md (Leo, 2026-09-11).
+         String url = "https://www.vibrant-america.com/lisapi/v1/lis/cloud-proxy/grpc/sendSkinPlacePatientOrders";
+         
+ //        HttpHeaders headers = new HttpHeaders();
+-- 
+2.39.2 (Apple Git-143)
+
