@@ -17,9 +17,10 @@ tags:
 - vp-18152
 - core-v1-retirement
 created: 2026-09-11
-updated: 2026-09-14
+updated: 2026-09-15
 links:
 - VP-18276
+- CONFLUENCE-2684321795
 - INCIDENT-20260518
 - INCIDENT-20260601-sftp-hang
 - INCIDENT-20260910-emr-v2-di-crashloop
@@ -175,3 +176,9 @@ TODO next session: (1) business-hours (Tue 9-17 PT) p50/p95 for findPatient, cre
 
 ### [2026-09-14 20:40]
 Leo: "create ticket, assign 給我" -> created VP-18276 https://vibrantamerica.atlassian.net/browse/VP-18276 (Task, VP, assignee Leo, Dev To Do) via the claude.ai Atlassian connector (the vibrant MCP at 192.168.60.8 and on-prem hosts were unreachable at the time - VPN down). Content: shipped table with PRs and first measurements, remaining ops checklist (business-hours measurement, S2 grpc switch, kit inprocess switch, newrange error rate, cleanups, cloud-local-proxy clock), and the six pre-existing defect groups as candidates for separate tickets. No Jira comments posted.
+
+### [2026-09-15 16:50]
+Leo: "把我的改善+成效都寫上去" + Confluence folder 2681962497 (space LIS). Folder already held a sibling page "Refactored APIs — Session Notes" (Yuteng Fu, PRs #771/#772) -> created a NEW sibling page instead of editing his: "Trans v1 / v2 Optimization — Shipped Changes & Measured Impact", id 2684321795, https://vibrantamerica.atlassian.net/wiki/spaces/LIS/pages/2684321795 . Created via Confluence REST v2 POST /wiki/api/v2/pages with agent .env JIRA_EMAIL/JIRA_API_TOKEN (the claude.ai Atlassian connector exposes no create/update page tool; parentId = folder id, parentType folder, spaceId 90603522, body representation=storage).
+BUSINESS-HOURS MEASUREMENT DONE (closes TODO 1). Window 16:00-22:00 UTC (09:00-15:00 PT) Mon 09-14 (pre) vs Tue 09-15 (post); cut at 22:00 because Yuteng's #771/#772 deployed 22:14 UTC (image dae5611, pods 7796647dbd) and would contaminate the comparison. p50/p95 before -> after: createPatient 3.68->2.08 / 3.70->2.50; newrange 2.17->1.76 / 3.16->2.76; getTimeLine 2.14->1.78 / 2.42->2.04; findPatient 1.01->0.93 / 2.31->1.88. hits pre/post 495/596, 1176/1355, 1109/1273, 4016/4706. Errors: findPatient+createPatient 0 both windows; getTimeLine 3->1; newrange 11/1176 (0.8%) -> 17/1355 (1.1%), both under the 1.8% 7d baseline. All four estimates met or beaten except newrange p95 (-0.40 s vs "clearly down") - fan-out is core-side.
+SHADOW RESULTS (closes TODO 2/3 measurement half, decision still Leo's): S2 `proxy_grpc_shadow` 24 h = 7,702 comparisons, 7,701 equal (99.99%); getKitStatus 3900 eq, 243->215 ms; getTestStatus 1901 with **1 mismatch**, 207->184 ms; getQuestionaire 1901 eq, 96->73 ms. Saving ~25 ms/call -> real but small; resolve the 1 diff before TRANS_PROXY_GRPC_MODE=grpc. Kit shadow (`@operation:kitShadow`, v1) = 1,843 comparisons, 1,843 equal (100%), HTTP avg 1,095 ms vs in-process 496 ms => ~600 ms/request on the table; 1 inprocess_failed that still compared equal.
+Datadog method notes: `dd.metrics_scalar('<agg>:<metric>{...} by {tag}', 'avg'|'sum')` needs the reducer as a SECOND arg (else "Missing aggregator"); tag filters must use `AND` not commas when combined with `IN (...)` (else "'AND' and 'OR' cannot be mixed with ','"). Kit shadow logs are NOT findable by free-text `timeline_kit_shadow` (returns 1) - use `@operation:kitShadow` (1,843). Same trap cost a wrong "shadow has stopped" reading mid-session.
