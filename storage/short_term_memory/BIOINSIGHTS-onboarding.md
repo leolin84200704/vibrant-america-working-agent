@@ -11,7 +11,7 @@ unblock_when: 'BioInsights grants account perms (test: sftp key-auth to sftp.bio
   then ls / — currently auth OK but ls/stat/put all fail); waiting on Thomas reply
   to 2026-07-21 email'
 created: 2026-07-21
-updated: '2026-07-27'
+updated: '2026-09-14'
 links:
 - BETA-E2E-20260729
 - BIOINSIGHTS-SFTP-KEY
@@ -198,6 +198,11 @@ score: 0.2719
 - Cyberduck access for Leo: key converted to ~/.ssh/bioinsights_vibrant-wellness.pem (2026-07-27); ppk still unencrypted in ~/Downloads (secure-store follow-up stands).
 - Still waiting on vendor: sample HL7 files + direction-convention confirm (orders=/outgoing/ assumption unchanged). ORC-12 must carry 30248 for orders to resolve.
 - [2026-07-27] Leo SENT reply to Serdar+Payton: technically ready end-to-end; "internal coordination step" (= P2P transition confirm, old platform not named externally); will update immediately; invited sample HL7 into outgoing/. PENDING DECISIONS: (a) P2P row retirement — double delivery to /public/ + /incoming/ is ACTIVE until decided (30248's next report_finished pushes both); manual repush w/o integration_id now targets BioInsights (FULL sorts first in validateEmrIntegration findFirst desc); (b) kits_options=2 unconfirmed; (c) JAG payment method for EMR ordering unverified.
+
+### [2026-09-14] New vendor-side party: devcom (Olena Momotko, BA) building the integration for BioInsights; email thread "Integration with Vibrant Wellness"
+- Thread CC: lisa/travis/tracie/paola @bioinsights.com, Tianhao Wang (Vibrant), liana.vinichuk @devcom. Olena 09-09: "thank you for providing access, everything works well" (which access Leo granted is not in memory), asked 4 questions (legal docs, bidirectional/EMR-vs-provider, test catalog w/ CPT+LOINC, remaining steps); 09-14 follow-up, says they are blocked.
+- Prod ground truth 09-14: ehr_vendors 46 BIOINSIGHTS is_public=0 unchanged since 07-23; exactly 1 ehr_integrations row (JAG 30248/132493 FULL LIVE); hl7_file_input has ZERO rows for BIOINSIGHTS -> no sample/test order has ever been dropped in /outgoing/. Direction convention (orders=/outgoing/, results=/incoming/) still unconfirmed by vendor.
+- Leo draft answers: no legal docs; bidirectional yes but "provider level"; catalog from Zhenhe Zhang. Agent drafted the operational-steps answer + suggested rewording of the provider-level answer (per-provider NPI onboarding, not single-provider limitation).
 
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
