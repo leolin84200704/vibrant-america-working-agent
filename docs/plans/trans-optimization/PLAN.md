@@ -207,6 +207,21 @@ cloud-local-proxy 本身（`cloud-local-proxy-config` 55 keys）前面擋的是�
 
 DoD（每票）：shadow diff 0 差異；spec 覆蓋新分支；staging p95 下降且 error rate 不升；prod 觀察 7 天。
 
+**2026-09-14 Phase 2 進度（Leo：「能修的直接修」）**
+
+| 端點 | 實讀結論 | 動作 | 狀態 |
+|---|---|---|---|
+| v1 `findPatient` | 串行 pipeline，非 N+1、無自打 | P1 並行 + P2 GetSampleTests 提前 | **上線**（#769）；改後 47 min p50 0.92 / p95 0.94 s（低流量時段，待工作日再量） |
+| v1 `patientTestResultnewrange` | 365 gRPC 已並行（~1.5 s）；串行的是 `full_test_mapping` HTTP（3–4.5 s） | 提前發送、原位 await；兩個報告 GET 併行 | PR #775 |
+| v1 `createPatient` | p50 3.8 s 中 ~2.9 s 是每則 Kafka 訊息各自 connect/disconnect（14 則） | 長駐 producer（同 record、同順序） | PR #773 |
+| v1 `getTimeLine` | `serviceToken` 卡住整個 Promise.all；invoice/fallback 串行走公網；kits 呼叫繞公網→LIS-Sample→打回 trans v1（p50 1.39 s） | A-PR1 排程重整 | PR #774；A-PR2（kits 改內部 + shadow）進行中 |
+| v1 `updatePatient` | ~全部在 core `UpdatePatientInformantWithWriteBack` | 不動 | — |
+| v1 gRPC `GetSampleInfo` | p95 在 core `GetSampleTests` cache miss（3.2 s） | 不動 | — |
+| v2 `PatientProfileSlow` | 尾巴在 shipping / interactive-report | 不動（跨團隊） | — |
+| PDF ×3、dashboard timeline | 時間在 lis-order / pdf-engine / lis-dashboard | 不動（跨團隊） | — |
+
+分析報告：`phase2-findpatient-analysis.md`、`phase2-newrange-analysis.md`、`phase2-timeline-sampleinfo-analysis.md`、`phase2-create-update-patient-analysis.md`。每個 code PR 都先有 golden-response spec 或等價的既有 spec 當安全網。
+
 ### Phase 3 — 配合 Core v1 退役（VP-17348 Phase 4 / 4b；trans 側的票是 VP-18152）
 
 > v0.3（2026-09-11）依 Jira 實讀改寫。原 v0.1 提的「自建 CoreClientProvider + CORE_TARGET flag + trans 側 shadow」**撤回**：Core 團隊的做法是在 **server 端**做切換（V1 gRPC reverse-proxy 到 V2、per-function、由他們的 shadow 框架驅動），caller 完全不用改。trans 若自建一套切換與 shadow，會跟 VP-18122 ~ VP-18130 重工，還會踩到 epic 明列的最高風險「proto freeze 是長期硬依賴」。
