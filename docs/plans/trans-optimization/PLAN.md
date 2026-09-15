@@ -1,6 +1,7 @@
 # Trans v1 / v2 優化計劃（草案 v0.3）
 
 - 日期：2026-09-11（v0.2 追加 cloud-local-proxy / web-homepage-api；v0.3 依 Jira 實讀改寫 Phase 3；2026-09-14 Phase 1.1 S1 **已執行**（st + prod），見 §8 runbook）
+- Jira：**VP-18276**（tracking，assignee Leo，2026-09-14 建）。
 - 狀態：**draft**。code 側只加了 `TRANS-OPT` 註解（四個 repo 的 `feature/leo/TRANS-OPT` branch，零行為變更，見 §9）；未開 PR、未留 Jira comment。等 Leo review。
 - 範圍：`LIS-transformer`（trans v1，REST + gRPC）與 `LIS-transformer-v2`（trans v2，GraphQL + REST）；v0.2 起追加 `cloud-local-proxy`（退役對象）與 `web-homepage-api`（去向待決，見 §2.9 / Phase 5 Track W）
 - 最高原則：**功能零改變**。所有變更都必須能證明「對外回應相同、副作用相同」，否則不做。

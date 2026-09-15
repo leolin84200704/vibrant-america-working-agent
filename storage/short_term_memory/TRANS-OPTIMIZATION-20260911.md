@@ -1,6 +1,6 @@
 ---
 id: TRANS-OPTIMIZATION-20260911
-title: Trans v1/v2 optimization program — planning phase (no ticket yet; related epic
+title: Trans v1/v2 optimization program — tracking ticket VP-18276 (related epic
   VP-17348 / VP-18152)
 status: active
 category: technical
@@ -19,6 +19,7 @@ tags:
 created: 2026-09-11
 updated: 2026-09-14
 links:
+- VP-18276
 - INCIDENT-20260518
 - INCIDENT-20260601-sftp-hang
 - INCIDENT-20260910-emr-v2-di-crashloop
@@ -171,3 +172,6 @@ OPEN PRs awaiting Leo (all zero-behaviour on merge except where noted): #773 cre
 Leo merged #773/#774/#775/#776 (02:08 UTC 09-15); three concurrent deploy-prod runs, final live image = last merge 5f79b52 (verified per pod). Set TRANS_TIMELINE_KIT_MODE=shadow on default/lis-trans-config (backup ~/.trans-opt-backups/*.pre-kit-shadow.yaml) 02:22 UTC. First window (02:25-03:05 UTC, low traffic): createPatient p50 1.68 s (7d 3.56; estimate ~2) with 12 kafka.produce / 3 tcp.connect per trace (was 14/14); getTimeLine p50 1.71 s (7d 2.15; estimate -0.25); newrange p50 2.05 s unchanged as predicted, p95 sample too small; findPatient p50 1.10. Kit shadow 16/16 equal, http ~1.1 s vs in-process ~0.37 s. newrange 4/40 errors are the pre-existing 78 ms fast-fail 500 class (same p50 as 327 baseline 500s; same accession retried; the code path fails before the changed function) - keep watching the daily rate. Kafka: no send failures; partitioner warning now once per pod/cluster instead of per message. Results in docs/plans/trans-optimization/phase2-measurements.md.
 Lesson PRs opened in project-agent-factory (one per lesson, per CONTRIBUTING): #78 latency estimate = critical-path delta; #79 re-derive perf-plan premises from current code + fresh trace; #80 golden spec must pin per-stage failure paths; #81 gates must own their environment (DI smoke depends on cwd/.env). Estimates so far are met or beaten; no estimate-miss lesson yet.
 TODO next session: (1) business-hours (Tue 9-17 PT) p50/p95 for findPatient, createPatient, getTimeLine, newrange vs prior weekdays; (2) S2: after 24 h shadow (23:10 UTC 09-15) confirm equal 100% -> ask Leo -> TRANS_PROXY_GRPC_MODE=grpc; (3) kit shadow: after a business day confirm equal -> ask Leo -> TRANS_TIMELINE_KIT_MODE=inprocess; (4) newrange error rate vs 1.8% baseline; (5) later cleanups: remove http/shadow branches, proxy_* keys (S6), close #626.
+
+### [2026-09-14 20:40]
+Leo: "create ticket, assign 給我" -> created VP-18276 https://vibrantamerica.atlassian.net/browse/VP-18276 (Task, VP, assignee Leo, Dev To Do) via the claude.ai Atlassian connector (the vibrant MCP at 192.168.60.8 and on-prem hosts were unreachable at the time - VPN down). Content: shipped table with PRs and first measurements, remaining ops checklist (business-hours measurement, S2 grpc switch, kit inprocess switch, newrange error rate, cleanups, cloud-local-proxy clock), and the six pre-existing defect groups as candidates for separate tickets. No Jira comments posted.
