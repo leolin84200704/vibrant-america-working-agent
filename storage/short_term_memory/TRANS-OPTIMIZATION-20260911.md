@@ -241,3 +241,17 @@ Leo：#626 有 conflict，並確認其他 PR 不會實際影響使用者。
 ### [2026-09-16 13:45]
 Confluence 2684321795 更新到 **version 2**（REST v2 PUT，version.number 必須遞增；先 GET 確認是 v1 沒被別人改過）。結構：原本的 §1–§4 保留為 first wave，新增 **§5 Second wave 2026-09-16**（5.1 CI gate／5.2 coresamples deadline／5.3 刪 dead config／5.4 被關掉的 #634／5.5 v1 service_config 從未生效／5.6 數字／5.7 誤判的錯誤突波），Defects 順延成 §6、Next 成 §7 並改寫。§3.3 與 §4 的既有交叉引用不受影響。
 本日五個 PR 全部 merge 上線：v1 #781 #782、v2 #633 #626 #637（#634 關閉）。live image v1 `402d78e`（含他人 #783 #784）、v2 `3855769`。#637 驗收通過（100 分鐘 0 DEADLINE_EXCEEDED、0 coresamples error span、0 restart）。
+
+### [2026-09-16 14:50]
+繼續 §7 待辦，三件事：
+
+**1. Shadow 的唯一「不一致」查清了，不是不一致。** 那筆 `equal:false`（2026-09-15 21:42，getTestStatus sample 2594896）的內容是 `http_ok:false` **且** `grpc_ok:false`、`grpc_error: '2 UNKNOWN: Internal server error'`——**兩邊都失敗**，不是兩邊答案不同。#629 的 `equal` 定義是 `httpOk && grpcOk && canonicalJson(a)===canonicalJson(b)`，任一邊失敗就是 false。所以累計 **13,629 筆比對、0 筆真正分歧**。`TRANS_PROXY_GRPC_MODE=grpc` 的證據門檻已經過了，剩下的是 Leo 決定何時切（prod config 變更）。
+教訓：shadow 的 `equal` 旗標若把「雙方都失敗」和「雙方不一致」混在一起，會製造假的 blocker。下次設計 shadow 要分成 `equal` / `both_failed` 兩個欄位。
+
+**2. on-prem 存取確認沒有**（不是假設）：`kubectl config get-contexts` 只有 `lisportalprod`（AKS）和 `minikube`。§5.3 的 on-prem `CORE_SAMPLE_V2_RPC` 問題我做不了，必須由有 on-prem 存取的人查。
+
+**3. v1 gRPC service_config → PR #792**（head `98a06e4`，未 merge）。**最重要的發現是一個陷阱**：把 `name: [{service:'lis'}]` 改成能比對的形式，會**同時**啟用旁邊那個 `retryPolicy`（maxAttempts 5、retryableStatusCodes UNAVAILABLE/UNKNOWN），而它套用在整個 channel，包含 `CreatePatientV2`（2,780 次/週）和 `UpdatePatientInformantWithWriteBack`（941 次/週）這兩個**非冪等寫入**。UNKNOWN 可能代表「server 已寫入、只是回應丟了」，重試 5 次會產生重複病人。所以 PR 是**刪掉 retryPolicy**，不是搬移，並留下大段註解禁止再加回去。
+值的選法（照 #637 的做法先量再選）：本 client 7 天所有 method 的 p95 都 < 10.3 s，超過 ~25 s 的只有那三個寫入 → default **60 s**，三個寫入 **240 s**（高於觀測最大值 188.7 / 159.1 / 75.6 s），確保今天會成功的呼叫一個都不被砍。
+另外記一筆：`UpdatePatientInfo` 的 **p50 是 9.7 秒**（48 次/週），那是 core 側的問題，但也是這裡天花板必須訂這麼寬的原因。
+
+**工具教訓**：commit message 用 `-m "..."` 且內容含反引號時會被 shell 當成命令替換吃掉（本次 `` `name` `` 整個消失）。以後 commit message 一律用 heredoc。
