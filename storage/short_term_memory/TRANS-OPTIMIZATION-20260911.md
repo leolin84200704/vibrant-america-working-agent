@@ -1,7 +1,7 @@
 ---
 id: TRANS-OPTIMIZATION-20260911
-title: Trans v1/v2 optimization program — tracking ticket VP-18276 (related epic
-  VP-17348 / VP-18152)
+title: Trans v1/v2 optimization program — tracking ticket VP-18276 (related epic VP-17348
+  / VP-18152)
 status: active
 category: technical
 tags:
@@ -19,10 +19,11 @@ tags:
 created: 2026-09-11
 updated: 2026-09-15
 links:
-- VP-18276
 - CONFLUENCE-2684321795
 - INCIDENT-20260518
+- INCIDENT-20260528
 - INCIDENT-20260601-sftp-hang
+- INCIDENT-20260817-onprem-deploy-freeze
 - INCIDENT-20260910-emr-v2-di-crashloop
 - QH-1104
 - QH-1130
@@ -31,6 +32,8 @@ links:
 - QH-1775
 - QH-211
 - QH-2259
+- QH-2648
+- QH-680
 - QH-862
 - QH-918
 - QH-919
@@ -41,6 +44,8 @@ links:
 - VP-16391
 - VP-16499
 - VP-16513
+- VP-16514
+- VP-16516
 - VP-16520
 - VP-16629
 - VP-16785
@@ -53,21 +58,28 @@ links:
 - VP-17217
 - VP-17222
 - VP-17312
+- VP-17412
 - VP-17422
+- VP-17577
 - VP-17714
 - VP-17753
+- VP-17754
+- VP-17755
+- VP-17765
 - VP-17766
 - VP-17825
 - VP-17868
 - VP-17870
 - VP-18048
 - VP-18050
+- VP-18276
 - VP-9299
 - business-model
+- business-model-deep
 - failures
 - repo-catalog
 - repos
-score: 0.63
+score: 0.765
 ---
 
 # Summary
@@ -182,3 +194,21 @@ Leo: "把我的改善+成效都寫上去" + Confluence folder 2681962497 (space 
 BUSINESS-HOURS MEASUREMENT DONE (closes TODO 1). Window 16:00-22:00 UTC (09:00-15:00 PT) Mon 09-14 (pre) vs Tue 09-15 (post); cut at 22:00 because Yuteng's #771/#772 deployed 22:14 UTC (image dae5611, pods 7796647dbd) and would contaminate the comparison. p50/p95 before -> after: createPatient 3.68->2.08 / 3.70->2.50; newrange 2.17->1.76 / 3.16->2.76; getTimeLine 2.14->1.78 / 2.42->2.04; findPatient 1.01->0.93 / 2.31->1.88. hits pre/post 495/596, 1176/1355, 1109/1273, 4016/4706. Errors: findPatient+createPatient 0 both windows; getTimeLine 3->1; newrange 11/1176 (0.8%) -> 17/1355 (1.1%), both under the 1.8% 7d baseline. All four estimates met or beaten except newrange p95 (-0.40 s vs "clearly down") - fan-out is core-side.
 SHADOW RESULTS (closes TODO 2/3 measurement half, decision still Leo's): S2 `proxy_grpc_shadow` 24 h = 7,702 comparisons, 7,701 equal (99.99%); getKitStatus 3900 eq, 243->215 ms; getTestStatus 1901 with **1 mismatch**, 207->184 ms; getQuestionaire 1901 eq, 96->73 ms. Saving ~25 ms/call -> real but small; resolve the 1 diff before TRANS_PROXY_GRPC_MODE=grpc. Kit shadow (`@operation:kitShadow`, v1) = 1,843 comparisons, 1,843 equal (100%), HTTP avg 1,095 ms vs in-process 496 ms => ~600 ms/request on the table; 1 inprocess_failed that still compared equal.
 Datadog method notes: `dd.metrics_scalar('<agg>:<metric>{...} by {tag}', 'avg'|'sum')` needs the reducer as a SECOND arg (else "Missing aggregator"); tag filters must use `AND` not commas when combined with `IN (...)` (else "'AND' and 'OR' cannot be mixed with ','"). Kit shadow logs are NOT findable by free-text `timeline_kit_shadow` (returns 1) - use `@operation:kitShadow` (1,843). Same trap cost a wrong "shadow has stopped" reading mid-session.
+
+### [2026-09-15 dream] VP-18276 closed as a record ticket; program stays active here
+- VP-18276 created 10:31 PDT and moved Dev To Do -> Done 10:34 PDT by Leo (story points 12, QH-7118 auto-linked, 0 comments). Its description carries the shipped table + remaining-ops checklist, so the audit treats it as a documentation closure: all 8 PRs merged, GitHub Actions deploy-prod/`frontend-service-graphql` success on every main merge (v1 last 5f79b52 02:08Z 09-15; v2 832ce95 22:56Z 09-14), business-hours measurement done 09-15.
+- Health since the deploys (Datadog): the trans error mix on 09-14/15 is 3-4x a normal weekday for `npm error … nest start` (v1, 30/day = one per pod per deploy, 12 deploys) and transv2 `Error getting requestv2/v3 timeout/502` (41-43/day vs 9-11) — both track the deploy/restart hours, not a regression. One signal to look at next session: v1 `14 UNAVAILABLE … ECONNREFUSED 192.168.60.6:31865` (core v1 gRPC) 15 on 09-11 -> 73 (09-14) -> 83 (09-15), business hours only, starting 19:00Z 09-14 = 4 h BEFORE the first TRANS-OPT deploy — core-side, but find which RPC.
+- Remaining ops unchanged: S2 grpc switch (1 getTestStatus diff to explain first), kit inprocess switch, newrange error-rate watch, cleanups (#626 close, http/shadow branch removal, proxy_* keys), cloud-local-proxy retirement clock (since 09-14). Local status stays `active`; reconcile cannot map this file to VP-18276.
+
+### [2026-09-15 19:30]
+Leo: 看 Confluence folder 已做的，比對計劃，把還能做的做一做（**僅限 LIS-transformer / LIS-transformer-v2 兩個 repo**）。Folder 2681962497 只有兩頁（我的 2684321795 + Yuteng 的 2681995265），沒有新增。比對 PLAN.md 後**開了 4 個 PR**（都沒 merge，Leo 決定）：
+- **Phase 0.3 CI gate**：v1 #781 head `819fafb`、v2 #633 head `95b5bff`。各加 reusable `.github/workflows/ci-tests.yml`（npm ci → tsc --noEmit -p tsconfig.build.json → jest --ci），deploy workflow 的 `buildImage` 加 `needs: [test]`，並在 `pull_request` 也跑。v1 node 22、v2 node 20（照各自 Dockerfile）。**這個 gate 第一次跑就抓到本機抓不到的 bug**：`--runInBand` 把 64/56 個 suite 塞進單一 process，撞 runner ~2 GB 預設 heap → `Ineffective mark-compacts near heap limit` exit 134（本機過是因為 macOS 預設 heap 較大）。改 `--maxWorkers=2 --workerIdleMemoryLimit=1G` 後本機重驗：v1 64/64 811 tests、v2 56/56 757 pass+4 skip。補推後照 CLAUDE.md 例外條款在兩個 PR 各留 comment 標明新 head SHA。
+- **Phase 3.4 v1 dead code**：#782，刪 `trans.grpc.options.ts` 的 `coreSampleV2Url`（算完就丟，client 一直直接讀 `CORE_SAMPLE_V2_RPC`）。**選擇刪掉不接上**——接上等於改 on-prem 送去哪。**浮出未解問題**：`platform_type==='local'` 在本 repo 其他地方是活的，若原作者判斷正確，on-prem v1 pod 可能每支 coresamples-v2 呼叫都在靜默失敗，要查 on-prem deployment env。
+- **Phase 3.4 v2 keepalive**：#634，4 個 coresamples client 的 keepalive 120 s → 300 s（對齊 v1；v1 註解記載低於 Go server `KeepaliveEnforcementPolicy.MinTime` 預設 5 分鐘會吃 GOAWAY ENHANCE_YOUR_CALM），並明寫 `keepalive_permit_without_calls: 0`。**GOAWAY 假設未驗證**（Datadog MCP 整段時間連不上，疑 VPN），PR body 已寫明；改動只降 ping 壓力，兩個方向都安全。
+
+**評估後決定不做的（連同理由，避免下次重跑同樣的路）**：
+- **getSetting 的重複 metadata**：`getSetting` 與其他約 50 處都有 `metadata` + `oauth2metadata` 兩次 `createMetadataForCoresampleV2`。實讀 `setting/tool.ts:105` 後確認 `getOAuthToken()` 的 fast path 是純記憶體快取讀取（無 I/O），第二次呼叫只多一個 `new Metadata()` + 幾個字串操作 → **收益趨近於零，不值得 50 處的 diff 風險**。`utility.service.ts:9748` 早有人做過同樣收斂並留下註解。
+- **fetchSettings 的 9 支 core gRPC 並行**：PLAN 手法 1 說要並行，**實讀發現 main 早已是 `Promise.all` 包 `Promise.all`**，計劃這條已過時。
+- **v2 patientProfile per-sample 迴圈並行 + accession-scoped memo**：迴圈 body ~290 行，改 `Promise.all(samples.map())` 需整段縮排，沒有 golden spec 當安全網；且 09-14 的實測結論已把 PatientProfileSlow 判給 shipping / interactive-report（跨團隊），trans 側只有多 sample accession 才有感。Datadog 掛掉無法量「一個 accession 平均幾個 sample」→ **在拿到那個數字前不動**。真要做的話 3 個 accession-scoped 呼叫（`getReportStatusListV2WithInteractiveProducts`、`questionnaire_status`、`report_finish_time`）可以提到迴圈外，但 **`getQuestionnaireStatusArray` 會被各 sample push，共用同一個 array instance 會互相污染，必須改成每個 sample 複製一份**——這點記下來，下次做的人不要踩。
+- **`processTNPWarningDataRedrawed` 的「return 後 dead code」**：09-14 的紀錄講得太簡化。實讀後**更正**：外層是 `if (SERVER_ENVIRONMENT == 'prod')` 才 return，非 prod 會走到後面的 `if (true)` 區塊（含 `SendTestOrderPDFMail` POST）。**不是全域 dead code，刪掉會改 staging 行為**，沒動。
+- **await-inside-`Promise.all` array literal**：寫腳本掃了 5 個大檔，只有 3 個 hit，全部是 thunk / `.then` 內的刻意排序（含我自己 #769 那段，有 golden spec 釘住）。**這個 smell 在 main 已經清乾淨**。
