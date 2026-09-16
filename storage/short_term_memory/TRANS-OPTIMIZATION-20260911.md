@@ -212,3 +212,16 @@ Leo: 看 Confluence folder 已做的，比對計劃，把還能做的做一做�
 - **v2 patientProfile per-sample 迴圈並行 + accession-scoped memo**：迴圈 body ~290 行，改 `Promise.all(samples.map())` 需整段縮排，沒有 golden spec 當安全網；且 09-14 的實測結論已把 PatientProfileSlow 判給 shipping / interactive-report（跨團隊），trans 側只有多 sample accession 才有感。Datadog 掛掉無法量「一個 accession 平均幾個 sample」→ **在拿到那個數字前不動**。真要做的話 3 個 accession-scoped 呼叫（`getReportStatusListV2WithInteractiveProducts`、`questionnaire_status`、`report_finish_time`）可以提到迴圈外，但 **`getQuestionnaireStatusArray` 會被各 sample push，共用同一個 array instance 會互相污染，必須改成每個 sample 複製一份**——這點記下來，下次做的人不要踩。
 - **`processTNPWarningDataRedrawed` 的「return 後 dead code」**：09-14 的紀錄講得太簡化。實讀後**更正**：外層是 `if (SERVER_ENVIRONMENT == 'prod')` 才 return，非 prod 會走到後面的 `if (true)` 區塊（含 `SendTestOrderPDFMail` POST）。**不是全域 dead code，刪掉會改 staging 行為**，沒動。
 - **await-inside-`Promise.all` array literal**：寫腳本掃了 5 個大檔，只有 3 個 hit，全部是 thunk / `.then` 內的刻意排序（含我自己 #769 那段，有 golden spec 釘住）。**這個 smell 在 main 已經清乾淨**。
+
+### [2026-09-15 20:30]
+CI gate 兩邊都綠，**最終 head：v1 #781 `7c55f77`、v2 #633 `a0bfa4f`**（#782 `d360eb3`、#634 未動）。四個 PR 都已留 comment 標明 head SHA。
+
+**CI gate 在 runner 上迭代了 3 輪，每一輪的失敗本機都重現不了——這是這個 gate 最強的存在理由，也是本次最大的收穫**：
+1. `--runInBand` → heap OOM exit 134（本機過，因為 macOS 預設 heap 較大）。
+2. `--maxWorkers=2 --workerIdleMemoryLimit=1G` → v1 綠但慢；**v2 更糟**：jest 用 SIGTERM 殺自己的 worker，56 suite 有 40 個 "failed to run"，761 test 只跑到 184，燒 27 分鐘。**方向錯誤的教訓：runner 預設 heap 只有 ~2 GB，v2 單一 worker（Nest + Apollo + GraphQL 過 ts-jest）自己就超過，收緊 ceiling 只會讓 worker 在 suite 跑完前先被殺。要的是 headroom 不是 ceiling。**
+3. `--maxWorkers=2` + `NODE_OPTIONS=--max-old-space-size=4096` + `--forceExit` + `timeout-minutes: 25` → 兩邊全綠。
+
+**heap headroom 的效果是數量級的**：v2 1636 s（失敗）→ **92 s**；v1 1031 s（雖綠但離 25 min timeout 只剩 4 min）→ **63 s**。也就是說在預設 heap 下，worker 幾乎整輪都在 GC。以後在 GitHub runner 上跑 Nest/ts-jest 大型 suite，**先給 `--max-old-space-size`，不要用 `--workerIdleMemoryLimit`**。
+`timeout-minutes` 也是這輪補的：v2 第一次卡在 test step 30 分鐘不動，一個會無限掛著的 gate 本身就是問題。
+
+待 Leo：(1) merge 時確認上面的 head SHA；(2) main 的 branch protection 要把 `typecheck + unit tests` 設成 required，否則 PR 上的紅燈只是建議；(3) #634 的 GOAWAY 前提待 Datadog 通了驗證；(4) #782 浮出的 on-prem coresamples-v2 疑慮需要 on-prem 存取。
