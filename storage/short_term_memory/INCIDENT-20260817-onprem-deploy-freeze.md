@@ -37,6 +37,7 @@ links:
 - QH-862
 - QH-918
 - QH-919
+- TRANS-OPTIMIZATION-20260911
 - VP-15460
 - VP-16168
 - VP-16169
@@ -72,7 +73,7 @@ links:
 - failures
 - repo-catalog
 - repos
-score: 0.2822
+score: 0.2516
 ---
 
 # INCIDENT 2026-08-17 — on-prem emr-v2 deploy freeze

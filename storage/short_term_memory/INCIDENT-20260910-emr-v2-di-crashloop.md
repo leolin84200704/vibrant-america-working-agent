@@ -4,12 +4,13 @@ type: stm
 category: technical
 status: resolved
 follow_up: factory PRs
-score: 0.7763
+score: 0.7089
 base_weight: 0.9
 created: 2026-09-10
 updated: '2026-09-11'
 links:
 - INCIDENT-20260518
+- INCIDENT-20260528
 - INCIDENT-20260601-sftp-hang
 - INCIDENT-20260604
 - INCIDENT-20260817-onprem-deploy-freeze
@@ -21,6 +22,7 @@ links:
 - QH-1775
 - QH-211
 - QH-2259
+- QH-2648
 - QH-680
 - QH-862
 - QH-918
@@ -48,6 +50,7 @@ links:
 - VP-17217
 - VP-17222
 - VP-17312
+- VP-17412
 - VP-17422
 - VP-17559
 - VP-17577

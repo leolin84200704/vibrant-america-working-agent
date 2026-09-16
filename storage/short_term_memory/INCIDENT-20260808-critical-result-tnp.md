@@ -3,7 +3,7 @@ id: INCIDENT-20260808-critical-result-tnp
 type: stm
 category: emr_integration
 status: active
-score: 0.5505
+score: 0.4904
 base_weight: 1.0
 created: 2026-08-08
 updated: '2026-08-14'
@@ -108,6 +108,8 @@ links:
 - VP-18086
 - VP-18138
 - VP-18185
+- VP-18243
+- VP-18270
 - emr-integration
 - fhir-api
 relations:

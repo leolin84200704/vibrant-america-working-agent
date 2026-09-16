@@ -17,7 +17,7 @@ tags:
 - vp-18152
 - core-v1-retirement
 created: 2026-09-11
-updated: 2026-09-15
+updated: 2026-09-16
 links:
 - CONFLUENCE-2684321795
 - INCIDENT-20260518
@@ -237,3 +237,7 @@ Leo：#626 有 conflict，並確認其他 PR 不會實際影響使用者。
 - #782：`url: process.env.CORE_SAMPLE_V2_RPC` 原封不動；被刪的 `coreSampleV2Url` / `CORE_SAMPLE_V2_RPC_LOCAL` / `CORE_SAMPLE_V2_RPC_ONPREM_DEFAULT` 在該 branch 的 `src/` 內 0 個引用（`git grep` 對 ref 驗證）。
 - #626：全部新增行都以 `//` 開頭，零刪除。
 - #634：**唯一有 runtime 成分的一張，而且我發現一個開 PR 時沒講到的 caveat**——`grpc.service_config`（含 timeout）只掛在本檔兩個 `lis` client 上，**coresamples client 沒有，call site 也沒有 per-call deadline**，所以 keepalive 是偵測「靜默斷線」的唯一機制。連線在呼叫中途死掉時，偵測從 ~140 s 變成 ~320 s。不改變任何 response/schema/資料，但失敗情境下 hang 更久。已在 PR 留 comment 講明；仍建議 merge（v1 早就跑同樣的值對同一個服務；120 s 反而有被 server 拆通道的風險），真正的解是給 coresamples client 補 deadline，另開一張。
+
+### [2026-09-16 13:45]
+Confluence 2684321795 更新到 **version 2**（REST v2 PUT，version.number 必須遞增；先 GET 確認是 v1 沒被別人改過）。結構：原本的 §1–§4 保留為 first wave，新增 **§5 Second wave 2026-09-16**（5.1 CI gate／5.2 coresamples deadline／5.3 刪 dead config／5.4 被關掉的 #634／5.5 v1 service_config 從未生效／5.6 數字／5.7 誤判的錯誤突波），Defects 順延成 §6、Next 成 §7 並改寫。§3.3 與 §4 的既有交叉引用不受影響。
+本日五個 PR 全部 merge 上線：v1 #781 #782、v2 #633 #626 #637（#634 關閉）。live image v1 `402d78e`（含他人 #783 #784）、v2 `3855769`。#637 驗收通過（100 分鐘 0 DEADLINE_EXCEEDED、0 coresamples error span、0 restart）。

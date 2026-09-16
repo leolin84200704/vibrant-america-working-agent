@@ -26,7 +26,7 @@ links:
 - INCIDENT-20260910-emr-v2-di-crashloop
 - VP-17217
 - VP-17312
-score: 0.1575
+score: 0.1378
 ---
 
 # INCIDENT 2026-09-08 — result pushes failing: gRPC targets pointed at a dead AKS node IP
