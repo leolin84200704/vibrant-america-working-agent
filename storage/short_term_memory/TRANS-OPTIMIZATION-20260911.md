@@ -225,3 +225,15 @@ CI gate 兩邊都綠，**最終 head：v1 #781 `7c55f77`、v2 #633 `a0bfa4f`**�
 `timeout-minutes` 也是這輪補的：v2 第一次卡在 test step 30 分鐘不動，一個會無限掛著的 gate 本身就是問題。
 
 待 Leo：(1) merge 時確認上面的 head SHA；(2) main 的 branch protection 要把 `typecheck + unit tests` 設成 required，否則 PR 上的紅燈只是建議；(3) #634 的 GOAWAY 前提待 Datadog 通了驗證；(4) #782 浮出的 on-prem coresamples-v2 疑慮需要 on-prem 存取。
+
+### [2026-09-16 09:00]
+Leo：#626 有 conflict，並確認其他 PR 不會實際影響使用者。
+
+**#626 解衝突（不用 force-push）**：`git merge origin/main` 進 `feature/leo/TRANS-OPT`，**所有衝突都落在 `[P1-S2]` 註解上**——S2 已由 #629 上線（`ProxyGrpcService` + `TRANS_PROXY_GRPC_MODE`）並改寫了那些 call site，所以一律取 main 側（註解要求的工作已完成，掛註解的那幾行也不存在了）。另外把 `[P1-S1]` 註解改寫：它叫人去把 `lis-transv2-config` 從 cloud-local-proxy 移開，那在 09-14 就做完了，留著是誤導；改成記錄現況 + 「這個 env var 背後是 on-prem 位址，是本 resolver 唯一離開 cluster 的呼叫」。新 head `82917a5`，PR 回到 MERGEABLE。剩 17 行、5 檔、全是 `//`，零刪除（用 `git diff origin/main | grep '^+'` 機械驗證過）。merged head 上 tsc 乾淨、56/56、757 pass。
+**注意**：rebase 需要 force-push（CLAUDE.md 禁止），所以這類「PR 落後 main」一律用 merge main 進 branch，不要 rebase。
+
+**使用者影響稽核（逐一機械驗證，非口頭斷言）**：
+- #781 / #633（CI gate）：deploy workflow 的 diff **只有新增**（`test:` job + `needs: [test]`），build/推 image/kubectl set image/k8s-deploy 全部沒動，一行未刪。純 CI。
+- #782：`url: process.env.CORE_SAMPLE_V2_RPC` 原封不動；被刪的 `coreSampleV2Url` / `CORE_SAMPLE_V2_RPC_LOCAL` / `CORE_SAMPLE_V2_RPC_ONPREM_DEFAULT` 在該 branch 的 `src/` 內 0 個引用（`git grep` 對 ref 驗證）。
+- #626：全部新增行都以 `//` 開頭，零刪除。
+- #634：**唯一有 runtime 成分的一張，而且我發現一個開 PR 時沒講到的 caveat**——`grpc.service_config`（含 timeout）只掛在本檔兩個 `lis` client 上，**coresamples client 沒有，call site 也沒有 per-call deadline**，所以 keepalive 是偵測「靜默斷線」的唯一機制。連線在呼叫中途死掉時，偵測從 ~140 s 變成 ~320 s。不改變任何 response/schema/資料，但失敗情境下 hang 更久。已在 PR 留 comment 講明；仍建議 merge（v1 早就跑同樣的值對同一個服務；120 s 反而有被 server 拆通道的風險），真正的解是給 coresamples client 補 deadline，另開一張。
