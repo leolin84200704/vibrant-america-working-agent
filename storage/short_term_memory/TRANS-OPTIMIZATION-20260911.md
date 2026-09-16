@@ -255,3 +255,17 @@ Confluence 2684321795 更新到 **version 2**（REST v2 PUT，version.number 必
 另外記一筆：`UpdatePatientInfo` 的 **p50 是 9.7 秒**（48 次/週），那是 core 側的問題，但也是這裡天花板必須訂這麼寬的原因。
 
 **工具教訓**：commit message 用 `-m "..."` 且內容含反引號時會被 shell 當成命令替換吃掉（本次 `` `name` `` 整個消失）。以後 commit message 一律用 heredoc。
+
+### [2026-09-16 15:10]
+**兩個行為變更刻意分開落地**（出事才分得清是哪一個）：
+- **22:00:37 UTC** v1 `6b4ab6d`（PR #792，deadline 第一次真正生效）rollout 完成，3 pods、0 restarts。先驗：`DEADLINE_EXCEEDED` 0、所有端點錯誤 0。
+- **22:03:16 UTC** v2 切 `TRANS_PROXY_GRPC_MODE=grpc`（ConfigMap patch + rollout restart）。備份 `~/.trans-opt-backups/lis-transv2-config.20260916T214729Z.pre-grpc.yaml`。三個 pod 逐一 `kubectl exec printenv` 確認 = `grpc`（不是只看 ConfigMap）。
+
+**切換驗證（22:04 起）——三條證據都到齊**：
+1. **新路徑出現**：transv2 直接打 `shipping.ShippingService/GetKitStatusBySampleId`(15)、`GetQuestionaireBySampleId`(11)、`testresult.TestResultGrpcService/GetTestStatus`(11)。
+2. **舊路徑消失**：v1 `/proxy/grpc/*` 三個端點 hits = **0**（切換前 2 小時基線 684+496+467 = 1,647）。
+3. **客戶面零影響**：transv2 request errors 0、gRPC client errors 0、相關 error log 0、pod restarts 0。
+
+**不要誤讀的數字**：切換後 8 分鐘窗的 graphql p95 = 0.481 s，看起來比今天稍早的 1.094 s 好很多——**但短窗的 scalar p95 會塌向 p50，不能當成改善證據**（這個陷阱在 09-15 的量測已經記過一次）。真正的比較要等完整工作日窗。
+
+**查證過不是問題的訊號**：切換後有 3 筆 ERROR 等級 log，內容是 Node `MaxListenersExceededWarning` 啟動警告。查 3 天歷史：每次 deploy 都出現 6 筆（9/14 ×3、9/15、9/16 ×3），既有噪音，與本次無關。
