@@ -269,3 +269,15 @@ Confluence 2684321795 更新到 **version 2**（REST v2 PUT，version.number 必
 **不要誤讀的數字**：切換後 8 分鐘窗的 graphql p95 = 0.481 s，看起來比今天稍早的 1.094 s 好很多——**但短窗的 scalar p95 會塌向 p50，不能當成改善證據**（這個陷阱在 09-15 的量測已經記過一次）。真正的比較要等完整工作日窗。
 
 **查證過不是問題的訊號**：切換後有 3 筆 ERROR 等級 log，內容是 Node `MaxListenersExceededWarning` 啟動警告。查 3 天歷史：每次 deploy 都出現 6 筆（9/14 ×3、9/15、9/16 ×3），既有噪音，與本次無關。
+
+### [2026-09-16 15:40]
+切換後 33 分鐘完整驗證（22:04–22:37 UTC），全部乾淨：
+- 新路徑有實量：getKitStatusBySampleId 107、getQuestionaireBySampleId 96、getTestStatus 96（約 300 次），**gRPC client errors 0**。
+- 舊路徑：`/proxy/grpc/getteststatus` 和 `getquestionairebysampleid` 皆 **0**；`getkitstatus` 有 **1** 筆——時間落在 rollout 剛完成、舊 pod 還在 draining 的窗內，判定為收尾殘留，非新流量（若隔天仍有非零要重查）。
+- **DEADLINE_EXCEEDED 跨 v1+v2 = 0**（涵蓋 #792 的 v1 deadline 首次生效）。
+- transv2 客戶面 request errors **0**（835 個 graphql 請求）。pod restarts 全 0。
+- v1 期間又被第三方 deploy 一次（#789 VP-16884，live `a4592dc`），我的 #792 deadline 仍在該 image 內、仍生效。
+
+**graphql p95 = 0.547 s（835 請求）vs 今天稍早 1.094 s** —— 方向好看，但**依 lesson #83 不宣稱為改善**：窗只有 33 分鐘、又是傍晚時段，短窗百分位會塌向中位數。完整工作日對照明天再做。
+
+**一個待觀察（不是問題）**：shadow 期 getKitStatus:其他 ≈ 2.05:1，切換後 ≈ 1.11:1。可能只是時段流量組成差異（shadow 是 48 小時平均、現在是工作日傍晚），但值得用完整一天的資料重看一次比例是否回到 2:1；若沒有，代表某個 getKitStatus call site 的行為跟預期不同。
