@@ -281,3 +281,16 @@ Confluence 2684321795 更新到 **version 2**（REST v2 PUT，version.number 必
 **graphql p95 = 0.547 s（835 請求）vs 今天稍早 1.094 s** —— 方向好看，但**依 lesson #83 不宣稱為改善**：窗只有 33 分鐘、又是傍晚時段，短窗百分位會塌向中位數。完整工作日對照明天再做。
 
 **一個待觀察（不是問題）**：shadow 期 getKitStatus:其他 ≈ 2.05:1，切換後 ≈ 1.11:1。可能只是時段流量組成差異（shadow 是 48 小時平均、現在是工作日傍晚），但值得用完整一天的資料重看一次比例是否回到 2:1；若沒有，代表某個 getKitStatus call site 的行為跟預期不同。
+
+### [2026-09-16 16:40]
+持續監測 1.5 小時（22:04–23:36 UTC）全部乾淨：新路徑 605 次、gRPC errors **0**、客戶面 errors **0**（835 graphql 請求）、pod restarts **0**、DEADLINE_EXCEEDED **0**。舊路徑 ≤1 次（太稀疏沒被 span 取樣，無法歸因；相對切換前每小時 ~500 次等於零）。Confluence 更新到 **v4**（§4.1 改寫成已切換 + 三條驗證訊號 + shadow blocker 的真相；§7 重排）。
+
+**下一步做了 kit shadow 的決策資料，結果推翻我自己先前的說法** → Confluence **v5**：
+累計 **3,473 筆（~46 小時）、3,470 相同（99.91%）、3 筆分歧**。我先前報的「1,843 筆 100% 相同」是小樣本，已在頁面上明確標為更正。
+三筆分歧逐一看，**方向跟我原本假設相反**：
+- 09-16 01:13 sample 2627642：HTTP `false`（**8,035 ms**）vs in-process `true`（996 ms）
+- 09-16 22:00 sample 2618435：HTTP `false`（**5,600 ms**）vs in-process `true`（10 ms）
+- 09-16 17:41 sample 2617310：HTTP `true`（2,264 ms）vs in-process **失敗** → `false`
+**三分之二的分歧是現行路徑答錯**：三跳在高負載下跑 5.6–8.0 秒然後回 `false`，等於 timeline 對病人說「沒有報告」而其實有。這是**現在就存在的靜默 false negative**，在旁邊擺一條路對照之前完全看不見。
+第三筆是 in-process 真的失敗（1/3,473 = 0.03%），但**原因查不到——shadow 只記 `inprocess_failed` 不記 why**，跟 §4.1 同一類儀器缺口。
+所以決策收斂成：接受新路 ~0.03% false negative，換每個請求 ~610 ms + 移除一個發生率約兩倍的既有 false negative。數據上 in-process **又快又更正確**。剩下的是歸屬權判斷（`has_report` 能不能由 trans v1 自己的 kit 資料導出），不是準確度判斷。
