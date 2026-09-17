@@ -332,3 +332,12 @@ Confluence 更新到 **v7 → v8**（#793 進 §5.8、slow-vs-failed 更正、ac
 **過程中差點犯的錯**：本機 va-portal checkout 落後 origin/main **115 個 commit**，我第一次是對過期的樹 grep。改用 `git grep origin/main` 重查才算數。**讀別的 repo 下結論前必須先確認那個 checkout 的新舊**——Sync With the World 不只適用於自己在動的 repo。
 
 **工具筆記**：`mcp__vibrant__mysql_query` 的 SQL 必須以分號＋換行結尾，否則參數結尾的 `<` 會被送進 SQL parser 而報 `Parsing failed ... but "<" found`。
+
+### [2026-09-16 18:55]
+切換後 ~4 小時（22:04–01:52 UTC）持續觀測：
+- 新路徑累計 **1,088 次**（kit 434 / qnr 326 / teststatus 328）。
+- **客戶面 request errors 仍為 0**；pod restarts 0（v2 3h51m、v1 3h48m）；DEADLINE_EXCEEDED **0**。
+- 舊 proxy 路徑 2 次（90 分鐘時是 1 次）→ 約每 2 小時 1 筆的涓流，不是零。追不到 caller（量太小不會被 span 取樣）。**明天用整天資料再看一次**：若穩定維持每小時 <1 筆，可能是某個非 transv2 的消費者，那會影響該端點能不能退役。
+- **新增 1 筆 gRPC client error**（90 分鐘時為 0）：01:46:19 UTC，`/testresult.TestResultGrpcService/GetTestStatus`，`2 UNKNOWN: Internal server error`，peer 是 `lis-test-connect-deployment`。**是下游服務回的錯，不是切換造成**——shadow 期間唯一那筆「不一致」也正是同一個錯誤類別，而且當時兩條路同時失敗。
+  **不下結論的理由（套用今天寫的 lesson #83）**：新路 1/328 = 0.30% vs 舊路歷史 3/10,723 = 0.028%（09-09~09-16）。點估計高 ~11 倍，但 **n=1**——以舊路真實率推算，328 次中出現 ≥1 筆的機率約 8.7%，屬於正常機會範圍。單一事件無法分辨真實變化與偶然。**明天用完整一天的資料重算錯誤率**才算數。
+  該錯誤對使用者無影響：patientProfile 對 getTestStatus 有 `.catch()` 退回全零（那是既有的靜默預設問題，兩條路一樣）。
