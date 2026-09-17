@@ -303,3 +303,21 @@ Confluence 2684321795 更新到 **version 2**（REST v2 PUT，version.number 必
 重開這題的條件寫進頁面了：證明 trans v1 的 kit 資料與 LIS-Sample 是同一份記錄，或把 in-process 限縮到可證明等價的案例；**不是跑更久的 shadow**。
 
 **shadow 仍然值回票價——它找到現行路徑的一個真 bug**（與切不切無關，值得獨立開票）：三跳呼叫在負載下跑 5.6–8.0 秒後回 `false`，於是 `has_report` 對「有報告的病人」靜默顯示成沒有。**慢/失敗被當成否定答案回報**，而不是當成失敗。只改現行路徑就能修：把「沒有報告」和「查不出來」分開。這條已升為 §7 的下一步第一項。
+
+### [2026-09-16 17:40]
+Leo ok → 修現行路徑的 false negative → **PR #793**（head `795ecfd`，未 merge）。
+
+**機制從 code 確認（不是推測）**：`settingTool.getRequest` 把所有失敗吞成 `{transbadstatus:500}`，該物件沒有 `.data`，而 `httpHasReport` 只讀 `kitStatusResponse?.data?.tube_info` → 失敗 = `false`。同一個 function 下面 60 行的 `orderItemsAndHistory` 有檢查 `transbadstatus`，這個 call site 沒有。
+**生產證據對上了**：`[getRequest] getKitStatusV2 client error 409 ... accession_id=2609016901`，2026-09-16 01:13:22 UTC——與 shadow 分歧第一筆同秒同 sample（HTTP false / in-process true）。
+
+**我先前的說法要更正**：我說「三跳在負載下跑 5.6–8.0 秒後回 false」，把「慢」當成成因。實際上 `getRequest` **沒有設 axios timeout**，所以慢不會變成失敗。三筆分歧的正確歸類是：
+- 01:13（8,035 ms）= **真的失敗**（409），有 log 佐證 → #793 修得到
+- 22:00（5,600 ms）= **沒有對應的失敗 log**，可能是真的資料源分歧 → #793 修不到，正是 Leo 擋下 inprocess 的那個理由
+- 17:41 = in-process 失敗
+**教訓（與今天第三條 lesson 同源）**：把「慢」和「失敗」混為一談，是因為我看到時間長就假設是 timeout，沒去確認有沒有設 timeout。
+
+**修法**：失敗時 `has_report = null`。`null` 本來就是 `timeline_body` 的初始值，所以「未知」一直在合約內；不在合約內的是對沒完成的查詢斷言 `false`。成功但 `tube_info` 空仍然回 `false`——空答案也是答案，這條有 test 釘住。另外補上失敗時的 log（原本完全無痕，只有一行 generic `[getRequest]`，跟被它降級的 response 沒有任何關聯）。
+**順手關掉 shadow 自己的儀器缺口**：payload 加 `http_failed` / `both_failed`，`equal` 改成「兩邊都答了且一致」——就是今天送 factory #82 的那條教訓，先套用在自己的 code 上。
+
+**PR body 有標記需要 reviewer 檢查的點**：`has_report` 現在可能是 `null`，前端若有 `=== false` 的分支會走不同路，merge 前值得 grep 一次前端。
+**另一個順手發現（未修）**：4 筆失敗有 3 筆是 404 且 `accession_id=portal.vibrant-wellness.com`——有東西把 hostname 當成 accession id 傳進來，值得另開票。
