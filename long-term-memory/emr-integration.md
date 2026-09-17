@@ -3,7 +3,7 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 1.5964
+score: 1.6211
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-09-11
@@ -122,6 +122,8 @@ links:
 - VP-18086
 - VP-18138
 - VP-18185
+- VP-18243
+- VP-18270
 - fhir-api
 tags:
 - emr
@@ -194,7 +196,7 @@ summary: EMR/HL7/SFTP integration rules, identity mapping, MSH values, bundle co
 
 ### Order 解析來源：order_clients → ehr_integrations cutover（VP-16968）
 - 舊路徑 order 准入閘門 = `order_clients`（`customer-detail-fetcher.service.ts` fetchById/fetchByNpi，覆寫 kits_options/clinic_id/old_clinic_id；customer 主檔來自 gRPC GetCustomer）；`hl7-order.processor.ts` 查 ehr_integrations 只做 logging（Java parity，配不到不擋）。
-- VP-16968 cutover：閘門改 `ehr_integrations`，gate = **status='LIVE' AND ordering_enabled=true**；多列優先序 **FULL > ORDER_ONLY > 其他，再 updated_at desc**；`kits_options` / `old_clinic_id`（order payload/token 必要，原來只在 order_clients）新增到 ehr_integrations 欄位並從那取。
+- VP-16968 cutover：閘門改 `ehr_integrations`，gate = **status='LIVE' AND ordering_enabled=true**；多列優先序 **FULL > ORDER_ONLY > 其他，再 updated_at desc**；`kits_options` / `old_clinic_id`（order payload/token 必要，原來只在 order_clients）新增到 ehr_integrations 欄位並從那取。（`kits_options` 的 reader 已於 2026-09-14 移除，改讀 `kit_delivery_option`——VP-18270）
 - 前置陷阱：`order_clients` 955 distinct 客戶中 ~225（23.6%）**完全沒有 ehr_integrations 列** → 直接 cutover 會停單，必須先 backfill。`order_clients` 是 per-customer（非 per (customer,clinic)），多列衝突時 Java findFirst 取第一筆。
 - **VP-16968 後新整合只寫 `ehr_integrations`，不碰 `order_clients`**（kits_options/old_clinic_id 已在 ehr_integrations 欄位）。Leo 明確：order_clients 現在完全不碰。
 
@@ -252,10 +254,13 @@ summary: EMR/HL7/SFTP integration rules, identity mapping, MSH values, bundle co
 | 欄位 | 所在 table | 預設（fallback） | 備註 |
 |------|-----------|------------------|------|
 | `report_option` | `ehr_integrations` | `PERSONALIZED` | script 已自動處理（`getReportOption(clinicId)`） |
-| `kit_delivery_option` | `ehr_integrations` | 對齊 `order_clients.kits_options`（見下方規則） | **script 未處理，需手動補** |
+| `kit_delivery_option` | `ehr_integrations` | **2026-09-14 起是 runtime 唯一依據**（VP-18270）：抄 same-clinic LIVE 既有值；無既有時 `NON_BLOOD_ONLY`（= 舊 kits_options 0 行為）。`kits_options` 已無 reader，不用再對齊 | **script 未處理，需手動補** |
 | `old_clinic_id` | `order_clients` | `null` | **script 未處理，需手動補**；同 clinic 的既有記錄通常共用同一個 legacy clinic id |
 
 ### kit_delivery_option 對齊規則（VP-16476 修正版）
+
+> **⛔ SUPERSEDED 2026-09-14（VP-18270，emr-v2 main 172a7f3）**：從 172a7f3 起 emr-v2 order path（`customer-detail-fetcher.service.ts` → `parser.service.ts` `kitDeliveryMethodsFor()`）**只讀 `ehr_integrations.kit_delivery_option`**，
+> `kits_options` 沒有任何 reader（Java EMR-Backend 已不處理 order）。下面「informational / 必須對齊 kits_options」的描述是歷史；對齊表仍可用來**解讀舊資料**與理解 190 筆 backfill 的方向（kits 0→NON_BLOOD_ONLY、1→BOTH）。新規則見 【蒸餾 2026-09-15】。
 
 `ehr_integrations.kit_delivery_option` 是 informational 偏好欄位（auto-integrate module 的 PRD 表單），lis-backend-emr-v2 runtime 完全不 consume；EMR-Backend Java 看的是 `order_clients.kits_options`。對齊規則應該按 ParseHL7 真實語意推算，**不是按 enum 字面語意推測**。
 
@@ -650,7 +655,9 @@ VP-16423 case 揭示一種 ehr_integrations PENDING record 來源：**internal s
 
 **有 same-clinic LIVE follow target 時**：對齊既有 LIVE row 的值（filter `status='LIVE' AND business_justification != ''` 排除其他 stub）
 
-**`kit_delivery_option` ↔ `kits_options` 對齊規則（不可違反）**：
+> ⛔ 2026-09-14 起 `kits_options` 已無 reader（VP-18270）——下列對齊只在解讀歷史資料時有意義；新 row 只需把 `kit_delivery_option` 設對。
+
+**`kit_delivery_option` ↔ `kits_options` 對齊規則（歷史；VP-18270 前不可違反）**：
 - `NON_BLOOD_ONLY` ↔ `kits_options=0`（non-blood ship, blood supplied by clinic）
 - `BOTH_BLOOD_AND_NON_BLOOD` ↔ `kits_options=1`（both ship）
 - `NO_DELIVERY` ↔ `kits_options=2`（both supplied by clinic）
@@ -1905,3 +1912,52 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 ### VP-18086 結局：ADDITION_ENABLE 規則維持，票轉給 Fangyuan 後關
 - Xiaoye 09-10 把票轉給 Fangyuan「through exception」；Fangyuan + Jiafan 確認 API 與 portal 一致（saliva add-on 任一非血 host 都可選），09-11 隨 PH-872 resolved。
   09-03 baseline 的另一個發現——quote 端 add-on 被 silent drop（`["APOE_SALIVA"]` 單獨 → eligible:true、lineItems 空、total 0）——**仍是沒人認領的 pricing 缺陷**。
+
+## 【蒸餾 2026-09-15】kit_delivery_option 成為唯一 runtime 依據 + CHARM facility code 誤路由 + Order Summary PDF 改為下單即送（VP-18270 / VP-18243 / VP-18138 / VP-17812 / BIOINSIGHTS）
+
+### kit_delivery_option 是唯一依據（VP-18270，prod 172a7f3 2026-09-14 19:10Z）
+- 症狀：EverSpan Life（clinic 66839，customer 22376，MDHQ）admin UI 顯示 BOTH_BLOOD_AND_NON_BLOOD，HL7 下的單卻 blood=suppliedByClient。原因：`ehr_integrations` 有兩個 kit 欄位、兩個 writer、一個 reader——
+  UI（customer `NewRequestDialog.vue` / admin PATCH `/auto-integrate/requests/:id`）只寫 `kit_delivery_option`，runtime（`customer-detail-fetcher.service.ts` + `parser.service.ts`，ParseHL7.java:930 的 1:1 port）只讀 `kits_options`。
+  任何 UI 可編輯的「informational」欄位終究會被使用者當成權威。
+- 改法：`parser.service.ts` 匀出純函式 `kitDeliveryMethodsFor(option)`；無 integration 的 API scope-only 路徑（VP-17472）預設 `NON_BLOOD_ONLY`（= 舊 kits_options 0）；新 enum 值 `BLOOD_ONLY`（從未有整數對應）= blood ship、non-blood clinic 供應。
+  emr-v2 再無任何程式寫 `kits_options`；其他 repo 完全不碰 `ehr_integrations`。Java EMR-Backend 仍讀 `order_clients.kits_options` 但已不處理 order（2026-08-01 起 336 列 hl7_file_input 全由 emr-v2 pod 處理）。
+- prod backfill（2026-09-14 ~19:00Z，`npx prisma db execute` 走 emr-v2 prod DATABASE_URL；MCP write 帳號對 lis_emr 沒 UPDATE 權）：190 列 `LIVE AND ordering_enabled=1 AND kit_delivery_option='NO_DELIVERY' AND kits_options IN (0,1)` + 明確 id 清單
+  → 123 NON_BLOOD_ONLY + 67 BOTH。故意**不動** 5 列 BOTH/0（22376、50793、29473、29477、3332——UI 人工設的 BOTH 是意圖，部署後開始寄 blood kit）。100% 反查：LIVE+ordering 的殘餘 mismatch 恰為那 5 列（dream 09-15 再驗仍是 5）。
+  158 列 ordering_enabled=0 與 3 列 REJECTED 的 mismatch 沒動（runtime 不讀）。`updated_at` 故意不碰（fetcher tie-break 用 updated_at desc；已驗沒有 customer 有 >1 列 LIVE ordering）。
+- 2026-06-11 23:53:05 的 204 列 bulk batch 全是 schema default NO_DELIVERY、business_justification 空——**schema default ≠ 人設定過**，判 follow target 時仍要 filter LIVE + business 欄位有值。
+- 殘留不一致（沒改）：DB 欄位 default 仍是 BOTH_BLOOD_AND_NON_BLOOD 而 Prisma `@default(NO_DELIVERY)`（VP-16476 只改 Prisma）；`create-integration-request.dto.ts:124` class default BOTH vs service `|| 'NO_DELIVERY'`。UI 永遠送值所以少踩到；raw INSERT 不帶欄位會拿到 BOTH。
+- 驗證：部署後第一張單 hl7 7098（19:46Z）就是 EverSpan 66839 → bloodKitDeliveryMethod=shipToPatient 而該列 kits_options 仍 =0（payload 跟著 kit_delivery_option）。
+- **HL7 order 由 on-prem prod pod 處理**（`hl7_file_input.last_update_pod_name`，ns default，appserver04，ssh leo@192.168.60.5），AKS pod 只接 API。每次 main merge 後要看 on-prem image；Jenkins 同一次 deploy 會 roll 兩邊
+  （09-14 19:10Z 兩邊都到 172a7f3；09-15 22:33Z AKS roll 後 13 分鐘 on-prem replicaset 649df4d54c → 74dcc4b549）。
+- 票務：VP-18270 由 Mingxi（Zendesk 升級）09-14 13:47 PDT 開，Leo 14:07 PDT 關，**零 comment**——ticket 要的「filter out other potentially affected orders」（195 列 audit）只在 STM。
+
+### CHARM 的 receiving facility code 是 practice 身分，不是可抄的欄位（VP-18243，P1，2026-09-11）
+- 事故：VP-18055 的 09-05 修復以 INSERT…SELECT 抄了關閉帳號 6171 的 CHARM 列給 provider 8246（Geyer，practice 11783），msh06 `P00029HUC092017` 照抄；「HUC」= Holistic Urgent Care（practice 5144）。
+  85 筆 backlog repush 在 37 分鐘內把 Geyer 的報告送進別家診所的 CHARM 帳號（75 份 PHI 誤投）。這是 ENGINEERING-LESSONS「owner-bound 欄位不可照抄」的 LIS 實例：同一個 facility code 在 18 列 LIVE / 15 個 clinic 上重複 = owner-bound，一個 group-by 就看得出來。
+- 根：EMR-Backend `PracticesEnum.java:220`（2017 年 hard-code provider→facility），2025-12-24 migration 原樣搬進 `ehr_integrations`；provider 離開 practice 後 mapping 不會跟著改。**「恢復」一條 legacy delivery 可能恢復一條 legacy 誤路由**；
+  對 >90 天沒送過的目的地做 batch repush 前，目的地本身要人再確認一次（不只是確認修法）。
+- 圍堵 = status：listener（`kafka-report-finished-listener.service.ts:444-449`）與手動 repush（`result-generation.service.ts:781-790`）都要求 `status='LIVE'`；`result_enabled=0` 擋不住手動路徑（RESULT_ONLY/FULL 可替代）。
+  8246 列 LIVE→REJECTED（history 187、note 3）；6171 列與其他 14 列 HUC facility 未動（授權不明）。dream 09-15：8246 兩列皆 REJECTED，圍堵後 0 筆 rtr。副作用：8246 每份新報告會觸發 ResultScopeDropError——那是「被扣住」的訊號，不是新缺陷。
+- CHARM inventory 查法：`ehr_integrations WHERE ehr_vendor_id=7 GROUP BY clinic_id, clinic_name, msh06_receiving_facility`（47 列 / 36 clinic / 20 個 msh06；共用 code 的還有 Nourish P00021NMC1128、Pure Health P00036PIM051618、Wild Oak P00058WOM030323）。
+  票 Dev Blocked，等 Mingxi 經 Zendesk 向 CHARM / practice 確認每個 mapping；Leo 指示前不再動 prod。
+
+### Order Summary PDF 改為「收到 order 立刻送」（VP-18138 order-time，prod 04def1b 2026-09-15 22:33Z；已對 vendor 44 啟用）
+- 客戶（Next-Health / FOLLOWTHATPATIENT）要的是**下單時**就有 order summary 隨 sample 出貨，不是 result-time 那份（`deliver_order_summary_pdf` 對 44 維持 0）。Leo 選 Option A：intake 成功後的 in-process、never-throw 步驟
+  （`hl7-order.processor` 尾端 `deliverOrderFormsBestEffort`），不開新 queue；retry 靠之後的手動 re-drive（尚未建——會是新 prod surface，Leo 要再提）。
+- 設計：`ehr_vendors.sftp_order_forms_path`（nullable）**既是目的資料夾也是 per-vendor 開關**（31 列 NULL = 無行為變化）；審計表 `order_attachment_records`（append-only、無 relation）。
+  `SftpService.uploadVendorFile()` 用 vendor 列憑證、**不 mkdir**（打錯字不能在夥伴伺服器留孤兒資料夾）、走 `runSerialized`（與 result push 共用 OUTBOUND 連線單例，VP-17217；order fetch cron 用獨立 INBOUND pair 所以不搶）。
+  檔名 `{julien_barcode}_ordersummary.pdf`（fallback sample_id，7 vs 10 位不撞）；PDF spool 到 os.tmpdir() 用完 unlink。同一支 `GET /pdf/generateNormalOrderPdfBundles?sample_id=` 對 HL7 下的單也回 200（09-08 canary 只證過 portal 單），
+  回應已含 `blood` key（welcome + blood draw + shipping 合併），不需另呼叫有 500 quirk 的 `generateBloodDrawPdf`。blood draw form 目前**不送**（等 Leo + 客戶對檔案拆分的答覆）。
+- DDL `20260915_add_order_time_forms_delivery_vp18138` 先於 deploy 在 staging + prod 手動 apply（非 Prisma-managed；additive nullable，deployed client 選明確欄位所以不影響跑著的服務）。on-prem pod 共用 lisportalprod2，不用另跑。
+- 啟用：vendor 44 `sftp_order_forms_path='/Prod/FollowThatPatient/Order/Forms/'`（09-15 23:00Z）。Forms/ 是**我們自己建的**（FTPsftp 在 64.124.9.100:2224 對 Order/ 有 write+mkdir——實測 5-byte put + 拋棄式 mkdir 再刪，不是假設；
+  order fetcher 只列 Order/ 一層且 filter isFile，Forms/ 不會被掃到或歸檔）。
+  canary：prod pod 內跑 deployed dist 對真 FOLLOWTHATPATIENT 單（hl7 6762 / sample 2607324 / barcode 2608016036）→ DELIVERED 3258 ms、外部 paramiko 驗檔（sha256、%PDF-1.4…%%EOF）、spool 目錄空、`order_attachment_records` 恰 1 列（vendor 2）→ 路徑歸 NULL。
+- **仍未完成的 live 證據**：真 vendor 的 round-trip 等 Leo 那邊安排測試單；on-prem pod image 沒有直接驗（筆電無 on-prem context），改以「`order_attachment_records` 只有新 code 會寫」當證據。
+  測試單前提：(1) Forms/ 存在 ✓ (2) enablement UPDATE 已 commit ✓ (3) 單必須 PLACE 成功（5 張歷史測試單有 1 張死在 emr_code_not_found 就不會有列）。測試單會產生真 sample 與對應 charge。dream 09-15 23:xx：vendor 44 自 6762 後 0 張新單，`order_attachment_records` 仍只有 canary。
+- 票務：VP-18138 在 09-11 12:39 PDT 就被 Leo 關（Zhenhe 對 result-time canary PDF 說 acceptable），order-time 的整段 scope 變更與 09-15 部署**票上沒有任何紀錄**。VP-17812（Prospera spec）同日 12:08 PDT 從 Dev Blocked 直接 Done，
+  Zhenhe 08-21 的 Answer 3 其實是反問（collection options 是否 per-practice onboarding 自動決定、與 Prospera 系統無關？）——票上沒有回答。
+
+### BioInsights：vendor 端換了實作方（2026-09-14）
+- devcom（Olena Momotko，BA）替 BioInsights 建整合，email thread「Integration with Vibrant Wellness」（CC lisa/travis/tracie/paola @bioinsights.com、Tianhao Wang、liana.vinichuk @devcom）；09-09 說存取可用、問 4 題（法務文件、bidirectional/EMR-vs-provider、含 CPT+LOINC 的 test catalog、剩餘步驟），09-14 說被 block。
+  prod：ehr_vendors 46 BIOINSIGHTS is_public=0（07-23 起未動）；1 列 ehr_integrations（JAG 30248/132493 FULL LIVE）；hl7_file_input **零列** → 從未有 order 落到 /outgoing/。方向慣例（orders=/outgoing/、results=/incoming/）vendor 仍未確認。
+  Leo 立場：無法務文件；bidirectional yes、「provider level」（agent 建議改寫成 per-provider NPI onboarding，不是單一 provider 限制）；catalog 找 Zhenhe。

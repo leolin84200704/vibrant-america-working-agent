@@ -2,6 +2,8 @@
 date: 2026-09-14
 slug: trans-opt-phase1-2-execution
 tickets: [TRANS-OPT, VP-17348, VP-18152]
+related: [TRANS-OPTIMIZATION-20260911, VP-18276, VP-17348, VP-18152]
+distilled: true
 ---
 
 # Trans optimization: from plan to prod in one session

@@ -114,6 +114,8 @@ summary: 'Active repo reference: tech stack, ports, key areas, setup'
 ## Active Repos
 
 ### LIS-transformer-v2
+- **TRANS-OPT（2026-09-14/15）**：Datadog service `lis-transv2-deployment`；deploy = GitHub Actions `frontend-service-graphql`（main）/ `-st`（stage_test）；configMap `transv2/lis-transv2-config`。S2 直連 gRPC 在 `TRANS_PROXY_GRPC_MODE`（http/shadow/grpc，prod 目前 shadow）；
+  `checkIfPersonalizedReportCanBeCreated` 已從 cloud-local-proxy 改直打 on-prem 192.168.60.77:8081（S1，config only）。PatientProfileSlow 的 p95 尾巴在 shipping `horm-qnr/status` 與 interactive-report，不在本 repo。v2 `shipping.proto` 已補齊 v1 的 GetKitStatusBySampleId / GetQuestionaireBySampleId。計畫與量測：working-agent repo `docs/plans/trans-optimization/`。
 - **Purpose**: LIS frontend GraphQL API gateway
 - **Tech**: NestJS 11, TypeScript, Prisma (PostgreSQL + MySQL dual schema)
 - **Port**: 3390。**部署端點（LIS-7690 實測 2026-08-18，詳見 repo README PR #571）**：AKS-only（ns `transv2`，無 on-prem、無 NodePort）——prod `https://api.vibrant-america.com/v2/portal/trans-service` → svc `lis-transv2-service:3246`（3 replicas）、staging `.../trans-service-st` → `:3247`。GraphQL introspection 兩個 cloud env 都**關**（僅 `platform_type==='local'` 開，Bishop Fox hardening，不是故障）。**v1/v2 前綴分界**：`/v1/...`（含 wellness `/v1/portal/trans-service`、`/v1/portal/calendar`）全部是 v1 `LIS-transformer`；本 repo 只服務 `/v2/portal/trans-service`。Service/Ingress 物件不在 repo yaml，只在 cluster。
@@ -147,6 +149,8 @@ summary: 'Active repo reference: tech stack, ports, key areas, setup'
   - **Reminder template fallback chain（`reminder.service.ts:237`）**：`location || zoom_event_id || external_url || ''`。Backfill `external_url` 時若 `location` 已有非空值，reminder 仍會優先顯示舊 location — 必要時須一併處理 location
 
 ### LIS-transformer
+- **TRANS-OPT（2026-09-14/15）**：Datadog service `lis-trans-deployment`；deploy = GitHub Actions `lis-transformer-deploy-prod`（main）/ `-staging`（stage_test）；configMap `default/lis-trans-config`。已上 prod：findPatient 並行化（#769）、createPatient 共用 Kafka producer（#773）、getTimeLine 排程（#774）+ kit status in-process（#776，`TRANS_TIMELINE_KIT_MODE` http/shadow/inprocess，prod shadow）、newrange prefetch（#775）。
+  `getPatient.service.ts:410-418` 的跨請求 instance 欄位污染、`src/redis_s.ts` hard-code Redis 憑證等 pre-existing 缺陷列在 VP-18276。prod 仍有 14 個 `cloud-proxy` config key 沒有 reader（可清）。
 - **Purpose**: NestJS backend, REST (3190) + gRPC (3191)
 - **Tech**: NestJS 10, TypeScript, Prisma
 - **Key Areas**: `src/trans/` (patient data), `src/setting/` (clinic settings), `src/calendar/email/`（legacy consult-reminder Bull processor，Portal-Calendar 遷入）

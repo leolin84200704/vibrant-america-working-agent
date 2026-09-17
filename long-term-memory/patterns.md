@@ -2587,3 +2587,45 @@ Atlassian MCP 斷線時的 fallback：`~/src/credential/atlassian-api-token.md`�
 - LIS-Shipping：agent GitHub 帳號 `push:false`、org `allow_forking:false` → 交付物只能是 `git format-patch`；`npm ci` 在 origin/master 會失敗（lock 缺 `vibrant-oauth2-client`）。
 - VP-18055 monitor（PR #401 evidence gate）：`practice_level_declared` 單獨成立時會對 2026-05-27 seed batch 的每一列 page（25 個 Cerbo clinic / 91 個 ORDER_ONLY provider 的結果被
   06-11 backfill 的設計靜默丟掉）——這是 AM/產品決定不是 25 次 INSERT；需要 recent_integration 或 previously_delivered 當 co-signal。
+
+## 【蒸餾 2026-09-15】trans v1/v2 優化的工法 + Datadog DDSQL 陷阱 + emr-v2 DDL-in-pod + 部署雜訊基線（TRANS-OPT / VP-18276 / VP-18138 / VP-18270 / VP-18243）
+
+### 零功能變更的效能改動怎麼安全上 prod（TRANS-OPT，LIS-transformer #767/#769/#773–#776、LIS-transformer-v2 #628/#629）
+- 順序：先把兩個 repo 的單元測試基線弄綠（test-only PR：v2 10 個紅 suite——calendar suite 在 import 時因 `Azure_kafka_general_events` 未設而 throw → jest setupFiles 放 placeholder；v1 9 個零 provider 的 CLI scaffold spec、`src/redis*.ts` import 即開 ioredis → setupFiles stub）
+  → 每個改動前先由 subagent 寫 **golden-response spec**（pin 每一個 stage 的失敗路徑，不只 happy path；findPatient 的 naive 版本就被「GetSampleTests reject 時 active_event_id 不再寫入」抓到）→ 改 → PR。
+- 換 transport 的改動放在 **三態 flag** 後面：`http`（預設=零變化）/ `shadow`（兩邊都跑、回 HTTP、log 比對）/ 直連。transv2 `TRANS_PROXY_GRPC_MODE`（S2，configMap `transv2/lis-transv2-config`）、trans v1 `TRANS_TIMELINE_KIT_MODE`（configMap `default/lis-trans-config`）。
+  shadow 結果：S2 24h 7,702 比對 7,701 相等（getTestStatus 1 筆 diff 要先解掉才能切 grpc），每 call 省 ~25 ms（拆巢狀，不是 p95 槓桿）；kit in-process 1,843/1,843 相等，HTTP 1,095 ms vs in-process 496 ms。切換是 Leo 的決定；rollback = 設回 `http`。
+- 量測用 **trace metrics**（`analyze_datadog_logs` 的 DDSQL `dd.metrics_scalar()`，100% 請求），不要用 `search_datadog_spans`（~2% 取樣且偏差）。比較窗要避開別人的 deploy（09-15 22:14Z Yuteng #771/#772 一上就切窗）。
+  business-hours 結果 p50/p95：createPatient 3.68→2.08 / 3.70→2.50 s、newrange 2.17→1.76 / 3.16→2.76、getTimeLine 2.14→1.78 / 2.42→2.04、findPatient 1.01→0.93 / 2.31→1.88；錯誤率不變（newrange 1.1% < 1.8% baseline）。
+- 分析先於計畫：4 個 read-only 分析推翻 4 個計畫前提中的 3 個（findPatient 沒有 self-HTTP、9 個 gRPC 不是 14、newrange 的 365 gRPC 早已並行、瓶頸是 await 在 fan-out 之後的 getFullTestMapping；createPatient 的 2.9 s 是每則訊息 connect/disconnect 一次 kafkajs producer）。
+  factory lesson PR #78–#81（皆 OPEN 待 Leo）。
+- 分析時順手撿到的 pre-existing 缺陷（未改、建議另開票，全列在 VP-18276 description）：v1 `getPatient.service.ts:410-418` instance 欄位跨請求污染；findPatient 無 sample 的 order 讓 getWarning 中途 throw；newrange `generateTestStrings` 丟 key、catch 印 `express`；
+  createPatient Kafka helper 失敗回 500 物件但 caller 不檢查；`src/redis_s.ts` hard-code Redis 憑證；PatientProfileSlow 的尾巴在 shipping `horm-qnr/status`（p95 2.7 s）與 interactive-report（1.9 s），不在 trans。
+- 部署：兩個 trans repo 都是 **GitHub Actions**（v1 `lis-transformer-deploy-prod` on main、`-staging` on stage_test；v2 `frontend-service-graphql` / `-st`），同時 merge 多個 PR 會起多個 deploy run，live image = 最後一次 merge（要逐 pod 驗）。
+  Datadog service 名：v1 `lis-trans-deployment`、v2 `lis-transv2-deployment`（-st 也是 env:prod）。
+- 每次 v1 deploy 會在 Datadog 留下固定雜訊：舊 pod SIGTERM 的 `npm error command sh -c set NODE_ENV=prod && nest start`（每 pod 1 筆）+ `[ioredis] Unhandled error event: connect ETIMEDOUT` + DeprecationWarning；transv2 在 v1 滾動期間會多出 `Error getting requestv2/v3 | timeout / 502`。
+  **12 次 deploy 的日子這兩類會是平日的 3–4 倍，不是回歸。**
+- 09-14/15 另有一條與 trans-opt 無關的訊號：v1 `14 UNAVAILABLE ... ECONNREFUSED 192.168.60.6:31865`（core v1 gRPC NodePort）09-11 15 筆 → 週末 0 → 09-14 73 / 09-15 83，從 09-14 19:00Z（Leo 第一次 deploy 前 4 小時）就開始、只在 17–23Z 上班時段——core 側，下個 TRANS-OPT session 查是哪支 RPC。
+
+### Datadog（claude.ai connector 與 vibrant MCP 皆同）DDSQL 陷阱
+- `dd.metrics_scalar('<agg>:<metric>{...} by {tag}', 'avg'|'sum')` 第二個參數是 reducer，漏掉 → "Missing aggregator"。tag filter 與 `IN (...)` 併用時用 `AND`，不能用逗號（"'AND' and 'OR' cannot be mixed with ','"）。
+- 自訂 log 事件用 attribute 查（`@operation:kitShadow` 1,843 筆），free-text `timeline_kit_shadow` 只回 1 筆——同一個陷阱曾讓 session 中途誤判「shadow 停了」。
+- `analyze_datadog_logs` 的 `logs` 虛擬表已被 from/to 截好，SQL 裡不要再加 timestamp 條件；GROUP BY 要重複完整表達式（不能用 alias）。
+- vibrant MCP（192.168.60.8:8800）需要 VPN；VPN 斷時 Jira 走 claude.ai Atlassian connector、Datadog 走 claude.ai Datadog connector、prod lis_emr 走 emr-v2 `.env` DATABASE_URL + mysql2（**`timezone:'Z'`**，否則 DATETIME 被當本地時間、位移 7 小時）。dream 09-15 全程如此。
+
+### emr-v2 非 Prisma-managed 的 DDL：在 pod 裡跑（VP-18138 order-time）
+- 兩個環境都從 emr-v2 pod 內用 pod 自己的 DATABASE_URL（mysql2）跑 migration 檔的兩個 statement；ALTER 前用 information_schema 檢查欄位是否已存在、CREATE TABLE 用 IF NOT EXISTS → 可重跑。
+- 驗證三連：in-tx 讀回 → 第二條連線讀回 → **不同帳號**的獨立 read-only 連線（MCP）讀回。staging lis_emr 在 192.168.60.11（root）、prod lisportalprod2；on-prem pods 共用 prod DB。
+- `npx prisma db execute --schema prisma/schema.prisma --file x.sql` 走 emr-v2 prod DATABASE_URL 是 prod data fix 的可行路徑（VP-18270 190 列 backfill）；MCP write 帳號對 lis_emr 沒 UPDATE 權（`SCHEMA_UPDATE_PERMISSIONS`）。id 清單存檔時注意尾端換行（一個 id 以 `\n` 結尾差點漏掉）。
+
+### Worktree / 發 PR 的小坑（TRANS-OPT）
+- subagent 的 worktree 沒有 `.env` → pre-push DI smoke 在 JwtStrategy secret 上失敗；push 前把 `.env` 複製進去（factory #81 主張 gate 不該依賴 code 讀 .env）。
+- `npm ci` 的 postinstall 會改寫 tracked 的 `prisma2/generated/client2`（gitignored 但 tracked）——不要 commit 那些 diff。`az login` 指令折行時 `--scope` 會丟參數；AADSTS50078 = Azure MFA 過期，只有 Leo 能重登。
+- ConfigMap 改動前備份到 `~/.trans-opt-backups/`（含 secrets，repo 外）；readback 要挑 creationTimestamp 最新的 pod，不然會抓到 Terminating 的舊 pod。
+- 未追蹤的 `config.yaml`（完整 ConfigMap dump 含 secrets）曾出現在 ~/src/LIS-transformer-v2——該刪。
+
+### Confluence 寫頁面
+- claude.ai Atlassian connector 沒有 create/update page 工具；用 REST v2 `POST /wiki/api/v2/pages`（agent `.env` 的 JIRA_EMAIL/JIRA_API_TOKEN，`parentType: folder` + folder id，`spaceId 90603522`，body `representation: storage`）。同資料夾已有別人的頁面時**另開 sibling 頁**，不要編輯他的（頁 2684321795）。
+
+### emr-v2 rollout 的固定雜訊
+- 每次 Jenkins roll `lis-emr-v2-deployment-prod` 都會在啟動那 1–2 秒留下 24–36 行 `ECONNREFUSED ::1:6379 / 127.0.0.1:6379`（09-08、09-09、09-10、09-13、09-15 每次都有），之後 0 行。是 startup 期 Redis client 預設 localhost 的雜訊；不要把它算成 deploy 回歸。

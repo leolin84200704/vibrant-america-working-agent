@@ -1,13 +1,12 @@
 # Journal Index (Episodic Memory — L3a)
 
 > Auto-maintained by the dream pipeline. One line per entry, newest first.
-> Last updated: 2026-09-11. +5 entries distilled — vp-17766-consult-recipients, vp-17766-deploy-e2e,
-> vp18138-order-summary-pdf, vp18085-menu-section, vp18034-pr-b-wiring (→ emr-integration.md / patterns.md /
-> repos.md / ticket-routing.md / leo-working-rules.md). Four of the five had no `distilled:` key; added tonight.
-> Archived 3 distilled >30d entries (2026-08-06 x3) → archive/journal/.
+> Last updated: 2026-09-15. +1 entry distilled — trans-opt-phase1-2-execution (had no `distilled:` key; added tonight →
+> patterns.md / repos.md / ticket-routing.md / leo-working-rules.md). Archived 2 distilled >30d entries (2026-08-14 x2) → archive/journal/.
 
 | Date | Slug | Related | Distilled |
 |------|------|---------|-----------|
+| 2026-09-14 | trans-opt-phase1-2-execution | TRANS-OPTIMIZATION-20260911, VP-18276, VP-17348, VP-18152 | true |
 | 2026-09-10 | vp18034-pr-b-wiring | VP-18034, VP-18032, VP-18031, VP-18089, INCIDENT-20260910-emr-v2-di-crashloop | true |
 | 2026-09-09 | vp18085-menu-section | VP-18085, PH-871, VP-17724 | true |
 | 2026-09-08 | vp18138-order-summary-pdf | VP-18138, PH-904, VP-17812, INCIDENT-20260908-grpc-dead-node-ip | true |
@@ -28,8 +27,8 @@
 | 2026-08-18 | factory-update-throughput-cost | framework-sync, ENFORCEMENT-LADDER.md, WORK-LOOP.md | true |
 | 2026-08-16 | remaining-memory-stores-migration | native-auto-memory-retirement, RETRIEVAL.md, ENGINEERING-LESSONS.md | true |
 | 2026-08-16 | native-auto-memory-retirement | framework-sync, RETRIEVAL.md, ENFORCEMENT-LADDER.md | true |
-| 2026-08-14 | vp17715-report-group-push | VP-17715, VP-17723, VP-17344, VP-17493, VP-17441 | true |
-| 2026-08-14 | vp17714-clinician-switch-zoom-room | VP-17714, VP-16520, VP-16521, VP-16410, VP-16881, VP-17065 | true |
+| ~~2026-08-14~~ | ~~vp17715-report-group-push~~ | VP-17715, VP-17723, VP-17344, VP-17493, VP-17441 | archived 2026-09-15 → `archive/journal/` |
+| ~~2026-08-14~~ | ~~vp17714-clinician-switch-zoom-room~~ | VP-17714, VP-16520, VP-16521, VP-16410, VP-16881, VP-17065 | archived 2026-09-15 → `archive/journal/` |
 | ~~2026-08-06~~ | ~~vp17628-default-provider~~ | VP-17628, VP-17472, VP-17499, VP-17450, VP-17283, VP-17290 | archived 2026-09-11 → `archive/journal/` |
 | ~~2026-08-06~~ | ~~vp17524-out-of-result-tags~~ | VP-17524 | archived 2026-09-11 → `archive/journal/` |
 | ~~2026-08-06~~ | ~~vp17503-placeholder-pdf-removal~~ | VP-17503, VP-17493, VP-17342 | archived 2026-09-11 → `archive/journal/` |

@@ -387,3 +387,12 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 另兩層（外部模板、上游資料形狀）仍靠這條紀律。
 
 第三：兩張 prod data-fix 票都撞到**票外的鄰居**（LBS-1784 的 NPI 雙胞胎 oc 1961；LBS-1785 發現 15+ 組重複 LIVE）——照 09-03 規則：回報、不動、Leo 決定。兩票都做對了。
+
+## 讀 Leo 的字面 + 清單就是清單 + 紀錄票（2026-09-11 ~ 09-15；證據 TRANS-OPT / VP-18243 / VP-18276 / VP-18270 / VP-18138 / VP-17812）
+- **「要等最久的一個」= 延遲最高的**，不是「lead time 最長的」。09-14 照字面挑了 S1（等 30 天 zero-traffic 的 proxy 退役）做了一輪，Leo 要的是最慢的 API。兩種讀法會導向完全不同的工作時，**先問一句**再動手。
+- **「能修的直接修」的邊界是自己的 repo**：trans v1 + v2 內能改的都改，不對 shipping / interactive-report / core 開票（Leo 明講）。
+- **Leo 要清單時只貼清單**（VP-18243 comment 187633 被要求縮成一行 + 37 列表格）：分析留在 STM，票上放對方能直接核對的表。
+- **Leo 叫 agent 直接在票上留 comment 時，那是對「只起草不發」規則的明確例外**（VP-18243「先關並且 comment 詢問正確的 msh06」）——照做、STM 記下是 Leo 指示。
+- **Leo 開「紀錄票」會立刻自己關**（VP-18276：10:31 建、10:34 Done，description 就是交付物）——closeout audit 把它當文件票看（deploy 與量測都在票上），不要當「還沒 live 的功能」。但它底下的 remaining ops（S2 切 grpc、kit 切 inprocess、cleanup）**還開著**，STM 保持 active。
+- **票關了工作沒關**：VP-18138 在 09-11 就 Done，order-time 整段功能 09-15 才在同一張票號下部署；VP-18270 20 分鐘 Done、零 comment；VP-17812 從 Dev Blocked 直接 Done，reporter 的反問沒回。
+  三張都是 Leo 自己的票——agent 能做的是：每次 scope 變更 / 部署後**起草一則結案 comment 給 Leo 貼**，STM 記「已起草、未貼」。

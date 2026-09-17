@@ -3,12 +3,13 @@ id: business-model-deep
 type: ltm
 category: technical
 status: active
-score: 0.3341
+score: 0.3453
 base_weight: 0.9
 created: 2026-06-07
 updated: 2026-06-07
 links:
 - INCIDENT-20260910-emr-v2-di-crashloop
+- TRANS-OPTIMIZATION-20260911
 - VP-15460
 - VP-16410
 - VP-16520

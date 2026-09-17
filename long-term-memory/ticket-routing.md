@@ -85,3 +85,10 @@ summary: Ticket keyword to repo/module routing table
 - **`LIS-frontend` 是內部 lab-ops app，與 provider portal 無關**——別把 provider-facing ticket 路由過去。
 - Settings 一般走 transformer-v2 `/v2/portal/trans-service`，**但 EHR Integrations（Third-party tab，beta program 22 `auto_emr_integration` gate）直接打 emr-v2** `…/lisapi/v1/lis/emr-service[-staging]/api/v1/integration-management`（useEMRService.js），不經 transformer-v2。
 - Leo 對 portal 前端**無 push 權**（va-portal `permissions.push=false`）——FE half 只能出 patch 檔交接；跨 repo 計畫時先 `gh api repos/{owner}/{repo} --jq .permissions.push` 驗權。
+
+## 2026-09-15 新增路由（dream；VP-18270 / VP-18243 / VP-18138 / TRANS-OPT / BIOINSIGHTS）
+- **"EMR order 的 kit shipment method 不對 / Ship To Patient vs Supplied by Office"** → lis-backend-emr-v2 `hl7-order-processing/services/customer-detail-fetcher.service.ts` + `parser.service.ts`（`kitDeliveryMethodsFor`）；資料只看 `ehr_integrations.kit_delivery_option`（唯一依據，VP-18270）
+- **"報告送到別家診所的 EMR / CHARM misrouting / 收到不是自己病人的結果"** → 先查該 `msh06_receiving_facility` 被哪些 clinic 共用（P1、PHI），圍堵 = `ehr_integrations.status` LIVE→REJECTED；不要抄任何既有列的 msh06（VP-18243）
+- **"order summary / requisition PDF 隨 order 或 result 送 SFTP"** → emr-v2 order-time（`ehr_vendors.sftp_order_forms_path`，`order_attachment_records`）/ result-time（`deliver_order_summary_pdf`，`result_attachment_records`）（VP-18138）
+- **"trans / portal API 太慢 / p95 / 優化 / cloud-local-proxy"** → LIS-transformer（v1，`/v1/...`）/ LIS-transformer-v2（`/v2/portal/trans-service`）；計畫與量測在本 repo `docs/plans/trans-optimization/`，追蹤票 VP-18276；shipping / interactive-report / core 造成的尾巴不在 trans 範圍
+- **"BioInsights / devcom 整合"** → STM `BIOINSIGHTS-onboarding`；vendor 46，尚無任何 order 落地
