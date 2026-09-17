@@ -321,3 +321,14 @@ Leo ok → 修現行路徑的 false negative → **PR #793**（head `795ecfd`，
 
 **PR body 有標記需要 reviewer 檢查的點**：`has_report` 現在可能是 `null`，前端若有 `=== false` 的分支會走不同路，merge 前值得 grep 一次前端。
 **另一個順手發現（未修）**：4 筆失敗有 3 筆是 404 且 `accession_id=portal.vibrant-wellness.com`——有東西把 hostname 當成 accession id 傳進來，值得另開票。
+
+### [2026-09-16 18:10]
+Confluence 更新到 **v7 → v8**（#793 進 §5.8、slow-vs-failed 更正、accession 發現進 §6、Next 重排）。
+
+**追 `accession_id=portal.vibrant-wellness.com`**：7 天 12 筆，**全部**來自 `getKitStatusV2`。排除是我們的 config——`lis-trans-config` 的 `getKitStatusV2` 值正確（`...kits?accession_id=` 結尾），所以值真的是從 `POST /trans/getTimeLine` 的 request body 來的（controller 直接傳 `getTimeline.accession_id`）。發生在工作時段、約每天 2 筆，不像排程監控，像真實 client 的 bug。
+**決定不修 DTO**：`accession_id` 宣告是 `@IsString()`，DB 裡是 **varchar**，所以「accession 一定是數字」是假設不是事實；加嚴格驗證會把一個降級回應變成硬 400，而我無法完整刻畫這條路的所有呼叫者。這條需要 client 端的 owner，我只把事實寫清楚。
+
+**#793 的前端疑慮已自行解除**（原本寫在 PR 裡請 reviewer 查）：`getTimeLine` 在 va-portal / vibrant-wellness-portal / LIS-frontend / pns-portal 四個 repo 裡**只有一個消費者**（`PatientProfilePage/service/TimelineService.js`），`has_report` 只有 4 處用法：初始 false、reset false、assignment、以及 `if (this.hasReport && ...)` 的 truthy 檢查。**全 repo 沒有任何 `=== false` 形式**。`null` 是 falsy → 渲染行為不變。已回寫 PR comment 與頁面。
+**過程中差點犯的錯**：本機 va-portal checkout 落後 origin/main **115 個 commit**，我第一次是對過期的樹 grep。改用 `git grep origin/main` 重查才算數。**讀別的 repo 下結論前必須先確認那個 checkout 的新舊**——Sync With the World 不只適用於自己在動的 repo。
+
+**工具筆記**：`mcp__vibrant__mysql_query` 的 SQL 必須以分號＋換行結尾，否則參數結尾的 `<` 會被送進 SQL parser 而報 `Parsing failed ... but "<" found`。
