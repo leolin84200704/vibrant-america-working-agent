@@ -17,7 +17,7 @@ tags:
 - vp-18152
 - core-v1-retirement
 created: 2026-09-11
-updated: 2026-09-16
+updated: 2026-09-17
 links:
 - CONFLUENCE-2684321795
 - INCIDENT-20260518
@@ -341,3 +341,39 @@ Confluence 更新到 **v7 → v8**（#793 進 §5.8、slow-vs-failed 更正、ac
 - **新增 1 筆 gRPC client error**（90 分鐘時為 0）：01:46:19 UTC，`/testresult.TestResultGrpcService/GetTestStatus`，`2 UNKNOWN: Internal server error`，peer 是 `lis-test-connect-deployment`。**是下游服務回的錯，不是切換造成**——shadow 期間唯一那筆「不一致」也正是同一個錯誤類別，而且當時兩條路同時失敗。
   **不下結論的理由（套用今天寫的 lesson #83）**：新路 1/328 = 0.30% vs 舊路歷史 3/10,723 = 0.028%（09-09~09-16）。點估計高 ~11 倍，但 **n=1**——以舊路真實率推算，328 次中出現 ≥1 筆的機率約 8.7%，屬於正常機會範圍。單一事件無法分辨真實變化與偶然。**明天用完整一天的資料重算錯誤率**才算數。
   該錯誤對使用者無影響：patientProfile 對 getTestStatus 有 `.catch()` 退回全零（那是既有的靜默預設問題，兩條路一樣）。
+
+### [2026-09-17 15:30]
+昨天留下的三個「明天用整天資料再看」全部結清，另外 #793 已由 Leo merge 並上線。
+
+**#793 上線驗證（19:50–19:52 UTC 三個 pod，live image `c8020ee`，含他人 #794/#795）**：
+- 正向對照成立：`@operation:kitShadow` 上線後 **288 筆**，payload 已帶 `http_failed` / `both_failed`（實際讀到一筆 `http_failed:false`、`both_failed:false`、`equal:true`），儀器缺口確實補上了。
+- `@operation:kitLookupFailed` **0 筆**、`@equal:false` **0 筆**、`@inprocess_failed:true` **0 筆**。
+- **0 筆不能當成「修好了」的證據**：失敗基礎率是兩天 4 筆（≈0.08/h），2.5 小時內期望值 <1。真正證明 code 在跑的是那 288 筆 shadow log，不是失敗 log 的缺席。
+
+**舊 proxy 路徑：改用 log（非取樣）量，得到和 span 完全不同的結論**
+- 對照（09-16 19:00–21:00，切換前）：`@url:/proxy/grpc/*` `@request_type:Request` = **976 次/2h**（≈488/h）。
+- 今天 07:00–22:26（15.4h）= **18 次**，且分佈極不平均：
+  - `getTestStatus` **0**、`getQuestionaireBySampleId` **0** → 這兩個端點真的死了，可退役。
+  - `getKitStatus` **13**（≈0.85/h）→ **不是零**。
+  - `getPatientTestsResult` **5** → 本來就不在 S2 遷移範圍，另有消費者。
+- **儀器教訓（重要，會影響之前的數字）**：span 是取樣的（對照窗 976 次真實流量只有 4 個 span ≈ 0.4%），所以我先前用 span search 說「舊路 ≤1 次／2 次」是在用一個解析度不足的儀器報稀疏事件。**v1 對每個 request/response 都寫 log，那才是計數用的儀器**；span 只適合看單一 trace 的結構。錯誤 span 反而近乎完整（被 error retention filter 保留），所以**分子可信、分母不可信**——不要用取樣分母算錯誤率（昨天那個「11 倍」就建立在不可比的分母上）。
+
+**`getKitStatus` 殘留呼叫者：四個機制逐一用證據排除，不是假設**
+1. transv2 呼叫點 1（`utility.api.service.ts` `proxyLookup`）：`mode==='grpc'` 直接 return `proxyGrpcCached`，**無 HTTP fallback**（讀 origin/main 原始碼確認）。
+2. transv2 呼叫點 2（`utility.service.ts:2574` `UtilityRestService.getKitStatus`）：同樣 mode-gated，grpc 分支不碰 axios。
+3. Config drift（計劃書記錄過 `kubectl apply` 回退）：`lis-transv2-config` = `grpc`，**三個 pod `printenv` 都是 `grpc`**，0 restart；且熬過了他人 #636 的 deploy（live `ac96c57`）。
+4. `cloud-local-proxy`：repo 內兩處 `/proxy/grpc` **都只是註解**（描述 code 出處），不是呼叫者。
+→ 結論：有一個**尚未識別的 in-cluster 消費者**在用 `/proxy/grpc/*` 家族（axios/1.16.0 打 `lis-trans-service:3146`），`getKitStatus` 與 `getPatientTestsResult` 都是它。trace 在這個量級不會被取樣，所以歸因做不到。**要收掉這條，最省的做法是在 v1 proxy controller 對 `/proxy/grpc/*` 記 user-agent / x-forwarded-for**（小改動、只加 log），否則就得要 ingress log。
+- 注意：transv2 namespace 是 **`transv2`**，不是 `default`（v1 在 default）。
+
+**gRPC 錯誤率（完整 24.4 小時窗，09-16 22:04 → 09-17 22:28）**
+- migrated 三個方法的 error span 仍然**只有 1 筆**，就是昨天那筆 01:46:19 `GetTestStatus` `2 UNKNOWN`（peer `lis-test-connect-deployment`），之後 ~20 小時沒有新的。
+- transv2 全服務 error log 59 筆，逐一看**沒有一筆屬於 migrated path**；唯一沾到 kit 字樣的是 `getPatientKitInfo`（09-16 23:51）。查 8 天歷史：**22 筆，其中 12 筆落在 09-16 切換前的 18:58–20:21**，切換後只有那 1 筆 → 既有錯誤類別，切換後反而變少，非 regression。
+- 昨天說的「客戶面 request errors 0」要收斂講法：那是 request 層級的量測；應用層 error log 一直都不是 0（既有類別），兩者不同指標。
+
+**Confluence 2684321795 目前是 stale 的兩處**（尚未改，等 Leo）：§5.8 仍寫 #793 「(open)」而它已 merge 並上線；§7 有一行「Agree the `has_report` semantics, then switch `TRANS_TIMELINE_KIT_MODE` to `inprocess`」與上方「declined, not deferred」直接矛盾，是舊版殘留。
+
+**VP-18262 本身的交付面（今天最大的缺口，與 code 無關）**
+- 票是 **Dev In Progress、due 2026-09-18（明天）、零 comment**，最後更新 09-14。所有已上線成果掛在 VP-18276／Confluence，票面上看不到任何東西。
+- 票的 acceptance 是三件事：(a) 一份分 phase 的合併 plan、(b) Phase 1 detailed doc（細到能拆 dev ticket）、(c) 把 Phase 1 日期回填 epic VP-18260 Timeline。目前 plan 只有本地 `docs/plans/trans-optimization/PLAN.md`（草案 v0.3，繁中），§6 的建議票「尚未建」；Confluence 那頁是 **shipped changes**，不是 plan。
+- **joint deliverable 的另一半沒動**：Yekai 的孿生票 **VP-18261 仍 Dev To Do**，09-13 後未更新，同樣 due 09-18。這是協調問題，不是我能單方面補的。
