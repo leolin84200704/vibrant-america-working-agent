@@ -17,7 +17,7 @@ tags:
 - vp-18152
 - core-v1-retirement
 created: 2026-09-11
-updated: 2026-09-17
+updated: 2026-09-18
 links:
 - CONFLUENCE-2684321795
 - INCIDENT-20260518
@@ -377,3 +377,23 @@ Confluence 更新到 **v7 → v8**（#793 進 §5.8、slow-vs-failed 更正、ac
 - 票是 **Dev In Progress、due 2026-09-18（明天）、零 comment**，最後更新 09-14。所有已上線成果掛在 VP-18276／Confluence，票面上看不到任何東西。
 - 票的 acceptance 是三件事：(a) 一份分 phase 的合併 plan、(b) Phase 1 detailed doc（細到能拆 dev ticket）、(c) 把 Phase 1 日期回填 epic VP-18260 Timeline。目前 plan 只有本地 `docs/plans/trans-optimization/PLAN.md`（草案 v0.3，繁中），§6 的建議票「尚未建」；Confluence 那頁是 **shipped changes**，不是 plan。
 - **joint deliverable 的另一半沒動**：Yekai 的孿生票 **VP-18261 仍 Dev To Do**，09-13 後未更新，同樣 due 09-18。這是協調問題，不是我能單方面補的。
+
+### [2026-09-18 13:43]
+Leo：「還有什麼能做的嗎？一樣要 pull 最新的 PR 並且檢查 atlassian doc」→ 回報選項後他指定 **做 A + B，不要停**。
+
+**同步結果**：#793 已 merge 上線（09-17 18:23Z），TRANS-OPT 這條線目前沒有未 merge 的 PR（v1 最新是別人的 #798/#799 VP-16886）。Confluence 2684321795 停在 v8，09-17 一整天的量測都還沒進頁面。VP-18262 仍 Dev In Progress、due 今天、0 comment。**Yekai 的 VP-18261 已被改到 due 09-24**（09-17 18:35 PT），我這張沒改——兩張同一份 joint deliverable，期限現在不一致。
+
+**#793 的正向證據終於有了**（昨天只有 288 筆 shadow 證明 code 在跑，失敗數 0 不構成證據）：24 小時 1,512 筆 kit lookup，`http_failed:true` **3 筆**、`kitLookupFailed` **3 筆**（兩側對得起來）。**每天約 3 筆病人可見的假陰性被消掉**。in-process 失敗 1/1,512（0.07%），與 shadow 期的 0.03% 同量級——Leo 擋下切換的理由沒被新資料動搖。
+
+**舊 proxy 路徑，切換後全窗（09-16 22:04Z → 09-18 20:30Z，46.5h）逐 route 計數**：`getTestStatus` 0、`getQuestionaireBySampleId` 0、`listTnpCode` 0、`getKitStatus` 22（≈0.47/h）、`getPatientTestsResult` 8。前兩支是 S2 遷移對象且消費者已確認搬走 → 可退役；**`listTnpCode` 的 0 不能算數**——它從來不在 S2 範圍，零是「沒解釋」不是「預期」，刻意留著。`sendSkinPlacePatientOrders` 在 trans v1 是 0，但它的已知 caller（billing）打的是地上 proxy，不是這裡，所以 0 不構成死亡證據。
+
+**A（交付面）完成**：
+- 兩份英文交付物寫完並上 Confluence（LIS space，folder 2681962497 下）：
+  - **Phased Plan** 2697461770（v2）— 六個 phase、排序理由、量到的三個結構性成因、提議時程。
+  - **Phase 1 Detail** 2696740867（v1，plan 的 child）— P1-A~P1-F 六個工作項，各有證據/做法/影響元件/驗證/回滾/sizing，共 ~6 dev-days，附 13 張可直接開的票。
+  - 本地 source 同時進 repo：`docs/plans/trans-optimization/{epic-plan-en,phase1-detail-en}.md`。
+- Jira comment 與 epic Timeline 兩份草稿寫在 `jira-drafts-20260918.md`，**未發**（comment 只起草的既有規則；epic description 是 PM 的欄位，更該等 Leo）。
+
+**B（Confluence v9）完成**：§5.8 的 #793 從 (open) 改成 merged+live 並補上線後實測；新增 **§5.9「Counting with the right instrument」**（span 取樣 vs log 全量的儀器教訓 + 逐 route 計數表 + 未識別 caller 的四個排除證據 + 24.4h gRPC 錯誤讀數）；§7 整段重寫，砍掉「Merge #793」和那行與「declined, not deferred」矛盾的 inprocess 殘留，並連到新的兩頁。
+
+**寫 plan 時做的一個判斷**：原 PLAN.md 的 Phase 0/1/2 有很大一部分已經上線了，要不要重新編號。決定**不重編**——Confluence 頁和團隊對話已經在用「Phase 0/1/2」這組詞，重編號會讓看過舊版的人對不上。改成每個 phase 標 shipped / partly shipped / not started，Phase 1 detail 只寫「還沒做的部分」，並把已上線的部分列在 §2 當背景。
