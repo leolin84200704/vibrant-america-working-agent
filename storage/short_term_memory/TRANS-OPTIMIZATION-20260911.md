@@ -475,3 +475,17 @@ Leo：「每個你認為不該 remove 的都可以有比較好的方向不是嗎
 
 **發佈時踩到的事**：頁面已經是 v2 而我只發過 v1 → PUT 回 409。**沒有直接覆蓋**，先抓 version 歷史（authorId 跟我用的 token 同一個帳號，分不出人），再把 live v2 與我 v1 的 markdown 重建後做 tag-strip 純文字 diff → 差異只有一處：Asks 第一條的 **"Ray — " 被人刪掉**。其餘全是 Confluence 編輯器的正規化（`local-id`、entity、table width）。**照著保留**，把該條改成中性的「Ingress access logs — 」，沒有把名字加回去，並回報 Leo 確認。
 → **可重用的做法**：Confluence 409 時，用「本地 markdown 重新產生當初那版 → 與 live 做 strip-tag 純文字 diff」就能在共用帳號下分辨「編輯器正規化」與「真人編輯」。
+
+### [2026-09-18 17:45]
+Leo：「可以直接做，但是一定不能影響到現在的狀況」→ old-report 的 attribution **PR #801**（head `77fd13b`，未 merge）。
+
+**#801 疊在 #800 之上**（base = `feature/leo/TRANS-OPT-proxy-caller-logging`）。理由：interceptor class 在 main 上不存在，不疊就只能複製一份 code，兩張 PR 各一個同功能檔案，之後必然要再收一次。疊了之後這張的 diff 只有**兩行 wiring + 一份 spec**。#800 merge 後 GitHub 會自動把它 retarget 到 main。
+
+**「不能影響現狀」在這個 controller 上有具體含意**：`/proxy/old-report/*` 回的是 `StreamableFile`、真的在串 PDF。好消息是 #800 的 interceptor **結構上就碰不到 response**——`return next.handle()`，沒有 `.pipe()`、沒有 `tap()`、沒有包裝。
+→ **所以測試斷言的是 object identity**（`expect(returned).toBe(handlerObservable)`），不是斷言發出來的值。**identity 才是「串流不會被緩衝／延遲／重送」的那個性質**；斷言值只能證明這一次沒壞。這條值得記成通用做法：要證明「沒有包裝」就斷言同一個物件，不要斷言行為看起來一樣。
+- 另外釘住：query string 帶 `sample_id`/`customer_id`、header 帶 bearer token，log 一律不收（有 test）；logger throw / log write reject 都不能影響路由（有 test）。
+- 測試：新 spec 5 cases；全 suite **67/67、855 tests 綠**，`tsc --noEmit` 乾淨。
+
+**CI 沒有跑，而且是預期的**：`.github/workflows/ci-tests.yml` 的觸發是 `pull_request: branches: [main, stage_test]`，#801 target 的是 feature branch 所以不觸發。**等 #800 merge、GitHub 自動 retarget 到 main 之後才會跑**。在那之前唯一的證據是本機那次全綠——回報時要講清楚，不能說「CI 綠」。
+
+**流量理由（寫進 PR body）**：`/proxy/old-report/downloadTestOrderPDF` 15 天 20,715 次（≈1,380/天、真實客戶），其餘 10 條 0。#800 蓋不到它，而它正是三個待定歸屬裡最大的一個。
