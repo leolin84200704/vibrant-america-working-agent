@@ -414,3 +414,24 @@ Leo 三項指示：(1) comment 發、(2) 這張票先完成並附連結、(3) C1
 - PR body 標了要 reviewer 判斷的一點：**`user_id`（JWT subject）該不該記**——它是最強的歸因訊號、也對齊 core 側 VP-18140 的 `jwt_sub`，但拿掉其餘 tuple 仍可用。
 
 **退役順序因此固定下來**：#800 merge → 觀察一週 `@operation:proxyGrpcCaller` → 找到 caller 後才動 `getKitStatus`；`getTestStatus` / `getQuestionaireBySampleId` 兩支已有兩個獨立零窗口，可以先退。`listTnpCode` 雖然也是 0 但不在 S2 範圍，零是「沒解釋」不是「預期」，繼續留著。
+
+### [2026-09-18 15:20]
+Leo 質疑「這種應該要先看 datadog 這 14 天的流量不是嗎」——**他是對的，而且我犯的是自相矛盾**：我在 Phase 1 doc 的風險表裡自己寫了「罕見 caller（月批次、排程 job）」這條，對 `listTnpCode` 套用了、對另外兩支卻沒有。兩個窗口 46.5 小時、而且都在切換之後，撐不起「可退役」。
+
+**拉到 15 天（Datadog retention 上限；35 天的查詢最早只回到 09-03，flex 也一樣）之後，得到的是完全不同層級的證據**：
+- `getTestStatus` 與 `getQuestionaireBySampleId` **每一天都 lockstep**（差 ≤1：120/120、249/249、266/266、1789/1789、1602/1603、1876/1877、1512/1513…），`getKitStatus` 穩定是它們的 **2 倍** → 這是**單一 caller 的固定 per-sample 樣式**，不是一群 caller。第二個獨立消費者跑的那天 lockstep 會斷，15 天沒斷過。切換後兩天整整 0。
+- **這是關於 caller「組成」的證據，不是「缺席」的證據**——這才是退役該用的標準。零窗口只能證明那段時間沒人打。
+- `listTnpCode`：15 天全 0（**切換前就是 0**），且全機器 63 個 repo 零呼叫者。注意 `LIS-backend-results-grpc` 有同名 `listTnpCode`，那是**下游實作**不是 caller，差點誤判。
+- **`getPatientTestsResult` 我先前寫錯了**（PR #800 body 與 Phase 1 頁都寫「大概是同一個 caller」）：它 15 天平盤 1–5/天，**切換完全沒影響它** → 從來不在遷移路徑上，它的消費者至少存在 15 天。`getKitStatus` 的殘留（15、5）與它同量級，所以「同一個 client 打兩支」仍是最省解釋，但「與遷移路徑同一個 caller」已被**排除**。
+
+**判定：三退三留** — 退 `getTestStatus` / `getQuestionaireBySampleId` / `listTnpCode`；留 `getKitStatus` / `getPatientTestsResult`（未識別 caller）/ `sendSkinPlacePatientOrders`（billing 要**改指過來**，它是整併終點不是退役對象）。
+
+**Leo 追問「切換後可以內部統整對嗎」→ 對，但 proxy 不是純轉發**，搬移要一起帶三樣：(1) `createMetadataForCoresampleV2` 的 JWT→gRPC metadata 轉譯（`user_id` **不是** ownership 檢查，六個 method 都只餵進 metadata）；(2) `getKitStatus` 的 proto3 補值（`packages` → `[]`，Sentry #68038）；(3) error/Sentry/log 那層。**可行性有實證**：transv2 #629 就是逐行搬的，normalization 也照搬（`proxy-grpc.service.ts:130-144`）。
+→ 但前提是那個 caller **講得了 gRPC**。講不了（不能 vendor proto 的 Java/Python service、on-prem script、別人的排程）就得留著當橋。**所以終局不是六條全消失，是五條消失＋一條變成統整點**，而 P1-D 的意義因此從「退役前置」升級成「決定刪掉還是留橋」。
+
+**Leo 指示：寫公告、兩週後做、建票 deadline 三週。** 已執行：
+- **VP-18320** 建立（parent VP-18260、due 2026-10-09、P2、assignee Leo、Dev To Do）。description 含範圍、15 天 lockstep 證據、明說看不到的那一類（月週期 + 只搜本機 repo）、搬移指引（含上面三樣要帶走的東西）、時程三段。
+- 公告雙語稿 `docs/plans/trans-optimization/announcement-proxy-grpc-deprecation.md`，Leo 自己發。核心設計：**公告存在的理由就是補上 log 看不到的那一類**——所以文案明說「不確定也請留言，我們的 log 只留 15 天」。
+- 三處文件同步更正：Phase 1 頁 **v2**（P1-C 改寫成 lockstep 證據 + VP-18320、P1-D 加 consolidate-vs-bridge、DoD 與風險表改掉「兩個零窗口」的標準）、shipped-changes **v10**（§5.9 表換成 15 天版 + 明寫先前那個較弱標準是錯的 + `getPatientTestsResult` 更正）、PR #800 body（同上，head `d2274f3` 未動）。
+
+**通用教訓**：退役決策要的是**caller composition**（誰在打、樣式是什麼），不是 **absence**（某段時間沒人打）。零窗口的長度再加也只是同一個推論形式加大樣本；換成看整個 retention 窗的樣式才換到不同種類的證據。這與 09-16 那條「agreement count 不等於 equivalence」同源——都是把「觀測到的行為一致」誤當成「結構上的結論」。

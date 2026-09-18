@@ -13,7 +13,7 @@ This doc is detailed enough to cut tickets from. Each work item below is one tic
 - No response body, status code, or side effect changes anywhere. Class A and C rules from the plan apply per item.
 - Every retargeted key keeps its previous value recorded, so rollback is a single `kubectl edit`.
 - `cloud-local-proxy` has either a complete caller list or a dated path to one — it is not scaled to zero on an assumption.
-- Every removed route has two independent zero-traffic windows measured from **request logs**, not sampled spans.
+- Every removed route is justified by **caller composition over the full log-retention window**, measured from request logs rather than sampled spans — not merely by a zero window. Where that evidence cannot reach (retention is 15 days, so a monthly caller is invisible), the gap is closed by an announced notice period, not by assuming absence.
 
 > On that last point, from experience earlier in this program: spans are sampled — in one two-hour window, 976 real requests produced 4 spans (≈0.4%). Counting sparse events with spans understates them by two orders of magnitude. Trans v1 logs every request and response, and that is the instrument to count with. Error spans are near-complete (they are kept by an error retention filter), which makes the numerator trustworthy and the denominator not — so error *rates* must never be computed from sampled counts.
 
@@ -60,23 +60,30 @@ Per batch:
 **Approach:** re-confirm 0 reads by grep at the current `main`, delete on staging, smoke test, delete on prod. **Verification:** the point of this ticket is that nothing changes; a diff of the ConfigMap plus a green smoke run is the whole proof.
 **Size:** **0.5 day**.
 
-### P1-C — retire the proxy routes that the S2 cutover made unused
+### P1-C — retire the proxy routes that no longer have a caller
 
-**Problem.** `/proxy/grpc/*` in trans v1 exists so that trans v2 could reach gRPC services over HTTP. S2 removed that need. Counted from request logs since the cutover (2026-09-16 22:04 UTC → 2026-09-18 20:30 UTC, 46.5 h):
+**Ticket: VP-18320** (announced 2026-09-18, removal 2026-10-02, due 2026-10-09).
 
-| Route | Calls since cutover | Before cutover |
-|---|---|---|
-| `getTestStatus` | **0** | ~488/h across the family |
-| `getQuestionaireBySampleId` | **0** | — |
-| `listTnpCode` | **0** | — |
-| `getKitStatus` | 22 (≈0.47/h) | — |
-| `getPatientTestsResult` | 8 (≈0.17/h) | — |
+**Problem.** `/proxy/grpc/*` in trans v1 exists so that trans v2 could reach gRPC services over HTTP. S2 removed that need. Counted from request logs across the full 15 days Datadog retains (2026-09-03 → 2026-09-18):
 
-**Approach.** Retire `getTestStatus` and `getQuestionaireBySampleId` — both were in the S2 migration, both have been at zero across two independent windows, and their consumer is known to have moved. `listTnpCode` also reads zero, but it was **never part of S2**, so its zero is unexplained rather than expected; it needs its own read over a longer window before it is called dead. `sendSkinPlacePatientOrders` reads zero at trans v1 only because its known caller (`LIS-backend-billing`) addresses the on-prem proxy instead — that is not evidence of death, and it is handled in **P1-E**.
+| Route | Daily rate before the cutover | 09-17 | 09-18 | Read |
+|---|---|---|---|---|
+| `getTestStatus` | 120–1,876, in lockstep with `getQuestionaireBySampleId` every single day | 0 | 0 | Retire |
+| `getQuestionaireBySampleId` | same series, never differing by more than 1 | 0 | 0 | Retire |
+| `listTnpCode` | 0, every day, including before the cutover | 0 | 0 | Retire |
+| `getKitStatus` | ≈2× the above (239–3,700) | 15 | 5 | Keep — unidentified caller |
+| `getPatientTestsResult` | 1–5, flat, unaffected by the cutover | 5 | 3 | Keep — pre-existing caller |
+| `sendSkinPlacePatientOrders` | 0 (its known caller uses the on-prem proxy) | 0 | 0 | Keep — see P1-E |
 
-Remove the route handler and the matching config keys in both repos in the same ticket, so no key is left pointing at a route that no longer exists.
+**The lockstep is the evidence, not the zero window.** `getTestStatus` and `getQuestionaireBySampleId` track each other to within one call on every one of the 15 days, and `getKitStatus` runs at exactly twice their rate. That is one caller's fixed per-sample pattern — transv2's patientProfile — rather than a population of callers. A second, independent consumer would break the lockstep on the days it ran; it never breaks. Then both went to exactly zero the day after the cutover. Two zero windows alone would not have justified this; the shape of the 15 days does.
+
+`listTnpCode` is the cleanest of the three on different grounds: zero traffic for the entire window *including before the cutover*, and no caller in any of the 63 repos on the dev machine. (`LIS-backend-results-grpc` implements `listTnpCode` — it is the downstream service, not a caller. Worth stating because it looks like a caller in a grep.)
+
+**What this cannot see.** Log retention stops at 15 days — a 35-day query returns nothing before 2026-09-03, on flex storage too — and the code search only covers locally cloned repos. A caller running monthly is invisible to both. That gap is closed procedurally: a two-week announced notice with a named place to object (VP-18320), then a re-check of the logs on the removal date.
+
+**Approach.** Remove the three route handlers and the matching config keys in both repos in one PR, so no key is left pointing at a route that no longer exists.
 **Rollback:** revert the PR; the gRPC clients behind the routes are untouched.
-**Size:** **0.5 day**. **Depends on:** nothing. Do not extend it to `getKitStatus` — see P1-D.
+**Size:** **0.5 day**, on 2026-10-02.
 
 ### P1-D — identify the client still calling `/proxy/grpc/getKitStatus` and `getPatientTestsResult`
 
@@ -91,7 +98,11 @@ So there is an unidentified in-cluster consumer (an `axios/1.16.0` client addres
 
 **Approach.** Log `user-agent` and `x-forwarded-for` on `/proxy/grpc/*` in the trans v1 proxy controller. Log-only, no behavior change, no response change. Observe for a week, then route the finding to whichever team owns the caller.
 
-**Why it matters:** this is the blocker for retiring the rest of the `/proxy/grpc` family and a prerequisite for the `cloud-local-proxy` scale-to-zero. It is also the cheapest possible way to get the answer — the alternative is ingress logs from a cluster this team does not have access to.
+**One correction from the 15-day read.** `getPatientTestsResult` is not collateral from the cutover: its 1–5 calls a day are flat across the whole window and completely unmoved by the switch. It was never on the migrated path, and whoever calls it has been calling it for at least 15 days. `getKitStatus`'s residual is the same order of magnitude, so one client doing both remains the most economical explanation — but "the same caller as the migrated path" is now excluded rather than supported.
+
+**Why it matters, and it is more than retirement.** Identifying the caller decides which of two end states each route gets. If the caller can speak gRPC, the route is deleted and the work consolidates internally — that path is proven, not theoretical: transv2's PR #629 did exactly this, carrying over both the metadata construction and the proto3 `packages` normalisation line by line. If the caller cannot (a service that cannot vendor the proto, an on-prem script, someone else's scheduler), the route stays as that caller's bridge. `sendSkinPlacePatientOrders` is already the second case, pointing the other way: billing moves *onto* trans v1, which makes trans v1 the consolidation point rather than a removal candidate.
+
+So the end state is not six routes disappearing. It is five disappearing and one becoming where the others consolidate. This is also the blocker for the `cloud-local-proxy` scale-to-zero, and the cheapest way to get the answer — the alternative is ingress logs from a cluster this team has no access to.
 **Size:** **0.5 day** of work, then a week of waiting.
 
 ### P1-E — `cloud-local-proxy` retirement
@@ -124,7 +135,7 @@ So there is an unidentified in-cluster consumer (an `axios/1.16.0` client addres
 | An in-cluster target depends on something the public ingress injects (auth header, TLS, `Host`) | That endpoint returns 401 or 500 on the first request after the change | Step 2 of P1-A is exactly this check; staging first; one batch at a time with 24 h of observation between |
 | A ConfigMap change is reverted by someone running `kubectl apply -f` from the repo copy | Phase 1's gains silently disappear | The repo copy holds 5 keys against 154 live — it must never be applied. Drift detection is a Phase 0 item; until it exists, this is a team convention and a known hole |
 | `cloud-local-proxy` has a caller nobody has found | Scaling to zero breaks another team's service | P1-E step 1 gates the scale-to-zero; the 30-day zero-traffic clock runs after the caller list, not instead of it |
-| A retired route turns out to have a rare caller (monthly batch, scheduled job) | A 404 on a path that used to work | Two independent zero windows are the bar for removal, and `listTnpCode` is deliberately held back for exactly this reason |
+| A retired route turns out to have a rare caller (monthly batch, scheduled job) | A 404 on a path that used to work | The one class the logs cannot see, since retention is 15 days. Closed procedurally rather than empirically: a two-week announced notice with a named place to object (VP-18320), and a re-check of the logs on the removal date |
 | Deleting a flag branch removes the rollback path for a recent cutover | A regression needs a redeploy instead of a config flip | P1-F is dated a week after the cutover, not immediately |
 
 ---
@@ -153,7 +164,7 @@ So there is an unidentified in-cluster consumer (an `axios/1.16.0` client addres
 - `[Trans Opt][P1] …— interactive-report`
 - `[Trans Opt][P1] …— remaining targets`
 - `[Trans Opt][P1] trans v2: remove 8 unread config keys pointing at an unreachable on-prem address`
-- `[Trans Opt][P1] trans v1: retire /proxy/grpc/getTestStatus and /proxy/grpc/getQuestionaireBySampleId`
+- ~~`[Trans Opt][P1] trans v1: retire /proxy/grpc/getTestStatus and /proxy/grpc/getQuestionaireBySampleId`~~ → created as **VP-18320**, widened to include `listTnpCode`
 - `[Trans Opt][P1] trans v1: log user-agent and x-forwarded-for on /proxy/grpc/* to identify the remaining caller`
 - `[Trans Opt][P1] cloud-local-proxy: enumerate callers from cloud and on-prem ingress access logs`
 - `[Trans Opt][P1] LIS-backend-billing: repoint sendSkinPlacePatientOrders from cloud-proxy to trans v1` (other team)
