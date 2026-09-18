@@ -41,8 +41,24 @@ without pushing back, and prod data changes made before the vendor-field survey 
 ## Gate 2 — Scope confirmation
 If the ticket scope is ambiguous, run `ticket-requirements-clarify` first and confirm with the human/PM before coding. Prefer the minimal change; widening scope after confirmation is cheap, unwinding an over-built change is not.
 
-## Gate 3 — Schema migration BEFORE deploy
+## Gate 3 — Schema migration BEFORE deploy, and lint the DDL before it touches prod
 emr-v2 prod is **not** Prisma-managed. Adding a non-optional column in the schema without first applying the `ALTER` to the prod DB makes that model return 500 "Unknown column" on every read (VP-16832). Sequence is fixed: **apply the migration to prod DB first, then deploy the code that reads it** — never the reverse.
+
+Before running any manual DDL on a prod MySQL (lisportalprod2 = `8.0.45-azure`, checked 2026-09-18; re-check with `SELECT VERSION()` — the INSTANT rules are gated on the exact version):
+
+1. **Session guard first.** Prod `@@lock_wait_timeout` is the MySQL default, 31536000 s (one year). A DDL that meets a metadata lock held by any open transaction queues indefinitely, and every later query on that table queues behind it. Prefix the DDL in the same session:
+   ```sql
+   SET SESSION lock_wait_timeout = 5;
+   ALTER TABLE ... , ALGORITHM=INSTANT, LOCK=NONE;
+   ```
+   State `ALGORITHM=` and `LOCK=` explicitly so the server fails loudly instead of silently falling back to a table-copying `COPY`.
+2. **Lint the migration file** with the vendored checker (stdlib Python, no install):
+   ```bash
+   python3 .claude/skills/lis-prod-change-gate/scripts/lint_migration.py --mysql-version 8.0.45 path/to/migration.sql
+   ```
+   30 deterministic checks: INSTANT/INPLACE/COPY version gates against the exact server version, LOCK clause validity, the `lock_wait_timeout` guard above (MM015), FK + INPLACE conflicts, VARCHAR crossing the 255-byte boundary, `IF NOT EXISTS` on an ALTER clause (not MySQL syntax), irreversible DROP without a stated backup. Exit 1 = critical findings; paste the output into the report. It reads DDL only — a prod `UPDATE`/`DELETE` data fix is Gate 7's business, the linter will not see it.
+   Source: `johnqtcg/awesome-skills` `skills/mysql-migration/scripts/lint_migration.py` @ `8f3373d` (2026-08-06), MIT — license alongside in `scripts/`. Re-vendor when the upstream matrix moves past 8.0.45.
+3. **Reference when the DDL is more than an ADD COLUMN NULL**: `planetscale/database-skills` → `skills/mysql/references/online-ddl.md` (algorithm/lock decision table, 8.0.28/8.0.29 gates, the metadata lock every INPLACE still takes at commit, gh-ost vs pt-osc for multi-million-row tables) and `row-locking-gotchas.md` / `deadlocks.md` for UPDATE-WHERE-JOIN review. Load on demand; not vendored.
 
 ## Gate 4 — Config yaml coupling (dual update, same change)
 Any new `process.env.X` must be added to **both** `lis-emr-v2-config.yaml` and `lis-emr-v2-config-prod.yaml` (under `data:`) in the same change — proactively, not when asked. (INCIDENT-20260601, re-broken 3×.) Enforced by the `pre-commit` hook, but state the yaml edits explicitly so the human sees them.
@@ -55,7 +71,7 @@ All source/comments/migrations are English-only (replies to the user stay zh-TW)
 Two distinct checks, both required for prod-impacting changes:
 - **Test before push**: run the unit tests and make sure they cover the new logic *branches*, not just compile. Compile pass ≠ behavior correct (INCIDENT-20260601: a SFTP verify patch was pushed on a green build alone).
 - **Verify on live, not mock**: a passing mock unit test is not "verified in prod". Reproduce the actual prod behavior against the real DB / running service before claiming a result. (VP-16850: an "empty result bug" was actually `max_advance_days=28` config, not a code bug.) Also verify the **peer-observed** state, not just your own side's log (INCIDENT-20260601: a lifecycle patch was verified only on the hanging pod, not the peer's session count → leaked for 3 days).
-- `pre-push` hook runs `prisma generate` + `nest build`; a build failure is real, not a "stale/pre-existing" illusion (VP-16521 was a missing `prisma generate` after a branch switch).
+- `pre-push` hook (factory `framework/githooks/pre-push`, wired by global `core.hooksPath`) runs `prisma generate` + `nest build` + the Nest DI boot smoke, and — for `lis-backend-emr-v2` and `LIS-transformer-v2` since 2026-09-18 — `jest --findRelatedTests` over the `.ts` this branch changed relative to `origin/main`. A build failure is real, not a "stale/pre-existing" illusion (VP-16521 was a missing `prisma generate` after a branch switch); a related-suite failure is real too — a spec that no longer compiles means the contract it pinned moved and nothing re-pinned it. Fix the code or the spec; never delete the assertion, and never `--no-verify` (the agent's own push hook refuses it). The gate only proves the *related* suites are green; "covers every new branch" is still the reviewer's job.
 
 ## Gate 7 — Prod data fixes: bound the scope, then verify at every layer
 For any prod `UPDATE`/`DELETE`:

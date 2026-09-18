@@ -16,6 +16,8 @@
 
 ## 2026-09-18 scan
 
+- **Adopted same day (Leo: "全部按照你的建議做")**: linter vendored into `.claude/skills/lis-prod-change-gate/scripts/` + Gate 3 rewritten (session `lock_wait_timeout` guard, explicit ALGORITHM/LOCK, lint step, planetscale refs) — this repo's PR; related-tests pre-push gate for emr-v2 + transformer-v2 — `project-agent-factory` PR (`framework/githooks/pre-push`, `TEST_GATE_REPOS`). Test before push now carries `enforced-by:`.
+
 - **Prod fact surfaced by the scan**: lisportalprod2 `@@lock_wait_timeout` = 31536000 (MySQL default, 1 year) and `@@innodb_lock_wait_timeout` = 50. A manual DDL that hits a metadata lock will queue indefinitely and stack every later query on that table behind it. Independent of any skill: prefix manual prod DDL with `SET SESSION lock_wait_timeout = 5` (fail fast) — proposed as a `lis-prod-change-gate` addition, pending Leo.
 - **mysql-migration (johnqtcg)** → watchlist (above). Strongest DB-safety candidate since the scan started: first one with runnable, version-aware checks instead of a prose checklist.
 - **planetscale/database-skills mysql** → watchlist (above) as reference text.
