@@ -435,3 +435,27 @@ Leo 質疑「這種應該要先看 datadog 這 14 天的流量不是嗎」——
 - 三處文件同步更正：Phase 1 頁 **v2**（P1-C 改寫成 lockstep 證據 + VP-18320、P1-D 加 consolidate-vs-bridge、DoD 與風險表改掉「兩個零窗口」的標準）、shipped-changes **v10**（§5.9 表換成 15 天版 + 明寫先前那個較弱標準是錯的 + `getPatientTestsResult` 更正）、PR #800 body（同上，head `d2274f3` 未動）。
 
 **通用教訓**：退役決策要的是**caller composition**（誰在打、樣式是什麼），不是 **absence**（某段時間沒人打）。零窗口的長度再加也只是同一個推論形式加大樣本；換成看整個 retention 窗的樣式才換到不同種類的證據。這與 09-16 那條「agreement count 不等於 equivalence」同源——都是把「觀測到的行為一致」誤當成「結構上的結論」。
+
+### [2026-09-18 16:40]
+Ray 回覆確認 `/proxy` 與 cloud-local-proxy 是 2023 年 DNS 未通時代的產物，終局是**全部移除**、呼叫者直接打目的地。Leo 要求把「分類 + 替還在用的端點找更好的家 + 要求下游 migrate」寫成英文 Confluence doc。
+
+**新頁面 2697166874**「Retiring /proxy and cloud-local-proxy — Classification and Migration Targets」（Phased Plan 的 child），並從 plan 頁（v3）與 VP-18320 remote link 連過去。
+
+**這輪最重要的是我自己被打回來兩次，兩次都對：**
+1. Leo 問「14 天流量」→ 我原本用 46.5 小時兩個零窗口就要退役，而我自己在風險表寫過「月批次」這條卻沒套用。**退役要的是 caller composition（誰在打、樣式），不是 absence（某段時間沒人打）。**
+2. Leo 問「可以分類 + 要求下游搬不是嗎」→ 我上一輪答「零條搬 trans v2」，**那是在 caller 身分還不知道的情況下就砍掉選項**。trans v2 的 `PNSResolver` 已有 `getKitStatus` 的 `@ResolveField`、`patientProfile` 也在用 kit 資料——**caller 若是前端，搬 v2 不需要任何新實作**。已收回。
+
+**這次新挖到的事實（都進了新頁）：**
+- `/proxy/old-report/*` 11 條**只有 `downloadTestOrderPDF` 活著**：15 天 **20,715 次**（≈1,380/天，真實客戶 `customer_id`、`opt=download`）。其餘 10 條全零。
+- 11 條**全部都是重複品**：`trans-reports.controller.ts`（`@Controller('trans')`）有同樣 11 個操作外加 8 個，**共用同一個 `OldReportProxyService`、程序內呼叫不是 HTTP 自打**。
+- `/trans/*` 雙胞胎 15 天：GenerateBatchReqOrReportV2 1,830、downloadTestOrderPDF 1,436、另兩條各 8、其餘 7 條 0。**22 條端點只有 5 條有流量。**
+- **`/proxy/old-report/downloadTestOrderPDF` 的量是正式 `/trans/` 版本的 14 倍**——proxy 是主要路徑，caller 未識別，而 **#800 的 interceptor 沒蓋到 old-report**。要另開 PR。
+- va-portal 打的是 `/trans/downloadTestOrderPDF`（`src/api/download.js`，對 origin/main 查的），不是 proxy 版。
+- `sendSkinPlacePatientOrders` **也不是純轉發**：會 `skinPlace.comments = String(skinPlace.julien_barcode)` 再轉傳 Authorization。叫 billing 直打 crmapi 而不複製這個改寫，會安靜壞掉。
+- trans v2 **完全沒有報告 code**（ConfigMap 有 key，`git grep` origin/main src 零讀取）。
+
+**定死的分類規則（兩個問題決定歸宿）**：叢集內服務 + metadata/正規化 → 直打 gRPC；前端/外部 + metadata/正規化 → **trans v2**（現成）；前端/外部 + **PHI ownership gate** → **trans v1 `/trans/*`**（gate 已在那）。
+**給 Ray 的關鍵區分**：要刪的是**重複的轉發層**，不是**認證邊界**。`/trans/*` 與 trans v2 不是 wrapper 是產品 API；PHI 的目的地不是 gRPC-only（core）就是 `secure/nologin`（地上報告伺服器），所以「直接打目的地」對叢集內服務成立、對終端使用者不成立。
+**維持的判斷**：報告那 19 條不重寫進 v2——零延遲收益（p95 在 lis-order/pdf-engine）、且重做合規 gate 正是上次 `?internal_user_id=` 繞過漏洞的來源。
+
+**下一步（頁面 §6）**：#800 merge + 另開 old-report 版 attribution PR → 一週後填上三個待定歸宿 → 每個下游 owner 一張 migration 票 → 刪。

@@ -4,6 +4,8 @@
 
 This is the combined direction for the trans optimization: what the phases are, why they are in this order, and what each is aiming at. Phase 1 has its own detailed doc — [Phase 1 Detail — Remove the Detours](https://vibrantamerica.atlassian.net/wiki/spaces/LIS/pages/2696740867) — with scope, approach, risks and sizing, at the level needed to cut dev tickets. Later phases stay high-level until we reach them, the same way the Core migration epic was scoped.
 
+The proxy layer specifically has its own page: [Retiring /proxy and cloud-local-proxy — Classification and Migration Targets](https://vibrantamerica.atlassian.net/wiki/spaces/LIS/pages/2697166874) assigns every route that is still in use to a target home and a downstream owner, and states what each wrapper adds that a migrating caller has to bring with it.
+
 Two notes on what this page is and is not. It is the plan half of the joint deliverable: the investigation behind it is the trans v1 / v2 read, the Datadog measurements, and the AKS inventory done under VP-18262 between 2026-09-11 and 2026-09-18. Yekai's investigation under VP-18261 is still open and merges into the same phases — where it lands differently, this page gets updated rather than forked. Separately, some of what is described below has already shipped; that is deliberate and is marked per item, because measuring against real traffic is the only way the ordering below could be justified at all. What shipped, and what it measurably did, is recorded change by change on [Shipped Changes & Measured Impact](https://vibrantamerica.atlassian.net/wiki/spaces/LIS/pages/2684321795).
 
 ---
