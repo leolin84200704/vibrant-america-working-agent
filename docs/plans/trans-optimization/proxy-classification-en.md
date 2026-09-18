@@ -66,58 +66,90 @@ The middle row matters and is easy to skip past. Trans v2 already exposes `getKi
 
 ---
 
-## 3. Assignments
+## 3. Assignments — every endpoint has a destination
 
-| Endpoint | Target home | Who migrates | Blocked on |
-|---|---|---|---|
-| `/proxy/grpc/getTestStatus` | — delete | nobody | announced, **VP-18320**, removal 2026-10-02 |
-| `/proxy/grpc/getQuestionaireBySampleId` | — delete | nobody | as above |
-| `/proxy/grpc/listTnpCode` | — delete | nobody | as above |
-| `/proxy/grpc/getKitStatus` | in-cluster service → shipping gRPC `getKitStatusBySampleId`; front end → **trans v2 GraphQL** (exists today) | the calling team, once named | caller identity — LIS-transformer PR #800 |
-| `/proxy/grpc/getPatientTestsResult` | in-cluster service → test-connect gRPC; front end → trans v2 | the calling team, once named | caller identity — PR #800 |
-| `/proxy/grpc/sendSkinPlacePatientOrders` | `crmapi` directly — **only if the caller replicates the payload rewrite below**; otherwise it keeps exactly one wrapper | `LIS-backend-billing` | a ticket on the billing team |
-| `/proxy/old-report/downloadTestOrderPDF` | **trans v1 `/trans/downloadTestOrderPDF`** — same operation, same service class, gate already present, already serving 1,436 calls | the calling team, once named | caller identity — needs the same attribution logging, which PR #800 does not cover |
-| `/proxy/old-report/*` (other 10) | — delete | nobody | none; can join VP-18320 or take its own ticket |
-| `cloud-local-proxy` (18 routes) | trans v1 equivalents, then each follows its row above | each caller | cloud + on-prem ingress access logs (on-prem needs Ray) |
+No route on this page is "stuck". Where a caller is still unidentified, that decides *which branch* a route takes, never *whether* it has a direction — the destination follows from the domain and the actual downstream, both of which are known today.
 
----
-
-## 4. What the wrappers actually add
-
-Anyone migrating off a proxy route needs this list. None of these routes is pure forwarding, and each item below exists because something broke without it.
-
-1. **JWT → gRPC metadata.** `createMetadataForCoresampleV2` propagates the caller's JWT subject to core. It is *not* an ownership check — the `/proxy/grpc` family has no ownership check at all, only authentication.
-2. **A proto3 normalisation on kit lookups.** proto3 omits empty repeated fields on the wire, so a PO with no shipped packages arrives with `packages === undefined` and consumers crash reading `.length`. The wrapper fills it with an empty array. Leaving this out is Sentry #68038.
-3. **A payload rewrite on `sendSkinPlacePatientOrders`.** The wrapper sets `comments` from `julien_barcode` before posting, and forwards the caller's `Authorization` header. A caller that goes straight to `crmapi` without replicating this will fail quietly rather than loudly.
-4. **A cross-tenant PHI ownership gate on `/proxy/old-report/*`.** Customer and clinic are pinned from the authenticated JWT and never from the query or body; every requested sample must belong to the caller's clinic; navigators denied at customer level are rejected; trusted internal callers are cross-clinic by design and bypass it. Reading identity from `req.user` directly rather than through `resolveIdsForHttpOptional` is deliberate — the latter falls back to request arguments, which let an external caller spoof `internal_user_id` via a query parameter and skip the check entirely.
-
-Trans v2's direct-gRPC path is the worked example that all of this is portable: PR #629 carried both the metadata construction and the proto3 normalisation across line by line, and the shadow comparison that followed agreed with the old path on 3,470 of 3,473 real requests. It worked because someone compared it line by line, not because the layer is thin.
+| Endpoint | What it really talks to | Destination | Who moves | Waiting on |
+|---|---|---|---|---|
+| `/proxy/grpc/getTestStatus` | test-connect gRPC | delete | nobody | **VP-18320**, removal 2026-10-02 |
+| `/proxy/grpc/getQuestionaireBySampleId` | interactive-report gRPC | delete | nobody | as above |
+| `/proxy/grpc/listTnpCode` | test-connect gRPC | delete | nobody | as above |
+| `/proxy/grpc/getKitStatus` | shipping gRPC `getKitStatusBySampleId` | in-cluster caller → **shipping gRPC directly**; front end → **trans v2** (GraphQL field exists today) | the calling team | which branch — PR #800 |
+| `/proxy/grpc/getPatientTestsResult` | test-connect gRPC | in-cluster caller → **test-connect gRPC directly**; front end → **trans v2** (PHI, so it needs the authenticated edge) | the calling team | which branch — PR #800 |
+| `/proxy/grpc/sendSkinPlacePatientOrders` | `crmapi` over the public internet | **`crmapi` directly**, with the payload rewrite in §4.3 carried by the caller | `LIS-backend-billing` | a ticket on that team |
+| `/proxy/old-report/downloadTestOrderPDF` | **lis-order, twice** (order summary + redraw), merged | **lis-order** — see §5 | the calling team, then lis-order | caller identity; lis-order's roadmap |
+| `/proxy/old-report/*` (other 10) | — | delete | nobody | none |
+| `/trans/downloadTestOrderPDF` | same as above | **lis-order** — see §5 | lis-order | that team's roadmap |
+| `/trans/GenerateBatchReqOrReportV2` | on-prem report server `192.168.60.77:8081/secure/nologin/…` | **base-report-service** — see §6 | report team | that team's roadmap |
+| `/trans/GenerateOnlineZipDownloadV2` (8 calls / 15 days) | same on-prem server | base-report-service, or delete — the traffic barely justifies a migration | report team / front end | a usage decision |
+| `/trans/getOrderSummaryReportZip` (8 calls / 15 days) | same on-prem server | as above | report team / front end | a usage decision |
+| `/trans/*` report routes (other 7) | — | delete | nobody | front-end confirmation |
+| `cloud-local-proxy` (18 routes) | trans v1 has an equivalent for all 18 | callers move to trans v1's `/trans/*` (which has the ownership gate its copies lack), then follow the rows above | each caller | cloud + on-prem ingress logs (Ray) |
 
 ---
 
-## 5. What cannot move, and why
+## 4. What the wrappers add — bring this with you
 
-**The report family should not be rebuilt in trans v2.** Nineteen routes, a cross-tenant ownership gate, deep-link token resolution and PDF streaming, for zero latency benefit — the p95 on this family is spent in `lis-order` and `pdf-engine`, not in trans. Trans v2 has no report code at all today: its ConfigMap holds report keys, but nothing reads them. Re-implementing a compliance gate is precisely where the spoofing bypass above came from. If there is an independent decision to make trans v2 the single external edge, that is a project with its own justification and its own review; it should not ride along with proxy retirement.
+None of these routes is pure forwarding. Every item below exists because something broke without it.
 
-**End users cannot be pointed at the report destination.** The destination behind `/proxy/old-report/*` is `192.168.x.x:8081/secure/nologin/...` — unauthenticated by construction. Sending customers there directly would remove the cross-tenant gate rather than relocate it. The gate would have to move into that server first, and that server is the thing being retired.
+1. **JWT → gRPC metadata.** `createMetadataForCoresampleV2` propagates the caller's JWT subject to core. It is *not* an ownership check — the `/proxy/grpc` family has authentication only.
+2. **A proto3 normalisation on kit lookups.** proto3 omits empty repeated fields, so a PO with no shipped packages arrives with `packages === undefined` and consumers crash on `.length`. The wrapper fills it with an empty array. Omitting this is Sentry #68038.
+3. **A payload rewrite on `sendSkinPlacePatientOrders`.** The wrapper sets `comments` from `julien_barcode` before posting and forwards the caller's `Authorization`. Going straight to `crmapi` without replicating it fails quietly rather than loudly.
+4. **A cross-tenant PHI ownership gate on `/proxy/old-report/*` and `/trans/*`.** Customer and clinic are pinned from the authenticated JWT and never from query or body; every requested sample must belong to the caller's clinic; navigators denied at customer level are rejected; trusted internal callers are cross-clinic by design and bypass it. Identity is read from `req.user` directly rather than through `resolveIdsForHttpOptional`, deliberately — the latter falls back to request arguments, which let an external caller spoof `internal_user_id` through a query parameter and skip the check entirely.
 
-**Nothing can be assigned to an owner we cannot name.** Three of the five live endpoints are blocked on the same missing fact: who is calling them. At roughly half a call an hour, `/proxy/grpc` traffic is never sampled into a trace, so APM cannot answer it; and while `/proxy/old-report/downloadTestOrderPDF` is busy enough to sample, the header fields that identify a caller are not logged today.
+Trans v2's direct-gRPC path is the proof all of this is portable: PR #629 carried items 1 and 2 across line by line, and the shadow comparison that followed agreed with the old path on 3,470 of 3,473 real requests. It worked because someone compared it line by line, not because the layer is thin.
+
+**A defect to fix wherever this endpoint ends up.** `downloadTestOrderPDF` writes its PDFs to the pod's working directory under a filename derived only from `sample_id` (`<sample_id>_downloadTestOrderPDF_newordersummary.pdf`). Two concurrent requests for the same sample therefore share filenames, and one request's `end` handler `unlinkSync`s a file the other may still be streaming. At ~1,380 requests a day this is a live race, not a theoretical one, and in the meantime PHI sits on the pod filesystem. This wants its own ticket regardless of which service owns the endpoint.
 
 ---
 
-## 6. Sequence
+## 5. `downloadTestOrderPDF` belongs in lis-order, not in a report service
+
+The name is misleading. Despite living under `old-report`, this endpoint has no relationship to `base-report-service`: both of its data sources are **lis-order** (`/v1/portal/order/…`), it produces an *order summary* document rather than a lab report, and `base-report-service` neither owns nor generates those PDFs. Moving it there would recreate a hop — report-service calling lis-order — which is the shape being deleted.
+
+What the endpoint actually does is orchestration: fetch the order summary and the redraw order summary in parallel, branch on the four combinations of 200/204 against `order_status`, merge the two PDFs, stream the result, delete the temp files. Both inputs are lis-order's own documents, so lis-order can collapse the whole thing into a single call and the merge disappears as a cross-service concern.
+
+Two steps, and the first does not wait for the second:
+
+| | Now | Later |
+|---|---|---|
+| Action | repoint the unidentified caller to `/trans/downloadTestOrderPDF` | lis-order takes the endpoint |
+| New code | **none** — same operation, same service class, gate already present, already serving 1,436 calls | a new endpoint on another team's service |
+| Unlocks | deleting all 11 `/proxy/old-report` routes | two cross-service calls and a PDF merge collapse into one call; trans stops holding PDFs on disk |
+
+A same-named `transService.downloadTestOrderPDF` exists and is a different thing — it calls the on-prem report server and is used by notifications and other report routes. It belongs to §6, not here.
+
+---
+
+## 6. The real end state for the report family
+
+Three `/trans/*` report routes still address `192.168.60.77:8081/secure/nologin/…` — the legacy on-prem report server, unauthenticated by construction. That server, not the wrappers in front of it, is the thing worth retiring: every route pointing at it is a dependency on an unauthenticated on-prem box reachable only because something in front of it is doing the authorising.
+
+So `/trans/*` is a **holding position, not the end state.** It is the right place for these operations today — the ownership gate is implemented there, and it is what the front end already calls — but the destination for the report family is `base-report-service`, which is already a real service with its own AKS deployment, its own authenticated external edge and its own report-generation pipeline. That is a conversation with the report team, sized on its own merits, and it is not a prerequisite for anything on this page.
+
+What this page does *not* recommend is rebuilding the report family inside **trans v2**. Nineteen routes, a cross-tenant ownership gate, deep-link token resolution and PDF streaming, for zero latency benefit — the p95 on this family is spent in `lis-order` and `pdf-engine`, not in trans. Trans v2 holds report keys in its ConfigMap but reads none of them, so this would be a from-scratch re-implementation of a compliance gate, which is exactly where the spoofing bypass in §4.4 came from. Moving these operations toward their owning services is the better direction; moving them sideways into the other trans is not.
+
+**End users cannot be pointed at the destination directly** for anything in this family, whichever service ends up owning it. The on-prem report server has no authentication, so sending customers there removes the cross-tenant gate rather than relocating it. Whoever owns the operation owns the gate with it.
+
+---
+
+## 7. Sequence
 
 1. **Now.** Merge LIS-transformer PR #800 (logs `user-agent`, `x-forwarded-for` and the JWT subject on `/proxy/grpc/*`; log-only, tested). Open the equivalent for `/proxy/old-report/*` — the busiest endpoint in the family sits there and PR #800 does not cover it.
 2. **2026-10-02.** VP-18320 removes the three dead `/proxy/grpc` routes after its announced two-week notice. The 10 dead `/proxy/old-report` routes can join it.
-3. **~1 week after the logging lands.** Fill in the three pending assignments. The rule in §2 is already fixed; only the caller names are missing.
-4. **Then.** One migration ticket per downstream owner, naming the target endpoint and a date, in the same shape as VP-18320.
-5. **Last.** Delete the routes, then retire `cloud-local-proxy` once its caller list is complete and the 30-day zero-traffic clock has run.
+3. **~1 week after the logging lands.** Resolve the two open branches in §3 — the rule and both candidate destinations are already fixed; only the caller names are missing.
+4. **Then.** One migration ticket per downstream owner, naming the target endpoint and a date, in the shape of VP-18320.
+5. **In parallel, on other teams' calendars.** lis-order takes `downloadTestOrderPDF` (§5); the report team takes the `secure/nologin` dependencies (§6); billing moves to `crmapi` (§3).
+6. **Last.** Delete the routes, then retire `cloud-local-proxy` once its caller list is complete and the 30-day zero-traffic clock has run.
 
 ---
 
-## 7. Asks
+## 8. Asks
 
-- **Ray** — cloud and on-prem ingress access logs for `api.vibrant-america.com/v1/lis/cloud-proxy` and `www.vibrant-america.com/lisapi/v1/lis/cloud-proxy`. This is the only thing that can enumerate `cloud-local-proxy`'s callers, and nothing downstream of it can start without that list.
-- **Billing** — a ticket to move `sendSkinPlacePatientOrders` off the proxy, carrying the payload rewrite in §4.3.
-- **Anyone calling a `/proxy/*` route** — say so on VP-18320. Our log retention is 15 days, so a job that runs monthly is invisible to us; a reply is the only way we find out before it breaks.
+- **Ingress access logs** — cloud and on-prem, for `api.vibrant-america.com/v1/lis/cloud-proxy` and `www.vibrant-america.com/lisapi/v1/lis/cloud-proxy`. This is the only thing that can enumerate `cloud-local-proxy`'s callers, and nothing downstream of it can start without that list.
+- **lis-order team** — take `downloadTestOrderPDF` (§5). Two of your own documents are currently fetched separately and merged by trans.
+- **Report team** — the three `/trans/*` routes still pointing at the unauthenticated on-prem report server (§6), and whether `base-report-service` is their successor.
+- **Billing** — move `sendSkinPlacePatientOrders` off the proxy, carrying the payload rewrite in §4.3.
+- **Anyone calling a `/proxy/*` route** — say so on VP-18320. Log retention here is 15 days, so a job that runs monthly is invisible to us; a reply is the only way we find out before it breaks.
 - **Repo admins** — mark the `typecheck + unit tests` job as a required status check on `main` in both trans repos. Until then a red PR check is advisory, and a merge to `main` is a deploy.

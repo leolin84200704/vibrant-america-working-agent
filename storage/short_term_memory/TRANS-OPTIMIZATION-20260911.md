@@ -459,3 +459,19 @@ Ray 回覆確認 `/proxy` 與 cloud-local-proxy 是 2023 年 DNS 未通時代的
 **維持的判斷**：報告那 19 條不重寫進 v2——零延遲收益（p95 在 lis-order/pdf-engine）、且重做合規 gate 正是上次 `?internal_user_id=` 繞過漏洞的來源。
 
 **下一步（頁面 §6）**：#800 merge + 另開 old-report 版 attribution PR → 一週後填上三個待定歸宿 → 每個下游 owner 一張 migration 票 → 刪。
+
+### [2026-09-18 17:10]
+Leo：「每個你認為不該 remove 的都可以有比較好的方向不是嗎？這個就要寫進 doc」——**第三次被打回來，第三次對**。我 §3 有三行寫「blocked on caller identity」，讀起來像「不知道、做不了」。**caller 身分只決定走哪個分支，不決定有沒有方向**；方向由 domain 與實際下游決定，那兩件事今天就知道。
+
+**查出來的下游（這才讓每一條都能定向）：**
+- `/proxy/old-report/downloadTestOrderPDF` 的真正下游**不是報告伺服器，是 lis-order**：controller 用 `url_order_summary_new` + `url_order_summary_new_redraw`（兩者都是 `api.vibrant-wellness.com/v1/portal/order`）並行抓兩份 PDF → 依 200/204 × `order_status` 四路分支 → **合併** → 串流 → 刪暫存檔。所以它是**訂單摘要**不是檢驗報告，**搬去 base-report-service 是錯的**（會變成 report-service → lis-order 再跳一次，正是要刪的形狀）。**正解是 lis-order**——兩份 PDF 都是它自己產的，搬過去兩次跨服務呼叫加合併會塌成一次。
+- 同名陷阱：`transService.downloadTestOrderPDF`（打地上 `192.168.60.77:8081/secure/nologin/`）是**另一個方法**，被 notifications 等 7 處使用，跟那條路由不是同一件事。
+- `/trans/GenerateBatchReqOrReportV2`（1,830）與 `GenerateOnlineZipDownloadV2` / `getOrderSummaryReportZip`（各 8）下游都是**地上 `192.168.60.77:8081/secure/nologin/`**。
+- **由此得到比「留在 trans v1」更重要的結論**：那台不驗身分的地上報告伺服器才是該退役的東西；`/trans/*` 是**holding position 不是終點**，報告家族的終點是 base-report-service（`LIS-Report/base-report-server`，有自己的 AKS namespace、JWT、對外 edge、報告產生管線）。
+
+**新發現的缺陷（與搬去哪無關，該自己一張票）**：`downloadTestOrderPDF` 把 PDF 寫到 `process.cwd()`，檔名只由 `sample_id` 組成 → **同 sample 的並行請求共用檔名**，其中一個的 `result.on('end')` 會 `unlinkSync` 掉另一個可能還在串流的檔。每天 1,380 次，是活的競態；期間 PHI 躺在 pod 檔案系統上。
+
+**頁面 2697166874 改到 v3**：§3 改成「每個端點都有 destination」的表（多了「真正在跟誰講話」欄），新增 §5（downloadTestOrderPDF → lis-order，兩步走，短期那步零新 code）與 §6（報告家族終點是 base-report-service，`/trans/*` 只是 holding position，並重申不要重寫進 trans v2），§4 補上競態，§7/§8 重排並加上 lis-order / report team 兩個新對象。
+
+**發佈時踩到的事**：頁面已經是 v2 而我只發過 v1 → PUT 回 409。**沒有直接覆蓋**，先抓 version 歷史（authorId 跟我用的 token 同一個帳號，分不出人），再把 live v2 與我 v1 的 markdown 重建後做 tag-strip 純文字 diff → 差異只有一處：Asks 第一條的 **"Ray — " 被人刪掉**。其餘全是 Confluence 編輯器的正規化（`local-id`、entity、table width）。**照著保留**，把該條改成中性的「Ingress access logs — 」，沒有把名字加回去，並回報 Leo 確認。
+→ **可重用的做法**：Confluence 409 時，用「本地 markdown 重新產生當初那版 → 與 live 做 strip-tag 純文字 diff」就能在共用帳號下分辨「編輯器正規化」與「真人編輯」。
