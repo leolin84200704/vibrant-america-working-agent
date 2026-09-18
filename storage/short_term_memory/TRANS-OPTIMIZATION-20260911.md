@@ -397,3 +397,20 @@ Leo：「還有什麼能做的嗎？一樣要 pull 最新的 PR 並且檢查 atl
 **B（Confluence v9）完成**：§5.8 的 #793 從 (open) 改成 merged+live 並補上線後實測；新增 **§5.9「Counting with the right instrument」**（span 取樣 vs log 全量的儀器教訓 + 逐 route 計數表 + 未識別 caller 的四個排除證據 + 24.4h gRPC 錯誤讀數）；§7 整段重寫，砍掉「Merge #793」和那行與「declined, not deferred」矛盾的 inprocess 殘留，並連到新的兩頁。
 
 **寫 plan 時做的一個判斷**：原 PLAN.md 的 Phase 0/1/2 有很大一部分已經上線了，要不要重新編號。決定**不重編**——Confluence 頁和團隊對話已經在用「Phase 0/1/2」這組詞，重編號會讓看過舊版的人對不上。改成每個 phase 標 shipped / partly shipped / not started，Phase 1 detail 只寫「還沒做的部分」，並把已上線的部分列在 §2 當背景。
+
+### [2026-09-18 14:05]
+Leo 三項指示：(1) comment 發、(2) 這張票先完成並附連結、(3) C1 也先做。全部執行完。
+
+**VP-18262 結案**：comment 188370 已發（ADF，三個 Confluence 連結 + 調查結論 + 已上線實測 + 提議日期 + 兩個外部相依）。三個 Confluence 頁以 remote link（relationship `documented by`）掛上票面。狀態 **Dev In Progress → Done**（resolution Done）。
+- **transition 選擇的依據**：可選 `Dev Complete`(2) 與 `Done`(15)。查同系列的 **VP-18276**（同為 Task、同為 trans-opt 記錄票）當初收的是 **Done**，VP-18080 亦然；VP-18197（Improvement、有 code）才是 Dev Complete。這張是調查/計劃交付、沒有 code 要 QA，所以照 VP-18276 收 Done。
+- **工具筆記**：`mcp__vibrant__get_jira_metadata(transitions)` 對這張票回 **空陣列**——MCP 的 service account（`jira-agent-...@serviceaccount`）沒有 transition 權限。改用 `.env` 的 JIRA_EMAIL/JIRA_API_TOKEN 直打 REST `/rest/api/3/issue/{key}/transitions` 才拿得到清單，POST 也成功。**comment 可以用 MCP 發（會顯示成 "Jira agent"），transition 與 remote link 要用 Leo 的 token。**
+- epic VP-18260 的 Timeline 草稿**沒動**——Leo 沒指示，那是 PM 的 description 欄位。草稿留在 `jira-drafts-20260918.md`。due date 也沒改（Yekai 的 VP-18261 是 09-24，這張維持 09-18 並在今天結案）。
+
+**C1 = Phase 1 的 P1-D，PR #800**（head `d2274f3`，未 merge）：`ProxyCallerLogInterceptor` 綁在 `ProxyController` 上，每個 `/proxy/grpc/*` 請求記一筆 user-agent / x-forwarded-for / x-real-ip / remote_address / route / method / JWT userId，operation `proxyGrpcCaller`。
+- **讀 code 得到的兩個事實**（不是推測）：6 條路由**每條都已經收 `@Headers() headers`**、多數收 `@Request() req`（`req.user.userId` 由 `CustomJwtAuthGuard` 填），資料一直都在手上、只是沒人記；而全域 `LoggingInterceptor` 記 url/query/body/response 但**不記 header**，所以 user-agent 從來沒進過 log。
+- **刻意不記 query string**：`sample_id` / `patient_id` 是檢體識別，對歸因沒有貢獻。
+- **log-only 的失敗模式要自己堵**：try/catch + detached `.catch()`，兩個 test 釘住「logger throw」與「log write reject」都不能影響路由回應。一個會讓請求失敗的 log-only 變更就不是 log-only。
+- 測試：新 spec 6 cases；全 suite **66/66、850 tests 綠**，`tsc --noEmit` 乾淨。
+- PR body 標了要 reviewer 判斷的一點：**`user_id`（JWT subject）該不該記**——它是最強的歸因訊號、也對齊 core 側 VP-18140 的 `jwt_sub`，但拿掉其餘 tuple 仍可用。
+
+**退役順序因此固定下來**：#800 merge → 觀察一週 `@operation:proxyGrpcCaller` → 找到 caller 後才動 `getKitStatus`；`getTestStatus` / `getQuestionaireBySampleId` 兩支已有兩個獨立零窗口，可以先退。`listTnpCode` 雖然也是 0 但不在 S2 範圍，零是「沒解釋」不是「預期」，繼續留著。
