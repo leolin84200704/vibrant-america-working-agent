@@ -11,7 +11,7 @@ unblock_when: 'BioInsights grants account perms (test: sftp key-auth to sftp.bio
   then ls / — currently auth OK but ls/stat/put all fail); waiting on Thomas reply
   to 2026-07-21 email'
 created: 2026-07-21
-updated: '2026-09-14'
+updated: 2026-09-18
 links:
 - BETA-E2E-20260729
 - BIOINSIGHTS-SFTP-KEY
@@ -205,6 +205,15 @@ score: 1.2405
 - Thread CC: lisa/travis/tracie/paola @bioinsights.com, Tianhao Wang (Vibrant), liana.vinichuk @devcom. Olena 09-09: "thank you for providing access, everything works well" (which access Leo granted is not in memory), asked 4 questions (legal docs, bidirectional/EMR-vs-provider, test catalog w/ CPT+LOINC, remaining steps); 09-14 follow-up, says they are blocked.
 - Prod ground truth 09-14: ehr_vendors 46 BIOINSIGHTS is_public=0 unchanged since 07-23; exactly 1 ehr_integrations row (JAG 30248/132493 FULL LIVE); hl7_file_input has ZERO rows for BIOINSIGHTS -> no sample/test order has ever been dropped in /outgoing/. Direction convention (orders=/outgoing/, results=/incoming/) still unconfirmed by vendor.
 - Leo draft answers: no legal docs; bidirectional yes but "provider level"; catalog from Zhenhe Zhang. Agent drafted the operational-steps answer + suggested rewording of the provider-level answer (per-provider NPI onboarding, not single-provider limitation).
+
+### [2026-09-18 09:30] devcom sample order ARRIVED (after Leo 09-17 email) — picked up, parse FAILED on placeholder NPI, quarantined
+- Olena (devcom) replied 09-17/18: "fixed and sent it to the correct bucket". Verified L4: `/outgoing/vibrant-test-order.hl7` (874 B) fetched by the cloud pod 2026-09-17 14:30 UTC (07:30 PT), moved to `/outgoing/archive/` (archive flow works live), local copy `/EMR_storage/HL7Message_prod/BIOINSIGHTS/Prod/Order/vibrant-test-order.hl7`, `hl7_file_input` id=7126 emr_service=BIOINSIGHTS. First BioInsights order file ever ingested.
+- Parse: 5 attempts 14:30-15:15 UTC all `customer_not_found=Balandan`; [RETRY-EXHAUSTED] retry_num=0, parse_finished=0, quarantine id=13 class=customer_not_found reason=UNKNOWN_ORIGIN. Will NOT auto-recover — even after the vendor fixes the file, a resend under a NEW file name is required (dedup by file name).
+- Root cause in the file: ORC-12 = `1234567^^Balandan^Paola^^^^^N` -> NPI 1234567 (placeholder). Only registered NPI on the integration is 1730269200 (JAG, ehr_integrations cms3icsz700010xlgywfuj8do). Also OBR-16 same placeholder; MSH-4 sending facility 1234567.
+- Other content gaps vs Leo's 09-17 checklist: OBR-4 = `3202^% Omega-6s^L`, `3200^...^L` x3 (3200 reused for 3 different tests) -> vendor-local placeholder codes, NOT our internal test codes; would fail emr_code_not_found next. Test catalog from Zhenhe still pending. IN1-2.1 = C (clinic card) — consistent with one of the two options, JAG preference still unconfirmed. MSH-12 = 2.5 (integration row hl7_version 2.3; not a blocker). Patient = John Doe test record.
+- Datadog noise: "Test code exceeds 50 characters ... test_id=7126, ehr_vendor_id=1" logs are UNRELATED (test_id, not hl7_file_input id).
+- SIDE FINDING: `/incoming/` holds ~150 result `.hl7` files for customer 30248 dated 2026-07-29 .. 2026-09-18 (from the double-delivery P2P+BioInsights setup) that the vendor has NEVER picked up. Vendor result consumption not happening; raise with vendor / decide on P2P retirement.
+- NEXT: Leo replies to Olena (draft given 09-18): file received, ORC-12 must be 1730269200, new file name on resend, test codes pending catalog. When a fixed file lands, expect emr_code_not_found until catalog mapping is done.
 
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
