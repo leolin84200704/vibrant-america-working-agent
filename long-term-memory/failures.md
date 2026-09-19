@@ -7,7 +7,7 @@ score: 1.4189
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-09-11
+updated: 2026-09-18
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -127,14 +127,14 @@ tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 101 entries across STM
+summary: Auto-aggregated failure index from 102 entries across STM
 ---
 
 # Failure Index
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-09-11 — total 101 entries
+> Last updated: 2026-09-18 — total 102 entries
 
 ## Themes
 
@@ -146,7 +146,7 @@ summary: Auto-aggregated failure index from 101 entries across STM
 - [Scope / requirement / PM communication](#scope-communication) — 5 entries
 - [Redis / cache / pending list](#redis-cache) — 4 entries
 - [Auth / permission / role](#auth-permission) — 4 entries
-- [Error handling / throw vs log](#error-handling) — 3 entries
+- [Error handling / throw vs log](#error-handling) — 4 entries
 - [Test / mock / spec](#test-mocking) — 2 entries
 - [gRPC / network / timeout](#grpc-network) — 2 entries
 - [Tool / cwd / branch / repo confusion](#tool-usage) — 1 entries
@@ -248,15 +248,6 @@ Root cause: Step 5c 只查了 integration-level 欄位（report_option / integra
 - **本地 npm run start:dev e2e**（POD_ROLE=pusher 安全關掉 intake cron/kafka；FHIR_RESULT_MODE=enabled；連 prod 唯讀）：401/400/**200**（DiagnosticReport, 159 obs, PDF url 無 base64, contained 齊全）。
 - 8 unit tests + build + DI boot check + 全套無新增失敗。config 兩份加 `FHIR_RESULT_MODE: disabled`（gitignored）。
 - **PR #159**(base staging) + Story **VP-16952**(掛 Epic VP-16934)。未 merge。PUSH 留後續。
-
-### **[[VP-16968]]** — `2026-06-11` — backfill type 設錯 FULL_INTEGRATION (Leo 抓到)
-
-- 我把 225 列設 FULL_INTEGRATION + result_enabled=true → 納入 result/report 投遞管線，但 order_clients 無 result config (ehr_vendor_id/sftp_result_path/sftp_host/legacy_emr_service/msh06 全 225 null; npi 缺3; emr_name/folder 只 27/225)。225 全 result-pipeline-eligible → 報告完成會被選中然後失敗。
-- root cause: 問 Leo type 選項時沒把「FULL 會啟用 result 投遞、需要 result config」這後果講明；沒從「這些是純 order 來源」反推 result 不可行。
-- Lesson: backfill/設 capability flag 前，逐一檢查該 flag 啟用的下游 pipeline 是否有足夠 config 支撐 (result_enabled→需 vendor/sftp_result_path)。enable 一個 capability = 啟用一條 pipeline。
-- 修正: UPDATE 225 (bound requested_by='VP-16968-backfill') → ORDER_ONLY, result_enabled=0, ordering=1, sftp=1。交易內驗 0 result-eligible / 0 uncovered / 225 affected。COMMITTED。backfill 腳本 artifact 同步改 ORDER_ONLY。
-- result 投遞給這些客戶 = 另案 (需真 result config 來源，order_clients/lis_emr 都沒有)。
-- 回歸驗證: 225 戶在 result_transmission_records(24530 筆) 從未以 result_client_id 出現 → 從沒走 emr-v2 result pipeline → 改 ORDER_ONLY 零 report 回歸。確認。
 
 ### **[[VP-16987]]** — `2026-06-16 17:55` — — Live prod 取證 (appserver04, leo 授權, 唯讀)
 
@@ -526,6 +517,15 @@ decode failure, see side finding). Switched to patient 3076377 (VP-17628 E2E pat
   orderable under 999997/10136). Cancelled within 30 s. Staging placements share the prod sample
   sequence — treat every 201 as real.
 
+### **[[VP-16968]]** — `2026-06-11` — **
+
+- 我把 225 列設 FULL_INTEGRATION + result_enabled=true → 納入 result/report 投遞管線，但 order_clients 無 result config (ehr_vendor_id/sftp_result_path/sftp_host/legacy_emr_service/msh06 全 225 null; npi 缺3; emr_name/folder 只 27/225)。225 全 result-pipeline-eligible → 報告完成會被選中然後失敗。
+- root cause: 問 Leo type 選項時沒把「FULL 會啟用 result 投遞、需要 result config」這後果講明；沒從「這些是純 order 來源」反推 result 不可行。
+- Lesson: backfill/設 capability flag 前，逐一檢查該 flag 啟用的下游 pipeline 是否有足夠 config 支撐 (result_enabled→需 vendor/sftp_result_path)。enable 一個 capability = 啟用一條 pipeline。
+- 修正: UPDATE 225 (bound requested_by='VP-16968-backfill') → ORDER_ONLY, result_enabled=0, ordering=1, sftp=1。交易內驗 0 result-eligible / 0 uncovered / 225 affected。COMMITTED。backfill 腳本 artifact 同步改 ORDER_ONLY。
+- result 投遞給這些客戶 = 另案 (需真 result config 來源，order_clients/lis_emr 都沒有)。
+- 回歸驗證: 225 戶在 result_transmission_records(24530 筆) 從未以 result_client_id 出現 → 從沒走 emr-v2 result pipeline → 改 ORDER_ONLY 零 report 回歸。確認。
+
 ### **[[VP-16164]]** — `2026-05-27` — **
 
 - v1 只給 practice 單一 sftp_path，漏掉 order/result pipeline 真正會用的十幾個欄位（傳輸方式/分開的 order/result path/enabled flags/legacy fields）。沒考慮 CharmEMR HTTP 模式。
@@ -574,23 +574,6 @@ Edited `src/proto/customer.proto` (`package lis`, legacy LIS host) before realiz
 ### **[[VP-15460]]** — `2026-04-28` — redlock CommonJS interop (#88)
 
 Production NestFactory crash at startup: `TypeError: redlock_1.default is not a constructor`. Root cause: `redlock@4` is plain CommonJS (`module.exports = Redlock`, no `.default`); this repo's `tsconfig.json` only sets `allowSyntheticDefaultImports`, not `esModuleInterop`, so `import Redlock from 'redlock'` compiled to `redlock_1.default` (undefined). Should have caught this at code review by recognizing redlock's package age + checking `tsconfig`.
-
-### **[[VP-16520]]** — `2026-05-28` — 把自己造成的 prisma client drift 誤判為「stale 假象」
-
-- 現象:LIS-transformer-v2 我的 branch 上 `npm run build` 跑出 18 個 `specialties` 型別錯誤(node_modules/.prisma/client v2_calendar.specialties)。schema.prisma 沒 specialties、Calendar GraphQL model 沒、我 diff 也沒。
-- 我下了「stale generated client 假象,build prebuild `prisma generate` 後就 0」的結論。
-- Leo 糾正:「不可能,npm run start:dev 100% 要過,鐵律」「以前也有過以為是別人的問題,後來是自己創的」「找,找到為止」。
-- 真因:之前在 `feature/leo/VP-16499` branch 工作時(那邊 schema 有 specialties)跑過 `prisma generate` → client 寫進 node_modules → 切到 VP-16521 branch(schema 沒 specialties)後 **client 沒重生成** → drift。**本 repo `npm run build` 的 prebuild 只是 `rimraf dist`,根本不會跑 prisma generate**(我先前以為會,完全錯)。
-- 修法:`npx prisma generate` + `npx prisma generate --schema=prisma2/schema2.prisma`(雙 client)→ build 0 → start:dev 啟動成功。
-- 教訓:已寫進 user memory `feedback_start_dev_iron_rule.md` + LTM repos.md。**「壞掉 = 自己造成的」要當預設假設**;切 branch 後不同 schema 必跑 generate 對齊雙 client。
-
-### **[[VP-16521]]** — `2026-05-28 17:50` — 分析 start:dev 走錯一輪 quick-fix（VP-16410 lesson 沒第一時間 retrieve）
-
-- **症狀**：merge 完跑 `npm run start:dev` 報 `Cannot find module '../../prisma2/generated/client2'`
-- **誤判**：第一波先做 dist 結構分析 → 提出 nest-cli assets / path-alias 等 4 個 option 問 Leo
-- **真正根因**：scripts/_send-reschedule-preview-emails.ts（VP-16521 上一輪留下的 untracked .ts）讓 tsc include 抓到 scripts/，dist 變 `dist/src/...` 嵌套（**完全跟 VP-16410 incident 同一個雷**）
-- **可預防**：Step 1 Retrieve 時 grep `failures.md` for `start:dev|MODULE_NOT_FOUND|prisma2.*client2` 應該秒中
-- **教訓**：start:dev 失敗時，**第一動作是 `ls dist/` 看頂層結構**（有沒有多/少一層 `src/`），不是 grep import path 或 prisma generate
 
 ### **[[VP-16934]]** — `2026-06-09` — 部署後 CrashLoopBackOff（我的疏失：跳過 start:dev）
 
@@ -718,6 +701,23 @@ See the lesson extracted to `long-term-memory/patterns.md`.
   My Confluence page 2485977089 (Order Intake API) still shows PascalCase
   eligibility list — needs manual edit (MCP has no page-update tool).
 
+### **[[VP-16520]]** — `2026-05-28` — **
+
+- 現象:LIS-transformer-v2 我的 branch 上 `npm run build` 跑出 18 個 `specialties` 型別錯誤(node_modules/.prisma/client v2_calendar.specialties)。schema.prisma 沒 specialties、Calendar GraphQL model 沒、我 diff 也沒。
+- 我下了「stale generated client 假象,build prebuild `prisma generate` 後就 0」的結論。
+- Leo 糾正:「不可能,npm run start:dev 100% 要過,鐵律」「以前也有過以為是別人的問題,後來是自己創的」「找,找到為止」。
+- 真因:之前在 `feature/leo/VP-16499` branch 工作時(那邊 schema 有 specialties)跑過 `prisma generate` → client 寫進 node_modules → 切到 VP-16521 branch(schema 沒 specialties)後 **client 沒重生成** → drift。**本 repo `npm run build` 的 prebuild 只是 `rimraf dist`,根本不會跑 prisma generate**(我先前以為會,完全錯)。
+- 修法:`npx prisma generate` + `npx prisma generate --schema=prisma2/schema2.prisma`(雙 client)→ build 0 → start:dev 啟動成功。
+- 教訓:已寫進 user memory `feedback_start_dev_iron_rule.md` + LTM repos.md。**「壞掉 = 自己造成的」要當預設假設**;切 branch 後不同 schema 必跑 generate 對齊雙 client。
+
+### **[[VP-16521]]** — `2026-05-28 17:50` — **
+
+- **症狀**：merge 完跑 `npm run start:dev` 報 `Cannot find module '../../prisma2/generated/client2'`
+- **誤判**：第一波先做 dist 結構分析 → 提出 nest-cli assets / path-alias 等 4 個 option 問 Leo
+- **真正根因**：scripts/_send-reschedule-preview-emails.ts（VP-16521 上一輪留下的 untracked .ts）讓 tsc include 抓到 scripts/，dist 變 `dist/src/...` 嵌套（**完全跟 VP-16410 incident 同一個雷**）
+- **可預防**：Step 1 Retrieve 時 grep `failures.md` for `start:dev|MODULE_NOT_FOUND|prisma2.*client2` 應該秒中
+- **教訓**：start:dev 失敗時，**第一動作是 `ls dist/` 看頂層結構**（有沒有多/少一層 `src/`），不是 grep import path 或 prisma generate
+
 ### **[[VP-16337]]** — `2026-04-27 23:38` — **
 
 **Root cause:** Two parallel proto trees exist in this repo:
@@ -752,13 +752,6 @@ Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`
 
 - az CLI MFA expired — could not inspect RBAC Container App directly; bounded diagnosis at the coresamples→container-app hop via error strings and timing.
 
-### **[[VP-16521]]** — `2026-05-28 17:52` — git stash push 把 MERGE_HEAD 弄丟
-
-- **症狀**：merge in-progress 時 `git stash push` → MERGE_HEAD 消失，stash pop 報 `event.service.ts: needs merge`
-- **修法**：`git merge origin/stage_test --no-commit --no-ff` 重觸發 merge state，再 `git checkout stash@{0} -- src/calendar/models/event/event.service.ts` 把 stash 內的 resolved 版本拉回，最後 `git stash drop`
-- **教訓**：merge in-progress 時禁用 `git stash`；要保存 in-flight diff 改用 `git diff > /tmp/wip.patch` + 該 file 個別 checkout
-- **更好做法**：根本不該為了 "比較 pre-merge lint baseline" 中斷 merge state — 直接看 origin/feature 上的 ESLint baseline 即可，或先 commit 中間態再分析
-
 ### **[[VP-16766]]** — `2026-05-27` — **Minor TS slip**：`_apply` 腳本初版用 `${ehr.created_at = now}`（賦值表達式）想偷塞欄位，TS2339 編譯失敗。改成直接 `${now}`。教訓：raw SQL 的 template binding 不要塞賦值/副作用，值先算好再代入。
 
 
@@ -779,11 +772,6 @@ Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`
 - sendOrder with sampleId=0 self-assigns a correct id (70/74 zero-id orders succeeded). The stuck rows are occasional sendOrder failures on that path.
 - coresamples v2 GenerateSampleID sequence is ~311k STALE: live probes returned ids 2277991-2278000, ALL existing patient samples in lis_core_v7.sample. A field-name-only fix would inject colliding ids → order path must NOT consume this RPC until their sequence is repaired (needs a coresamples-team ticket).
 - Fix on branch: finalizer skips pre-generation (sends 0 explicitly), client reads correct field + rejects invalid, [RETRY-EXHAUSTED] loud log, decrement floored. 21/21 targeted tests pass, build clean.
-
-### **[[VP-17217]]**
-
-- 首次 build TS2322：provider 陣列 union 型別 → 加 `Provider[]` 顯式型別修正。
-- spec 原以 class token 注入 → 改 inbound token 才能解析。
 
 ### **[[VP-17283]]**
 
@@ -813,6 +801,18 @@ None this session.
   a commit message body. Fixed by amend before push. Rules: heredoc
   (`git commit -F - <<'MSG'`) for any commit message with punctuation;
   grep -P '[^\x00-\x7F]' the message and changed files before commit.
+
+### **[[VP-16521]]** — `2026-05-28 17:52` — **
+
+- **症狀**：merge in-progress 時 `git stash push` → MERGE_HEAD 消失，stash pop 報 `event.service.ts: needs merge`
+- **修法**：`git merge origin/stage_test --no-commit --no-ff` 重觸發 merge state，再 `git checkout stash@{0} -- src/calendar/models/event/event.service.ts` 把 stash 內的 resolved 版本拉回，最後 `git stash drop`
+- **教訓**：merge in-progress 時禁用 `git stash`；要保存 in-flight diff 改用 `git diff > /tmp/wip.patch` + 該 file 個別 checkout
+- **更好做法**：根本不該為了 "比較 pre-merge lint baseline" 中斷 merge state — 直接看 origin/feature 上的 ESLint baseline 即可，或先 commit 中間態再分析
+
+### **[[VP-17217]]** — **
+
+- 首次 build TS2322：provider 陣列 union 型別 → 加 `Provider[]` 顯式型別修正。
+- spec 原以 class token 注入 → 改 inbound token 才能解析。
 
 ---
 
@@ -1011,36 +1011,6 @@ billing（見上一節）。這是本次驗證的範圍上限，已在 PR #316 �
 - 修正: 手動 SQL `UPDATE order_clients SET customer_id = 5408 WHERE id = 2278`
 - 可預防: 是。未來執行 insert-order-client.ts 後必須驗證 customer_id 是否正確
 
-### **[[VP-16232]]** — `2026-04-20 14:30` — **Failure 1: 用 crm.contacts 而非 gRPC**
-
-- Error: 4,480 筆在 crm.contacts 找不到
-- Assumption: crm.contacts 有所有 customer 資料
-- Root cause: crm.contacts 只有部分 customer（可能只有 sales contacts），不是權威資料源
-- Fix: 改用 gRPC GetCustomer
-
-**Failure 2: 命名格式錯誤**
-- Error: 把 patient calendar 改成 "{name}'s Provider Calendar"
-- Assumption: 沒有確認現有命名慣例
-- Root cause: 沒有先查看已存在的 patient calendar 命名格式（應為 "{NAME}'s Patient Calendar"）
-
-**Failure 3: gRPC endpoint 錯誤**
-- Error: CORE_SAMPLE_V2_RPC (10.224.0.53:8084) → ECONNREFUSED
-- Assumption: .env 裡的值可以直接用
-- Root cause: 沒有先讀 lis-code-agent/knowledge/emr-integration.md，那裡明確記載 gRPC endpoint 是 192.168.60.6:30276
-- Fix: 用 knowledge 裡記載的 endpoint
-
-**Failure 4: NestJS createApplicationContext + gRPC**
-- Error: gRPC @Client decorator 在 CLI 模式不初始化，且 PublicBookingService.onModuleInit crash
-- Assumption: 可以用 NestJS context 跑 gRPC migration
-- Root cause: createApplicationContext 不啟動 microservice transport
-- Fix: 改用 @grpc/grpc-js + proto-loader 直接建立 gRPC client
-
-**Failure 5: 沒有使用 lis-code-agent knowledge**
-- Error: 整個過程都沒有查 knowledge 目錄
-- Assumption: 可以靠 .env 和 codebase 自己找到答案
-- Root cause: 不知道/忽略了 lis-code-agent 的知識庫系統
-- Fix: 任何 gRPC/migration 任務先讀 knowledge/
-
 ### **[[VP-16329]]** — `2026-04-27 23:00` — **Failure: 第二次重跑 36816 INSERT 觸發 duplicate constraint error。**
 
 Root cause: 第一次跑時我用 `tail -50` 截取 output，後段顯示 record 資料但沒看到「✅ Successfully inserted」字樣（卡在 record dump），誤判沒成功就重跑。
@@ -1073,6 +1043,36 @@ Root cause: 第一次跑時我用 `tail -50` 截取 output，後段顯示 record
 ### **[[VP-18050]]**
 
 - GraphQL wire spec first asserted the resolver's clinic-user gate using a patient token that carried `patient_id` + `barcode` but no `clinic_id`. `AuthGuard.validatePatient` rejected it one layer earlier ("Missing required patient identifiers"), so the test proved nothing about the resolver. Fixed by giving the token the identifiers the guard requires, so the request actually reaches the gate under test. Cheap instance of a general trap: a rejection test that passes for the wrong reason looks identical to one that passes for the right reason.
+
+### **[[VP-16232]]** — `2026-04-20 14:30` — **
+
+- Error: 4,480 筆在 crm.contacts 找不到
+- Assumption: crm.contacts 有所有 customer 資料
+- Root cause: crm.contacts 只有部分 customer（可能只有 sales contacts），不是權威資料源
+- Fix: 改用 gRPC GetCustomer
+
+**Failure 2: 命名格式錯誤**
+- Error: 把 patient calendar 改成 "{name}'s Provider Calendar"
+- Assumption: 沒有確認現有命名慣例
+- Root cause: 沒有先查看已存在的 patient calendar 命名格式（應為 "{NAME}'s Patient Calendar"）
+
+**Failure 3: gRPC endpoint 錯誤**
+- Error: CORE_SAMPLE_V2_RPC (10.224.0.53:8084) → ECONNREFUSED
+- Assumption: .env 裡的值可以直接用
+- Root cause: 沒有先讀 lis-code-agent/knowledge/emr-integration.md，那裡明確記載 gRPC endpoint 是 192.168.60.6:30276
+- Fix: 用 knowledge 裡記載的 endpoint
+
+**Failure 4: NestJS createApplicationContext + gRPC**
+- Error: gRPC @Client decorator 在 CLI 模式不初始化，且 PublicBookingService.onModuleInit crash
+- Assumption: 可以用 NestJS context 跑 gRPC migration
+- Root cause: createApplicationContext 不啟動 microservice transport
+- Fix: 改用 @grpc/grpc-js + proto-loader 直接建立 gRPC client
+
+**Failure 5: 沒有使用 lis-code-agent knowledge**
+- Error: 整個過程都沒有查 knowledge 目錄
+- Assumption: 可以靠 .env 和 codebase 自己找到答案
+- Root cause: 不知道/忽略了 lis-code-agent 的知識庫系統
+- Fix: 任何 gRPC/migration 任務先讀 knowledge/
 
 ### **[[VP-16720]]** — `2026-06-01` — **
 
@@ -1251,6 +1251,17 @@ None that cost rework. Two near-misses worth naming:
 **教訓 (c)**：輸出看起來被亂改時，先懷疑自己的命令，再懷疑環境。我上次（Jira link 事件）
 的正確答案是「顯示層」，這次同樣的直覺是錯的 —— 前一次的結論不是這一次的先驗。
 
+### **[[VP-18303]]**
+
+- Ran `git checkout origin/main -- .` inside the main `lis-backend-emr-v2` checkout, which was on
+  `feature/leo/VP-18085-menu-section`. Overwrote the worktree with origin/main content while HEAD
+  stayed on the feature branch. Restored with `git reset HEAD -- . && git checkout -- .` (the tree
+  had been clean, so nothing was lost). Lesson: to read another ref, make a worktree — never
+  `checkout <ref> -- .` in a checkout that is on a different branch.
+- Nearly claimed that Cerbo silently drops oversized files, on the grounds that the 24.1MB
+  2607136250 push of 2026-07-28 never reached the archive. Checked first: same-filename overwrites
+  before the next pickup explain the gap just as well. Not evidence. Reported as a risk, not a fact.
+
 ---
 
 ## Test / mock / spec <a id='test-mocking'></a>
@@ -1276,7 +1287,7 @@ None that cost rework. Two near-misses worth naming:
 
 ## gRPC / network / timeout <a id='grpc-network'></a>
 
-### **[[VP-16521]]** — `2026-05-28 17:53` — IDE diagnostics 不穩（mcp__ide__getDiagnostics 連續 timeout）
+### **[[VP-16521]]** — `2026-05-28 17:53` — **
 
 - 試 2 次都 timeout，改跑 `npx eslint <file>` CLI 直接拿同樣結果
 - 教訓：WebStorm 抓 lint 等於 eslint + prettier；agent 端不要等 IDE diagnostics，CLI 更快更穩
