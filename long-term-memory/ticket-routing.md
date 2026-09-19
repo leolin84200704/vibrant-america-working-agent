@@ -6,7 +6,7 @@ status: active
 score: 0.1126
 base_weight: 0.7
 created: 2026-04-22
-updated: 2026-09-11
+updated: 2026-09-18
 links:
 - rules
 tags:
@@ -92,3 +92,10 @@ summary: Ticket keyword to repo/module routing table
 - **"order summary / requisition PDF 隨 order 或 result 送 SFTP"** → emr-v2 order-time（`ehr_vendors.sftp_order_forms_path`，`order_attachment_records`）/ result-time（`deliver_order_summary_pdf`，`result_attachment_records`）（VP-18138）
 - **"trans / portal API 太慢 / p95 / 優化 / cloud-local-proxy"** → LIS-transformer（v1，`/v1/...`）/ LIS-transformer-v2（`/v2/portal/trans-service`）；計畫與量測在本 repo `docs/plans/trans-optimization/`，追蹤票 VP-18276；shipping / interactive-report / core 造成的尾巴不在 trans 範圍
 - **"BioInsights / devcom 整合"** → STM `BIOINSIGHTS-onboarding`；vendor 46，尚無任何 order 落地
+
+## 2026-09-18 新增路由（dream；VP-18288 / VP-18303 / TRANS-OPT / BIOINSIGHTS）
+- **"vendor 收到的是 Classic 不是 Personalized / report_option 沒生效 / 換了報告樣式還是舊的"** → 先查 `result_transmission_records.integration_request_id` 是哪一列在推，再用 `file_size_bytes` 重建每次推送的 PDF 大小對 `pdf-cache/download/{accession}?style=classic|advanced`（emr-integration.md 2026-09-18）；config 表沒有歷史。通常不 repush。
+- **"result push API 504 / manual repush timed out / generate 端點 gateway timeout"** → 先查 rtr + vendor SFTP（推送多半已完成），再談修法；gateway-free 路徑是 on-prem gRPC `192.168.60.6:31317 ResultGenerationService`。`/lisapi` 的 ~90 s 是 origin 切的，owner 未找到。
+- **"/proxy/grpc/* 或 /proxy/old-report/* 退役 / 誰還在打 proxy / cloud-local-proxy 拆除"** → LIS-transformer `ProxyController` + `ProxyCallerLogInterceptor`（`@operation:proxyGrpcCaller`），分類與每條端點的家在 Confluence 2697166874，票 VP-18320（due 2026-10-09）。退役證據看 15 天 caller composition，不看零窗口。
+- **"BioInsights / devcom 的 order 沒進來 / customer_not_found=Balandan"** → hl7 7126 / quarantine 13：placeholder NPI 1234567，正確 NPI 1730269200；重送必須換檔名。下一關 emr_code_not_found（catalog 待 Zhenhe）。
+- **"診所新 provider 的 EMR order 沒下 / customer_not_found 但 practice 其他人正常"** → quarantine 11/12 樣態（NPI 在 ehr_integrations 與 core customer 皆 0 筆）→ add-provider playbook（`emr-order-customer-resolution` skill），需人決定；quarantine 會到期。

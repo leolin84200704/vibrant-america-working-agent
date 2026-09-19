@@ -2629,3 +2629,52 @@ Atlassian MCP 斷線時的 fallback：`~/src/credential/atlassian-api-token.md`�
 
 ### emr-v2 rollout 的固定雜訊
 - 每次 Jenkins roll `lis-emr-v2-deployment-prod` 都會在啟動那 1–2 秒留下 24–36 行 `ECONNREFUSED ::1:6379 / 127.0.0.1:6379`（09-08、09-09、09-10、09-13、09-15 每次都有），之後 0 行。是 startup 期 Redis client 預設 localhost 的雜訊；不要把它算成 deploy 回歸。
+
+## 【蒸餾 2026-09-18】量測儀器、退役證據、canary 與 PR 的工法（TRANS-OPT / VP-18262 / VP-18276 / VP-18303 / VP-18138 / VP-18048）
+
+### Datadog：span 是取樣的，log 才是計數器（TRANS-OPT 09-17）
+- 對照窗 976 次真實 `/proxy/grpc/*` 請求只留下 4 個 span（≈0.4%），所以「用 span search 說舊路只剩 ≤1 次」是拿解析度不足的儀器報稀疏事件。trans v1 對每個 request/response 都寫 log（`@url:/proxy/grpc/*` `@request_type:Request`），**計數用 log，看單一 trace 結構才用 span**。
+- 錯誤 span 被 error retention filter 幾乎完整保留 → **分子可信、分母不可信**，不要用取樣分母算錯誤率（09-16 的「11 倍」就是這樣算出來的）。
+- Datadog log retention **15 天**（查 35 天最早只回到 09-03，flex 一樣）。短窗的 scalar p95 會塌向 p50，8–33 分鐘窗不能宣稱改善（factory #83）。
+- 命名空間：trans v1 在 `default`（`lis-trans-service:3146`），transv2 在 **`transv2`**（ConfigMap `lis-transv2-config`）。
+
+### 退役一個端點要的是 caller composition，不是 absence（TRANS-OPT 09-18，Leo 打回）
+- 46.5 小時兩個零窗口撐不起「可退役」——我自己在風險表寫過「月批次、排程 job」卻沒套用。拉滿 15 天後看到的是**不同種類的證據**：`getTestStatus` 與 `getQuestionaireBySampleId` 每天 lockstep（差 ≤1），`getKitStatus` 穩定 2 倍 → 單一 caller 的固定 per-sample 樣式；第二個消費者存在的那天 lockstep 就會斷。零窗口只能證明「那段時間沒人打」，樣式才能證明「誰在打」。
+- 反例也在同一批：`getPatientTestsResult` 15 天平盤 1–5/天、切換完全不影響 → 從來不在遷移路徑上（我先前寫「大概同一個 caller」是錯的，已在 PR/頁面更正）；`listTnpCode` 15 天全 0 **且切換前就是 0**、63 個本機 repo 零呼叫者 → 可退（注意 `LIS-backend-results-grpc` 的同名 `listTnpCode` 是下游實作不是 caller）。
+- 判定「三退三留」：退 getTestStatus / getQuestionaireBySampleId / listTnpCode；留 getKitStatus / getPatientTestsResult（未識別 caller）/ sendSkinPlacePatientOrders（billing 要改指過來，它是整併終點）。流程：公告（補上 log 看不到的那一類，明說「不確定也請留言，log 只留 15 天」）→ 兩週 → 動手；VP-18320 due 10-09。
+- 搬 proxy 不是純轉發：要一起帶 `createMetadataForCoresampleV2` 的 JWT→gRPC metadata 轉譯、`getKitStatus` 的 proto3 補值（`packages`→`[]`）、error/Sentry 層；`sendSkinPlacePatientOrders` 還改寫 `comments = julien_barcode`。caller 講不了 gRPC（Java/Python/on-prem script）就得留橋 → 終局是「五條消失＋一條變統整點」。
+- Ray 確認 `/proxy` 與 cloud-local-proxy 是 2023 年 DNS 未通時代的產物；要刪的是**重複的轉發層**，不是**認證邊界**（`/trans/*` 與 transv2 是產品 API；PHI 目的地是 gRPC-only 的 core 或 `secure/nologin` 地上報告伺服器，「直接打目的地」對叢集內服務成立、對終端使用者不成立）。分類規則：叢集內服務 + metadata → 直打 gRPC；前端 + metadata → transv2（現成 `PNSResolver.getKitStatus`）；前端 + PHI ownership gate → trans v1 `/trans/*`。
+- `/proxy/old-report/*` 11 條只有 `downloadTestOrderPDF` 活著（15 天 20,715 次 ≈1,380/天，是 `/trans/` 正式版的 14 倍，caller 未識別），真正下游是 **lis-order**（`url_order_summary_new` + `_redraw` 兩份 PDF 並行抓→四路分支→合併），不是報告伺服器 → 搬去 base-report-service 是錯的，正解 lis-order。同名 `transService.downloadTestOrderPDF`（打地上 60.77:8081）是另一個方法。**活的競態**：PDF 寫到 `process.cwd()`、檔名只由 sample_id 組成，同 sample 並行請求會互相 `unlinkSync`。
+
+### log-only interceptor 的「不影響現狀」要用 object identity 斷言（TRANS-OPT #800/#801）
+- `ProxyCallerLogInterceptor` 記 user-agent / x-forwarded-for / x-real-ip / remote_address / route / method / JWT userId（operation `proxyGrpcCaller`），**刻意不記 query string**（sample_id/patient_id）與 bearer；try/catch + detached `.catch()`，logger throw / log write reject 都不能影響回應（有 test）。
+- `/proxy/old-report/*` 回 `StreamableFile`。證明 interceptor 沒包 response：`return next.handle()` 無 pipe/tap，測試斷言 `expect(returned).toBe(handlerObservable)`——**identity 才是「不緩衝、不延遲、不重送」的那個性質**，斷言值只證明這一次沒壞。
+- 疊 PR（#801 base = #800 的 branch）避免同功能兩份檔；GitHub 在 base merge 後自動 retarget。但 `.github/workflows/ci-tests.yml` 只在 `pull_request: branches: [main, stage_test]` 觸發 → **stacked PR 在 retarget 前不跑 CI**，回報只能說「本機全綠」。
+- 09-18 22:55Z 上線後 ~2.5 h `proxyGrpcCaller` 0 筆——與同窗 0 次 `/proxy/grpc/*` 一致，是「沒被打到」不是壞了；預期 ~0.6/h，隔天再看。
+
+### Confluence 共用帳號下的 409：用 strip-tag diff 分辨正規化與真人編輯（TRANS-OPT 09-18）
+- PUT 回 409（live v2、我只發過 v1）時**不要直接覆蓋**：version 歷史 authorId 與 token 同帳號分不出人 → 用本地 markdown 重建 v1、與 live v2 各轉純文字後 diff。差異只有一處（有人刪了 Asks 第一條的 "Ray — "），其餘是編輯器正規化（`local-id`、entity、table width）。照著保留對方的編輯再發 v3。
+- 頁面版本：2684321795 shipped-changes v10、2697461770 phased plan v3、2696740867 phase-1 detail v2、2697166874 classification v3。
+
+### Jira 操作邊界（VP-18262 結案）
+- claude.ai Atlassian connector 09-18 起回 **403 "The app is not installed on this instance"**（JQL 亦然）→ dream 改走 agent `.env` 的 JIRA_* REST（`/rest/api/3/search/jql`、`/issue/{key}?expand=changelog`）。
+- `mcp__vibrant__get_jira_metadata(transitions)` 對票回空陣列 = MCP service account 沒 transition 權；**comment 可用 MCP 發（顯示 "Jira agent"），transition 與 remote link 要用 Leo 的 token 直打 REST**。調查／計劃票收 `Done`（同系列 VP-18276、VP-18080），有 code 要 QA 的才收 `Dev Complete`（VP-18197）。
+
+### git / 工具坑（VP-18303 / TRANS-OPT）
+- **絕不在停在別的 branch 的 checkout 裡 `git checkout <ref> -- .`**：會把 working tree 覆成該 ref 而 HEAD 不動（VP-18303 對 `feature/leo/VP-18085-menu-section` 的 main checkout 幹了這事，`git reset HEAD -- . && git checkout -- .` 救回，前提是樹乾淨）。要讀另一個 ref 就開 worktree。
+- 讀別的 repo 下結論前先確認 checkout 新舊：本機 va-portal 落後 origin/main 115 commits，第一次 grep 對的是過期的樹；改 `git grep origin/main`。
+- PR 落後 main 一律 `git merge origin/main` 進 branch，不 rebase（rebase 要 force-push，禁止）。commit message 含反引號用 `-m` 會被 shell 吃掉 → heredoc。
+- GitHub runner 跑 Nest/ts-jest 大 suite：預設 heap ~2 GB 讓 worker 整輪在 GC（`--runInBand` OOM exit 134；`--workerIdleMemoryLimit` 讓 worker 被 SIGTERM）。**要 headroom 不要 ceiling**：`--maxWorkers=2` + `NODE_OPTIONS=--max-old-space-size=4096` + `--forceExit` + `timeout-minutes: 25`，v2 1636 s（失敗）→ 92 s、v1 1031 s → 63 s。gate 第一次跑就抓到本機抓不到的 bug（macOS heap 較大），這是 gate 的存在理由。main 的 branch protection 要把 `typecheck + unit tests` 設 required 才算 gate。
+- trans v1 `grpc.service_config`：把 `name: [{service:'lis'}]` 改成能比對的形式會**同時**啟用旁邊的 `retryPolicy`（maxAttempts 5、UNAVAILABLE/UNKNOWN），套用到整個 channel 包含 `CreatePatientV2`、`UpdatePatientInformantWithWriteBack` 等**非冪等寫入** → #792 是刪 retryPolicy 不是搬。deadline 值先量再選（7 天 p95 < 10.3 s → default 60 s，三個寫入 240 s）。coresamples client 沒有 service_config 也沒有 per-call deadline，keepalive 是偵測靜默斷線的唯一機制（#634 caveat）。
+- 兩個行為變更**刻意分開落地**（v1 deadline 22:00:37Z、v2 切 grpc 22:03:16Z），出事才分得清；切換驗證三條證據：新路徑出現、舊路徑消失、客戶面 errors/restarts 0。ConfigMap 改完要逐 pod `printenv` 確認，不是只看 ConfigMap。
+
+### canary 要用 app 自己的 producer（VP-18138 #422）
+- 用 raw `new Queue()` enqueue 的 canary 不繼承 module 的 `defaultJobOptions`（attempts 0 → 立即失敗、無重試），證明不了 app 實際用的 producer。要驗 retry：用 deployed dist 的同一組 options enqueue，或直接讀 `/app/dist/...module.js` 的 `registerQueue({...})`。順手發現的 nit：`onFailed` 對沒帶 attempts 的 job 印 `attempt 1/0`（`?? 1` 接不到 BullMQ 的 0）。
+- AKS prod emr-v2 pod `POD_ROLE=all` + `REDIS_HOST=localhost`（sidecar）→ enqueue 與 worker 同 pod；on-prem intake pod 才是 FOLLOWTHATPATIENT 真正跑的地方，image tag 只能從 replicaset hash 變化推論（無 on-prem context、on-prem log 不進 Datadog）。
+
+### transv2 staging 的自鑄 JWT（VP-18048 09-16 live round-trip）
+- staging `trans-service-st` 用 **dev secret**（`secretOrKeyDev`，HS256）；`secretOrKeyProd` 在 staging 回 `Invalid token`。clinic token `{user_id, customer_id, clinic_id, user_roles:['provider'], email_log_in_id}`；patient token `{patient_id, clinic_id, barcode, role:'patient'}` 且 **patient_id 必須等於 `v2_calendar.calendar_owner_id`、clinic_id 等於 `practice_id`**，否則先在 service 層被 FORBIDDEN "Patients can only access their own patient calendar" 擋下（在 field gate 之前）。
+- prod 0 筆非 NULL internal_notes → 只有 staging（calendar_dev_new，FE 測試寫的 3 筆）能 demo；clinic token 看到 `internal_notes`，patient token 拿 `null`、其餘欄位相同。含簽好 token 的腳本只留 scratchpad，不 commit。
+
+### 建新 endpoint 前先盤既有介面（VP-18303 PR #424 關閉的原因）
+- 我在「REST 一定超過 gateway 預算所以必須非同步」的前提下開了 202 + status endpoint；Leo 決定同步後，diff 471 行 0 刪除、剩下的兩件事（非同步觸發、查狀態）**gRPC 介面早就有**、零部署。Leo 一句「所以這個有什麼幫助嗎」收掉。寫 REST feature 前先看 proto。

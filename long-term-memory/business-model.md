@@ -3,7 +3,7 @@ id: business-model
 type: ltm
 category: technical
 status: active
-score: 0.6683
+score: 0.6794
 base_weight: 0.9
 created: 2026-06-07
 updated: 2026-06-07
@@ -53,6 +53,7 @@ links:
 - VP-17870
 - VP-18048
 - VP-18050
+- VP-18303
 - VP-9299
 - business-model-deep
 - emr-integration

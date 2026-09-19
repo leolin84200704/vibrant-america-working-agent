@@ -3,7 +3,7 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 1.6211
+score: 1.6335
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-09-11
@@ -124,6 +124,7 @@ links:
 - VP-18185
 - VP-18243
 - VP-18270
+- VP-18288
 - fhir-api
 tags:
 - emr
@@ -1961,3 +1962,36 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 - devcom（Olena Momotko，BA）替 BioInsights 建整合，email thread「Integration with Vibrant Wellness」（CC lisa/travis/tracie/paola @bioinsights.com、Tianhao Wang、liana.vinichuk @devcom）；09-09 說存取可用、問 4 題（法務文件、bidirectional/EMR-vs-provider、含 CPT+LOINC 的 test catalog、剩餘步驟），09-14 說被 block。
   prod：ehr_vendors 46 BIOINSIGHTS is_public=0（07-23 起未動）；1 列 ehr_integrations（JAG 30248/132493 FULL LIVE）；hl7_file_input **零列** → 從未有 order 落到 /outgoing/。方向慣例（orders=/outgoing/、results=/incoming/）vendor 仍未確認。
   Leo 立場：無法務文件；bidirectional yes、「provider level」（agent 建議改寫成 per-provider NPI onboarding，不是單一 provider 限制）；catalog 找 Zhenhe。
+
+## 【蒸餾 2026-09-18】報告樣式爭議的位元組重建法、manual push 504 的真相、order-time forms 的競態與檔名（VP-18288 / VP-18303 / VP-18138 / BIOINSIGHTS）
+
+### 「vendor 說收到的是 Classic 不是 Personalized」——用傳出的 artifact 重建，不要考古 config（VP-18288，P2P / ChiRho clinic 4676）
+- `ehr_integrations` **沒有歷史**：`updated_at` 不自動更新、`ehr_integration_notes` 只有 LIS-7716 的 PATCH 路徑會寫、`last_modified_by` 常停在 2026-05 的 VP-16617 清理。「送出當時 report_option 是什麼」從 config 表答不出來。
+- 但每筆 `result_transmission_records` 都留有 `file_size_bytes`（整個 HL7 檔）與 `generated_hl7_content`（PDF base64 換成 36 字元 placeholder），所以
+  `implied_pdf_bytes = (file_size_bytes − (CHAR_LENGTH(generated_hl7_content) − 36)) × 0.75` 可還原每一次推送的 PDF 位元組數；再從 `pdf-cache/download/{accession}?style=classic|advanced` 抓兩種樣式現貨比對，殘差固定 ~24 bytes → 逐筆判定 CLASSIC / PERSONALIZED（`advanced` 就是 "Personalized Report – All Markers"，pdftotext 可見 `Nutrient Zoomer - All Markers` 段）。
+- **壓縮會抹掉樣式訊號**：POWER2PRACTICE 不在 `FileSizeValidationService.vendorCompressionThresholds`，落到 DEFAULT 10 MB 壓縮門檻；來源 PDF > 10 MB 的推送經 `AdobePdfCompressionService` 壓到 ~18–22%，兩種樣式壓完比例一樣 → 單筆大檔無法用大小判定。**挑同批次的鄰居**（同 integration、47 秒後、夠小沒被壓）來回答同一個問題。
+- 判定前先看 `result_transmission_records.integration_request_id`：clinic 4676 有兩列 LIVE（4477 CLASSIC / 4478 PERSONALIZED），LIS-7716 的「sibling LIVE row 蓋掉設定」在這裡**不成立**——CLASSIC 列 0 筆 rtr。別先怪 sibling。
+- 結論類型：config 正確、artifact 正確 → **不 repush、不改 config**（repush 會把同一份文件再塞進病歷，不可逆且無效）。剩下的只有接收端能答：P2P 病歷裡 Aug 27–28 的 Classic 是切換前的真 Classic，provider 往下捲會看到。`acknowledgment_status` 對 P2P 永遠 PENDING，我們沒有回條。
+
+### manual result push 回 504 = **回報失敗，不是推送失敗**（VP-18303，customer 4953 MDHQ/Cerbo）
+- `POST /result/generate/{sampleId}` handler 同步 await 整條 generate + SFTP；`/lisapi` 前面的 origin 約 **90 s** 就切（不是 Cloudflare——Cloudflare 自己的 timeout 是 **524**，Cloudflare 品牌的 504 頁代表 **origin** 回了 gateway timeout；頁面 timestamp 對上 rtr 的 generation_started_at 就能算出切點）。推送照樣跑完：兩張 accession 都已在 `/rcode/results/`，大小與 `file_size_bytes` 完全相同。
+- **收到「timed out」抱怨先查 rtr + vendor SFTP，再決定要不要 repush**；盲 repush 會重複投遞。Cerbo 取檔是 vendor 節奏，取走的檔搬到 `/rcode/results/archive/{accession}_{YYYYMMDDHHMMSS}.hl7`，drop folder 有幾天沒取走的檔是常態不是異常。
+- 為什麼慢（perf follow-up 素材）：`sftp.service.ts` `uploadChain` 把**所有** outbound 上傳串成單一 promise chain（VP-17217 單例 client 的代價），一筆推送會排在別家 vendor 的流量後面；每次上傳 connect→put→disconnect（單次 connect 實測 4.5 s）；同大小不同 vendor 差 ~40×（vendor 3 = 1.0 s、vendor 1 = 20.9 s、vendor 8 = 47 s）。generation 2–68 s 的長尾**與檔案大小無關**，PDF-download backoff 假說被直方圖否定（沒有 10/30/70 s 聚集）。`total_processing_time_ms` 只算 generation 不含 transmission，所以 504 在資料裡看不出來。
+- 不用經過 gateway 的路徑（**已對 prod 驗證**）：on-prem NodePort `192.168.60.6:31317` `resultgeneration.ResultGenerationService`（proto `src/proto/result-generation.proto`，無 auth guard，deadline 由 client 設，建議 300 s）。`GetResultStatus(sample_id)` 是零副作用探針；`GenerateResultHl7(sample_id=不存在, send_result=false)` 回 "No result-enabled integration found for customer 0" 代表該 pod 過了 `isPusher` guard 可以真的推。`api.vibrant-america.com/v1/lis/emr-service/...` 走 AKS ingress（300 s）是另一條未測的 workaround。Leo 的方向：**同步等到結束回 200、把 gateway 預算拉高**（gateway owner 未找到——AKS 無 `www.vibrant-america.com` ingress、on-prem nginx 60.6 也沒有該 vhost）。
+- 側發現（未修、未開票）：`FileSizeValidationService` 對 MDHQ/Cerbo 的 15 MB 上限只 log 不擋，24.2 MB 照送（90 天內只有 customer 4953 兩筆超標）；manual/API push 的 `push_scope_key` 為 NULL → 一個合併檔，**忽略 `result_push_level=PER_REPORT_GROUP`**（自動 pipeline 是每 scope ~5 MB 一檔）；sample 2618571 report_finished 08-22 之後**從未被自動推送**過，可能是靜默漏推那一類。`lookup_sample_id` MCP 對存在的 accession 回 "No sample found"——**負結果不可信，退回 SQL**。
+
+### order-time forms：向 order-management 要 PDF 會撞到 async mirror 的延遲（VP-18138 續，prod 8b8e625 → 1d72a0b）
+- 第一批真 vendor 測試單（hl7 7123/7124，Prospera 站 3）PDF 全 FETCH_ERROR 500：`no order found for sample`。**競態不是 config**：HL7 下單走 legacy path，order-management 靠 `new_order` consumer 非同步鏡射，`TIMESTAMPDIFF(hl7_file_input.last_parse_time, lis_ordermanage.orders.created_at)` 718 筆實測 min 31 s / avg 44 s / max 126 s（≤120 s 覆蓋 99.86%）。
+- 修法 #422：intake hook 改成 enqueue BullMQ `order-forms-delivery`（jobId `order-forms-{hl7_file_input_id}` 防重送；首次延遲 `ORDER_FORMS_DELIVERY_DELAY_MS` 120 s，attempts 4，exponential 120 s → ~14 分鐘尾巴）。**不能 in-process sleep**：`process-hl7-file` queue concurrency 預設 1，睡在裡面會卡住所有 vendor 的進單。FETCH_ERROR/UPLOAD_ERROR 重試，SKIPPED/DELIVERED 結束；每次嘗試仍寫 `order_attachment_records`。
+- 檔名 #425：vendor 說 accession 對他們在下單時沒意義 → `{orderId}_{accession}_ordersummary.pdf`（Leo 選 B，保留 accession 因為 20 家診所共用一個資料夾、6 筆測試單不足以證明 ORC-2 全域唯一）。orderId 來源本來就有：ORC-2 → `parser.service.ts` `specimenId` → `emr_sample.emr_order_id`。**vendor 文字進檔名前要 sanitize**：`SftpService.uploadVendorFileImpl` 只 collapse 斜線；`sanitizeOrderId` 採 accept-or-drop（`^[A-Za-z0-9][A-Za-z0-9._-]*$`、64 字元），**修補會製造 vendor 找不到的假 id，丟掉退回 accession 名比較對**；`emrOrderId` 做成 required nullable 讓漏接線的 caller 在 compile 期被抓。
+- FOLLOWTHATPATIENT 的 HL7 ORC-12 帶的是**customer id 不是 NPI**（6263 / 43262），是該 vendor 既有慣例。AKS pod 打 vendor SFTP `64.124.9.100:2224` **TIMEOUT**（只有 on-prem egress 通），手動補送要從本機／on-prem。
+- 範圍警語：forms 只掛在 HL7 intake；Next-Health 真正的流量絕大多數是 **portal 下單**（382/382 result push 無 emr_sample、90 天只有 5 張 HL7 單），portal 單今天完全沒有 summary。Leo 已問「以後都會以這樣的形式嗎」，未決。
+- 09-18 稽核：deployed code 對 vendor 44 至今 **0 筆 DELIVERED**（兩張真測試單是手動補送的；canary 全走 vendor 2 自家 SFTP）。決定性證據仍是下一張真 Prospera 單。
+
+### BioInsights：第一個 order 檔終於落地，死在 placeholder NPI（2026-09-17/18）
+- devcom 的 `vibrant-test-order.hl7` 由 cloud pod 於 09-17 14:30Z 從 `/outgoing/` 取走並歸檔（archive 流程 live 驗證）；`hl7_file_input` 7126，5 次 parse 全 `customer_not_found=Balandan`，quarantine 13 OPEN。ORC-12 / OBR-16 / MSH-4 都是 `1234567`（placeholder），該 integration 唯一 NPI 是 1730269200（JAG）。**dedup 以檔名為鍵**：vendor 修好後必須換檔名重送，否則不會再被處理。下一關會是 `emr_code_not_found`——OBR-4 用 vendor 本地碼（3200 重複用在 3 個 test），catalog 還在 Zhenhe 手上。IN1-2.1=C 對得上其中一個選項；MSH-12 2.5 vs 列上 2.3 不是 blocker。
+- 側發現：`/incoming/` 躺著 ~150 個 customer 30248 的結果檔（07-29 起，P2P+BioInsights 雙投遞的產物），vendor **從未取走** → 結果消費沒在發生；P2P 列退場決定仍懸著。
+- Datadog 的 "Test code exceeds 50 characters ... test_id=7126" 是 test_id 不是 hl7_file_input id，純巧合。
+
+### 「診所新加 provider，VA 端沒帳號也沒 integration」的 quarantine 樣態（hl7 7099 / 7119，MDHQ Upstream Functional Medicine）
+- 同一個 ORC-12 NPI 1316086630（NPPES：Johnny Elbert Davis PA-C，地址與診所一致）在 `ehr_integrations`（任何 status）與 core `customer` 皆 0 筆 → quarantine 11（09-14，expires 09-21）與 12（09-16）都 OPEN，兩張病人單沒下。同 practice peer（customer 9889 Jeff Hunter，`/ufm/`）正常。處置 = add-provider playbook（`emr-order-customer-resolution` skill），需要人決定；quarantine 到期會靜默過期。

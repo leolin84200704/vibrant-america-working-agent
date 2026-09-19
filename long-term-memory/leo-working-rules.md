@@ -396,3 +396,34 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 - **Leo 開「紀錄票」會立刻自己關**（VP-18276：10:31 建、10:34 Done，description 就是交付物）——closeout audit 把它當文件票看（deploy 與量測都在票上），不要當「還沒 live 的功能」。但它底下的 remaining ops（S2 切 grpc、kit 切 inprocess、cleanup）**還開著**，STM 保持 active。
 - **票關了工作沒關**：VP-18138 在 09-11 就 Done，order-time 整段功能 09-15 才在同一張票號下部署；VP-18270 20 分鐘 Done、零 comment；VP-17812 從 Dev Blocked 直接 Done，reporter 的反問沒回。
   三張都是 Leo 自己的票——agent 能做的是：每次 scope 變更 / 部署後**起草一則結案 comment 給 Leo 貼**，STM 記「已起草、未貼」。
+
+## Leo 本週的決定與打回（2026-09-16 ~ 09-18；證據 TRANS-OPT / VP-18303 / VP-18138 / VP-18288 / VP-18262）
+- **「以後都要等到結束回 200」**（VP-18303）：manual result push 維持同步、把 gateway 預算拉高，不做 202 fire-and-forget。我沒把 201 改成字面 200（無謂的合約破壞），已標給他 override。
+- **「沒辦法確保資料是一模一樣的，不要切」**（kit inprocess）：agreement count 不是等價證據；重開條件是 provenance（證明兩邊讀同一份記錄），不是更長的 shadow。
+- **「這種應該要先看 datadog 這 14 天的流量不是嗎」**（proxy 退役）：退役證據要 caller composition（整個 retention 窗的樣式），不是兩天零窗口。
+- **「可以分類 + 要求下游搬不是嗎」／「每個你認為不該 remove 的都可以有比較好的方向」**：caller 身分未知只決定走哪個分支，不決定有沒有方向；doc 裡每一條端點都要有 destination，「blocked on caller identity」不是一個答案。
+- **「可以直接做，但是一定不能影響到現在的狀況」**（#801 串流路由上的 log-only interceptor）→ 用 object identity 斷言證明沒包 response，並在 PR 明講 CI 未跑（stacked PR）。
+- **「所以這個有什麼幫助嗎」**（PR #424）：功能既有介面已提供就關 PR，不要為了「已經寫了」硬 merge。
+- **「寫公告、兩週後做、建票 deadline 三週」**（VP-18320）：退役的節奏——公告的目的是補上 log 看不到的那一類 caller。
+- **Jira comment 的「只起草不發」規則本週三次明確例外**（VP-18303「發」、VP-18262「comment 發」、VP-18288 的 188045 也發了）：共同點是內容為**驗證結果**（artifact 證據 + 對方能自行核對的路徑）。預設仍是起草；Leo 說發才發，STM 要記「Leo 授權」——VP-18288 的 STM 漏記了，dream 09-18 補。
+- **Leo 讀到 Ray 的回覆後要的是英文 Confluence doc**（分類 + 每條端點的家 + 要求下游 migrate），不是 STM 或聊天裡的分析；doc 上不寫真人名字被人刪掉後照著保留（改中性的 "Ingress access logs —"）。
+
+## 收窄前提的三次打回 + Done 早於工作（cross-ticket review 2026-09-18；證據 VP-17812 / VP-18138 / VP-18270 / VP-18276 / VP-18288 / VP-18303 / VP-18262）
+
+本輪 7 張結案（含 1 張 Inactive），ground truth 全部對上：4 次 emr-v2 main merge Jenkins 全綠、AKS prod 在 1d72a0b、374/374 result push TRANSMITTED、intake 9/9；trans v1/v2 每次 main merge 的 Actions deploy 全 success、S2 切 grpc 後 0 客戶面錯誤。沒有 prod 事故。系統性樣態三個：
+
+**1. 我的第一個推論鏈三次被一個 artifact 或 Leo 的一句話推翻**——同一種錯誤，三個票：
+- VP-18303：我用「Cloudflare 100 s 天花板」建了整套建議；Leo 貼的 504 頁一看就是 origin 504（Cloudflare 自己是 524），切點是 ~90 s 不是 ~60 s。**一個 artifact 勝過三個工具輔助的推論。**
+- TRANS-OPT：46.5 小時零窗口 → 「可退役」；Leo 問 14 天 → 15 天 lockstep 才是關於 caller **組成**的證據；同時發現 `getPatientTestsResult` 我先前歸因錯了。
+- VP-18138：真 vendor 測試單 PDF 全 500，我先想 config；量了 718 筆才知道是 order-management mirror 慢 31–126 s 的競態。
+規則：**先找現存的 artifact（錯誤頁、傳出的檔案大小、整個 retention 窗的 log），再開始推論**；零／缺席只能證明「沒觀察到」。VP-18288 是這條做對的版本——config 沒歷史，就用 `file_size_bytes` 重建每一次推送，挑同批鄰居回答被壓縮抹掉訊號的那一筆。
+
+**2. 先建再查既有介面**：VP-18303 的 PR #424（471 行）在 gRPC 早已提供同樣能力的情況下開出來，Leo 一問就關。姊妹案是 VP-18138 的 sanitizer 第一版「修補」壞 id（test 抓到 `/abs/path`→`abspath` 是個 vendor 找不到的假 id）。規則：**新 surface 之前先列 proto / 既有 endpoint；處理不可信輸入時丟掉優於修補。**
+
+**3. Done 早於工作、票面零紀錄——上輪的規則本輪再犯 4/7**：
+- VP-18138 09-11 Done 後又 3 次 deploy（DDL、delayed job、檔名），票上 0 筆 agent/Leo comment；VP-18270 20 分鐘 Done 0 comment（reporter Mingxi 要的「找出其他受影響 order」= 190 列 backfill 只在 STM）；VP-17812 從 Dev Blocked 直接 Done、Zhenhe 的反問沒回；VP-18276 是 Leo 自己的紀錄票（0 comment 可接受）。
+- 另一面：VP-18288 / VP-18303 / VP-18262 三張**有** posted comment，全是 Leo 授權後由 agent 發的驗證結果——票面品質明顯好於前四張。
+- VP-18303 收 `Inactive`（done category）而不是 Done：root cause（gateway 90 s）沒修、四個側發現沒 owner；reporter 下次同樣會撞到。
+規則（承 09-03、09-11）：**每次 scope 變更／部署後起草一則英文結案 comment 給 Leo 貼**；別人開的票（Mingxi / Xiaoye / Zhenhe）Done 時票上必須有一則說明「做了什麼、在哪裡可以看到」；Inactive/Done 前列出未完成項與 owner。dream 對「Done 早於工作」的票**跟 STM 不跟票**——VP-18138 這次就是靠 STM 才審到三次 deploy。
+
+好的樣態（保留）：VP-18270 / VP-18138 的 prod 寫入全部三連驗證（in-tx、第二連線、獨立 read-only 帳號）並留 canary 證據列；VP-18138 canary 抓到自己 canary 的缺陷（raw Queue）後重做而不是宣稱過；TRANS-OPT 每次被打回都在 PR body / Confluence / STM 三處同步更正，不留舊說法。

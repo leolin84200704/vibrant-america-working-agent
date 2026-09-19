@@ -3,7 +3,7 @@ id: calendar-clinicalteam-reset-accession
 type: stm
 category: technical
 status: active
-score: 0.0064
+score: 0.0058
 base_weight: 0.9
 created: 2026-06-18
 updated: 2026-06-18

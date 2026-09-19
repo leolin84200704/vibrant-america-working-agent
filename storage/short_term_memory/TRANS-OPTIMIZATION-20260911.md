@@ -17,7 +17,7 @@ tags:
 - vp-18152
 - core-v1-retirement
 created: 2026-09-11
-updated: 2026-09-18
+updated: '2026-09-18'
 links:
 - CONFLUENCE-2684321795
 - INCIDENT-20260518
@@ -73,13 +73,14 @@ links:
 - VP-18048
 - VP-18050
 - VP-18276
+- VP-18303
 - VP-9299
 - business-model
 - business-model-deep
 - failures
 - repo-catalog
 - repos
-score: 0.765
+score: 0.7763
 ---
 
 # Summary
@@ -489,3 +490,8 @@ Leo：「可以直接做，但是一定不能影響到現在的狀況」→ old-
 **CI 沒有跑，而且是預期的**：`.github/workflows/ci-tests.yml` 的觸發是 `pull_request: branches: [main, stage_test]`，#801 target 的是 feature branch 所以不觸發。**等 #800 merge、GitHub 自動 retarget 到 main 之後才會跑**。在那之前唯一的證據是本機那次全綠——回報時要講清楚，不能說「CI 綠」。
 
 **流量理由（寫進 PR body）**：`/proxy/old-report/downloadTestOrderPDF` 15 天 20,715 次（≈1,380/天、真實客戶），其餘 10 條 0。#800 蓋不到它，而它正是三個待定歸屬裡最大的一個。
+
+### [2026-09-18 dream] VP-18262 + VP-18276 closeout audit — both PASS as documentation closures; #800 live, caller logging not yet exercised
+- **VP-18262** (Investigation & Plan): Leo Dev In Progress -> Done 09-18 13:52 PDT; comment 188370 (three Confluence links + remote links) is the deliverable. PR #800 merged to main 22:55Z AFTER Done; `lis-transformer-deploy-prod` run on 9264e9e success; 3 trans v1 pods on image 9264e9e, 0 restarts, error lines = only kafkajs ECONNRESET / ioredis ETIMEDOUT (known deploy-era noise). `@operation:proxyGrpcCaller` = **0 lines in ~2.5 h** on all 3 pods — consistent with 0 `/proxy/grpc/*` hits in the same window (one pod: 94 `/proxy/old-report/downloadTestOrderPDF` hits, 0 grpc), so "not exercised yet", not "broken". Expected ~0.6 hits/h; check after a full day. #801 (old-report attribution) still OPEN, stacked on #800's branch; CI will only run once GitHub retargets it to main.
+- **VP-18276** (Phase 1-2 record ticket): Done 09-15 10:34 PDT by Leo, 0 comments, description = shipped table. All 8 PRs merged, every main merge's deploy run success (v1 last 5f79b52 09-15 02:08Z; v2 832ce95 09-14 22:56Z). Post-close ops recorded here, not on the ticket: S2 switched to grpc 09-16 22:03Z (3 pods printenv grpc tonight, 0 error lines in 3 h), kit inprocess declined by Leo 09-16, #792 deadline + #793 has_report fix live 09-16/17. transv2 pods on ac96c57 (2d3h, 0 restarts). No health signal firing.
+- Dependents: no STM carries `unblocked_by` / `unblock_when` naming VP-18262 or VP-18276.

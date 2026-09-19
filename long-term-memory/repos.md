@@ -3,7 +3,7 @@ id: repos
 type: ltm
 category: technical
 status: active
-score: 1.1694
+score: 1.1806
 base_weight: 0.9
 created: 2026-04-22
 updated: 2026-09-11
@@ -91,6 +91,7 @@ links:
 - VP-17870
 - VP-18048
 - VP-18050
+- VP-18303
 - VP-9299
 - business-model
 - business-model-deep
@@ -301,3 +302,8 @@ sudo prompt 用 `echo <pw> | sudo -S <cmd>`。Heredoc 內含 `[^...]` 之類 exp
 - **LIS-Shipping**（Vibrant-America/LIS-Shipping）：agent GitHub 帳號 `permissions.push=false`，org `allow_forking=false` → 不能開 branch 也不能 fork PR；
   交付 = `git format-patch`（VP-18185 patch 存於 `storage/short_term_memory/VP-18185-lis-shipping-aa65b0b3.patch`）。`LIS_EMR_GRPC_URL` 指向死的 legacy emr port 31316（詳 emr-integration.md 2026-09-11）。
 - 跨 repo 計畫前先 `gh api repos/{owner}/{repo} --jq .permissions.push`（同 va-portal 教訓）。emr-v2 `push:true`。
+
+## 【更新 2026-09-18】trans v1 / v2 部署與 CI 邊界
+- **LIS-transformer**（v1）：ns `default`，Service `lis-trans-service:3146`，deploy Actions `lis-transformer-deploy-prod`（main）/ `-staging`（stage_test）；**LIS-transformer-v2**：ns `transv2`，Actions `frontend-service-graphql`（main）/ `-st`。兩邊 `ci-tests.yml`（tsc + jest，`needs: [test]` 擋 buildImage）只在 `pull_request` 到 `main`/`stage_test` 觸發 → stacked PR 在 retarget 前無 CI。
+- v1 proxy 家族現況（2026-09-18）：`/proxy/grpc/*` 六條（getTestStatus / getQuestionaireBySampleId / listTnpCode 待退，getKitStatus / getPatientTestsResult 有未識別 caller，sendSkinPlacePatientOrders 是 billing 的整併終點）；`/proxy/old-report/*` 11 條只有 `downloadTestOrderPDF` 活著（下游 lis-order，非報告伺服器），與 `trans-reports.controller.ts` 的 `/trans/*` 共用 `OldReportProxyService`。報告家族終點是 `LIS-Report/base-report-server`，`/trans/*` 只是 holding position。
+- transv2 `TRANS_PROXY_GRPC_MODE=grpc`（09-16 22:03Z 起）、v1 `TRANS_TIMELINE_KIT_MODE=shadow`（inprocess 被 Leo 否決）。v1 gRPC service_config 自 #792 起真的生效（default 60 s、三個寫入 240 s，retryPolicy 已刪）。
