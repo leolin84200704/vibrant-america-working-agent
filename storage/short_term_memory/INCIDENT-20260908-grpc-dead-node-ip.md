@@ -27,7 +27,7 @@ links:
 - VP-17217
 - VP-17312
 - VP-18303
-score: 0.1336
+score: 0.1293
 ---
 
 # INCIDENT 2026-09-08 — result pushes failing: gRPC targets pointed at a dead AKS node IP

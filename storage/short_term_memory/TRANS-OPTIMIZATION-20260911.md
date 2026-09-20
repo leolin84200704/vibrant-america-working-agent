@@ -17,7 +17,7 @@ tags:
 - vp-18152
 - core-v1-retirement
 created: 2026-09-11
-updated: '2026-09-18'
+updated: '2026-09-19'
 links:
 - CONFLUENCE-2684321795
 - INCIDENT-20260518
@@ -495,3 +495,12 @@ Leo：「可以直接做，但是一定不能影響到現在的狀況」→ old-
 - **VP-18262** (Investigation & Plan): Leo Dev In Progress -> Done 09-18 13:52 PDT; comment 188370 (three Confluence links + remote links) is the deliverable. PR #800 merged to main 22:55Z AFTER Done; `lis-transformer-deploy-prod` run on 9264e9e success; 3 trans v1 pods on image 9264e9e, 0 restarts, error lines = only kafkajs ECONNRESET / ioredis ETIMEDOUT (known deploy-era noise). `@operation:proxyGrpcCaller` = **0 lines in ~2.5 h** on all 3 pods — consistent with 0 `/proxy/grpc/*` hits in the same window (one pod: 94 `/proxy/old-report/downloadTestOrderPDF` hits, 0 grpc), so "not exercised yet", not "broken". Expected ~0.6 hits/h; check after a full day. #801 (old-report attribution) still OPEN, stacked on #800's branch; CI will only run once GitHub retargets it to main.
 - **VP-18276** (Phase 1-2 record ticket): Done 09-15 10:34 PDT by Leo, 0 comments, description = shipped table. All 8 PRs merged, every main merge's deploy run success (v1 last 5f79b52 09-15 02:08Z; v2 832ce95 09-14 22:56Z). Post-close ops recorded here, not on the ticket: S2 switched to grpc 09-16 22:03Z (3 pods printenv grpc tonight, 0 error lines in 3 h), kit inprocess declined by Leo 09-16, #792 deadline + #793 has_report fix live 09-16/17. transv2 pods on ac96c57 (2d3h, 0 restarts). No health signal firing.
 - Dependents: no STM carries `unblocked_by` / `unblock_when` naming VP-18262 or VP-18276.
+
+### [2026-09-19 dream] RE-CHECK: `proxyGrpcCaller` after a full day — the unknown `/proxy/grpc/*` caller is `lis-setting-consumer` (namespace `setting`)
+- Window: 27 h of prod trans v1 logs (3 pods on 9264e9e, 0 restarts) = **6 `proxy_grpc_caller` events** (5 `getKitStatus`, 1 `getPatientTestsResult`), ~0.22/h — same order as the 15-day span estimate (~0.6/h), no other `/proxy/grpc/*` route hit. `/proxy/old-report` in the same window: 288 hits across 3 pods (#801 still OPEN, base still the merged #800 branch, CI never ran).
+- Every event: `user_agent=axios/1.4.0`, `user_id=0` (no JWT), `x_forwarded_for=null`, `x_real_ip=null`, `remote_address=::ffff:10.224.{1.184,0.24,1.79}` → service-to-service over ClusterIP, not via ingress. `kubectl get pods -A -o wide` maps all three IPs to `setting/lis-setting-consumer-7dc8bdd8df-{fjnvp,x9cvq,f9zdj}` (image c3e166d = repo HEAD 09-16, 8 pods, 0 restarts).
+- Code confirmed in `LIS-setting-consumer` (c3e166d): configmap `lis-setting-consumer-config` sets `proxy_getkit` / `proxy_getresult` to `http://lis-trans-service.default.svc.cluster.local:3146/proxy/grpc/{getKitStatus?sample_id=,getPatientTestsResult?patient_id=}` (the repo `.env` still has the public `www.vibrant-america.com/lisapi/v1/lis/cloud-proxy/grpc/...` URLs — prod overrides them; `proxy_getteststatus` exists in `.env` only, no prod key, matches the two zero windows for `getTestStatus`).
+  - `getKitStatus` ← `setting-consumer.controller.ts` `getKitShip()` (~L8823) ← `bull.consumer.ts` `@Process()` of `notify_patient_when_not_return_kit_after_days` (L323/367) and of `notify_patient_ship_to_patient_confirm` (L1609/1654).
+  - `getPatientTestsResult` ← `getPatientTest()` (~L9159) ← `getTestNameWithTNPReason()` (L8917) ← `consume_notify_patient_when_basic_redraw()` (L4431).
+- Consequence for VP-18320: the two "keep until caller found" routes now have one owner. Retirement = point `lis-setting-consumer` at the gRPC client (or the transv2 route) via configmap + code, then retire both routes; no external caller seen in 27 h. Not acted on — work-session decision (Leo's announce-then-retire cadence). No ticket comment posted.
+- Health in window (2026-09-19T01:52Z → 09-20T01:35Z): 40 result pushes all TRANSMITTED, 1 MDHQ order parsed, emr-v2 prod pod 0 error lines / 0 restarts.

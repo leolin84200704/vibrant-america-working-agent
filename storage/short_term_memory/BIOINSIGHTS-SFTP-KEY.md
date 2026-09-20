@@ -113,7 +113,7 @@ links:
 - VP-18288
 - emr-integration
 - fhir-api
-score: 0.1935
+score: 0.1872
 ---
 
 # BIOINSIGHTS-SFTP-KEY — key-based SFTP auth support

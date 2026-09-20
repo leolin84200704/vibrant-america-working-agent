@@ -6,7 +6,7 @@ status: active
 score: 0.2079
 base_weight: 0.8
 created: 2026-04-22
-updated: 2026-09-11
+updated: 2026-09-19
 links:
 - INCIDENT-20260528
 - INCIDENT-20260529
@@ -2678,3 +2678,9 @@ Atlassian MCP 斷線時的 fallback：`~/src/credential/atlassian-api-token.md`�
 
 ### 建新 endpoint 前先盤既有介面（VP-18303 PR #424 關閉的原因）
 - 我在「REST 一定超過 gateway 預算所以必須非同步」的前提下開了 202 + status endpoint；Leo 決定同步後，diff 471 行 0 刪除、剩下的兩件事（非同步觸發、查狀態）**gRPC 介面早就有**、零部署。Leo 一句「所以這個有什麼幫助嗎」收掉。寫 REST feature 前先看 proto。
+
+## 【更新 2026-09-19】歸因叢集內呼叫方：remote_address = pod IP（TRANS-OPT #800 一日觀察）
+- 只記 log 的 interceptor（`proxyGrpcCaller`）在 27 h 內抓到的每一筆都是 `user_id=0`、`x_forwarded_for=null`、`x_real_ip=null`、`remote_address=::ffff:10.224.x.x`。這組特徵 = **service-to-service 直打 ClusterIP，沒經過 ingress**，所以 header 歸因全空是預期，不是 interceptor 壞掉。
+- 歸因步驤：`kubectl get pods -A -o wide | grep <ip>` 把 pod IP 對回 namespace/pod（AKS pod CIDR 10.224.0.0/16；node IP 也在同段，先查 pods 再查 nodes）→ 進該 repo 找 env/configmap 裡的 URL（`kubectl get configmap -n <ns> <name> -o json`；**prod configmap 常覆寫 repo `.env` 的公網 URL 成 `*.svc.cluster.local`**，只看 repo 會誤判成外部呼叫方）→ grep `process.env.<key>` 找呼叫點，再往上找 `@Process()`/`@Processor('queue')` 或 consumer 方法名。
+- 這次結果：`/proxy/grpc/getKitStatus` 與 `getPatientTestsResult` 的唯一呼叫方是 `setting/lis-setting-consumer`（BullMQ `notify_patient_when_not_return_kit_after_days`、`notify_patient_ship_to_patient_confirm`、`consume_notify_patient_when_basic_redraw`）。retire 前要先改它的 configmap + client。
+- 陷阱：configmap `-o json` 會把含密碼的 DB URL 一起印出來——過濾 key 再印，不要整份貼進 log / STM。
