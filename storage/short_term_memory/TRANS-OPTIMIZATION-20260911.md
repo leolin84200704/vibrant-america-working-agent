@@ -533,3 +533,26 @@ Leo：「繼續做 doc 裡面的每一步」＋「看 Vibrant-America org 所有
 **教訓**：文件裡「已完成」的宣稱，只要對象是叢集狀態，就必須回叢集重讀才算數；而發現不一致時，先假設是自己的記錄錯，不是環境漂移。
 
 **產出**：Phased Plan 頁 **v4 → v5** 新增 §6「Consumer inventory and migration runbook」——逐 key 寫 today → change to → 要帶走什麼（metadata、proto3 packages 正規化、payload rewrite）。Phase 1 頁 **v3**。VP-18320 的 comment 草稿寫進 `jira-drafts-20260918.md`（Draft 3，**未發**——Leo 上次只授權了 VP-18262 那一則，沒有概括授權）。
+
+### [2026-09-21 13:30]
+Leo 授權四件：發 VP-18320 comment、推進 staging 身分驗證、推進 skin 死 key 刪除、**VP-18152 直接做**。本輪完成前兩項中的第一項與 VP-18152 的量測。
+
+**VP-18320 comment 已發**（188522）：caller = LIS-setting-consumer、兩個儀器的封閉清單、skin 是死碼、提議併入 10 條零流量 old-report 路由。
+
+**VP-18152 重新量測（14 天，`@event:core_v1_http_request`）—— scope 比票面小很多**：
+
+| trans 呼叫點 | core v1 路由 | 14 天 axios 流量 |
+|---|---|---|
+| `list_customer_by_id_carlos` | `/api/clinic/list-customer-by-id/:clinic_id` | **活的**（數千筆） |
+| `create_patient` | `/api/patient/create-patient` | **0**（該路由在全域資料裡完全沒出現） |
+| `create_patientv2` | `/api/patient/create-patient-new` | **1** |
+| `LOG_IN_VIA_SESSION` | `/api/user/login_via_session` | **0**（完全沒出現） |
+
+→ **10-31 之前真正必須遷的只有 1 個呼叫點**，不是 4 個。另外三個要用跟 proxy 同一套標準處理：`create_patient` 掛在 `createPatientBatch` 批次路徑上，**14 天看不到月週期**，所以是「公告＋確認」不是「假設已死」。
+
+**又一次判別失誤，這次自己抓到**：我先用 repo 的 axios 版本當 trans 的指紋（v1 `^1.6.0`→1.13.6、v2 `^1.12.2`→1.16.0），看起來對得很漂亮。但 `/api/user/lis_log_in` 有 121 筆 `axios/1.16.0`，而**兩個 trans repo 都沒有引用 `lis_log_in`** → **axios 版本能縮小範圍但不能識別身分**，別的服務可能跑同一版。改用 VP-18140 log 自己的 `remote_ip` 才算數。
+→ 通用形式：**用「共享的技術特徵」（library 版本、UA、語言）當身分證，會在有第二個同款使用者時靜默錯誤**。要用「該服務獨有的東西」——pod IP（且要驗 pod 生命期）、專屬 env、專屬路由。這是本 session 第二次踩同類（第一次是 pod IP 回收）。
+- 附帶：VP-18140 log 的 `service_name` 欄位是 `unknown`，`jwt_sub` 是空字串——Zhibin 09-10 提過的歸因缺口仍然存在，所以只能靠 `remote_ip`。
+- 14 天內 `list-customer-by-id` 出現 **120+ 個不同 pod IP**，pod 汰換太頻繁，無法逐一解析；但這不影響 scope 結論。
+
+**未完成（下一輪）**：staging 驗 `/trans/downloadTestOrderPDF` 身分解析；skin 死 key 的四個 ConfigMap 刪除（staging 先）。先做 VP-18152 量測是因為它有 10-31 的外部硬期限。
