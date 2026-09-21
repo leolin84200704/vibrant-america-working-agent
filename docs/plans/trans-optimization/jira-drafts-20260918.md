@@ -50,3 +50,24 @@ Note: this changes an epic description that the PM owns, so it is a draft rather
 VP-18261 (Yekai, the twin half) was re-dated to **2026-09-24** on 09-17 and is still Dev To Do.
 VP-18262 is still due **2026-09-18**. Should this one move to 09-24 to match, or close on today's
 delivery with Yekai's half following separately? Changing the due date is a Jira field edit, so it waits.
+
+---
+
+## Draft 3 — comment on VP-18320 (2026-09-21, not posted)
+
+> **The caller is identified: `LIS-setting-consumer`.**
+>
+> The attribution logging from LIS-transformer #800 has been live since 2026-09-18. In a window where every pod predated the traffic, **100% of `/proxy/grpc/getKitStatus` requests come from `lis-setting-consumer`** — all three replicas, `axios/1.4.0`, no `x-forwarded-for`, so in-cluster. Its live environment confirms it independently and names three more:
+>
+> - `proxy_getkit` → `/proxy/grpc/getKitStatus`
+> - `proxy_getresult` → `/proxy/grpc/getPatientTestsResult`
+> - `url_downloadTestOrderPDFv2` → `/proxy/old-report/downloadTestOrderPDF`
+> - `skin_placepatientorders` → `/proxy/grpc/sendSkinPlacePatientOrders` (configured, no traffic observed in 15 days)
+>
+> A scan of every ConfigMap in the production cluster plus a GitHub code search across all 138 repos in the org closes the list: the only other consumers are trans v2 (three stale keys it no longer reads, plus `skin_placepatientorders` which it does) and `LIS-backend-billing` (a hard-coded cloud-proxy URL). No other repo or service is configured to call these routes.
+>
+> **Nothing changes for this ticket's three routes.** `getTestStatus`, `getQuestionaireBySampleId` and `listTnpCode` are still at zero and still on track for removal on 2026-10-02.
+>
+> **Proposed widening:** add the ten unused `/proxy/old-report/*` routes to this ticket — everything except `downloadTestOrderPDF`, which `lis-setting-consumer` uses ~1,380 times a day. They are at zero over the full 15-day window and each duplicates an existing `/trans/*` route served by the same in-process service class, so removing them deletes a duplicated surface rather than a capability. If that widening is unwelcome, they can take their own ticket instead.
+>
+> Per-consumer migration steps are in the runbook: https://vibrantamerica.atlassian.net/wiki/spaces/LIS/pages/2697461770

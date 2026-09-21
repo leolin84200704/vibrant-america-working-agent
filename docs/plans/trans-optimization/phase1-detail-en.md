@@ -25,7 +25,7 @@ This doc is detailed enough to cut tickets from. Each work item below is one tic
 |---|---|---|
 | **S1** — `checkIfPersonalizedReportCanBeCreated` | trans v2 addresses the report server directly instead of hopping through `cloud-local-proxy` | 58 real samples compared old path vs new inside a prod pod: status and body identical on all 58 (38 `false`, 20 `true`) |
 | **S2** — kit / test-status / questionnaire | trans v2 calls gRPC directly instead of calling trans v1 over HTTP to reach the same gRPC service | Shipped behind `TRANS_PROXY_GRPC_MODE` with a shadow mode; switched to `grpc` 2026-09-16 22:03 UTC. Since the switch: 0 client-facing request errors, 0 pod restarts, 0 `DEADLINE_EXCEEDED`, and 1 gRPC error in 24.4 h that belongs to a pre-existing downstream class |
-| **S6** — trans v1 dead config | 14 keys pointing at a retired cloud-proxy URL with 0 code reads, removed | grep proved 0 reads; removal ran staging-first |
+| ~~**S6** — trans v1 dead config~~ | **Not shipped.** This row previously said the 14 unread cloud-proxy keys had been removed. A full cluster ConfigMap scan on 2026-09-21 found all 14 still present in `lis-trans-config`, and in `lis-trans-config-st` too — so this was never executed, not executed-then-reverted | — |
 | gRPC deadlines | Both services' core channels now have a real deadline; a retry policy that never applied was deleted rather than kept | — |
 
 The flag branches from S2 stay in place for now. They are the rollback path, and deleting them trades a three-minute recovery for a redeploy. They come out in item **P1-F** once the gRPC path has held a normal week.
@@ -53,7 +53,11 @@ Per batch:
 **Rollback:** restore the previous key value — seconds, one key.
 **Size:** 6 batches × ~0.5 day = **3 days**.
 
-### P1-B — trans v2: delete the 8 unread config keys
+### P1-B — delete the unread config keys in both services
+
+**Scope corrected 2026-09-21.** This item was written as v2-only because v1's 14 keys were believed done. They are not (see §2), so P1-B covers both: **14 keys in `lis-trans-config`** pointing at `…/lis/cloud-proxy/…`, and **8 keys in `lis-transv2-config`** pointing at `192.168.10.153:8081`. Both sets have 0 code reads; both have `-st` twins that change first.
+
+### P1-B (original text) — trans v2: delete the 8 unread config keys
 
 **Problem.** 8 keys in `lis-transv2-config` (`Get_Requisition`, `url_GenerateBatchReqOrReportV2` and 6 others) point at `192.168.10.153:8081`, an on-prem address that is not reachable from AKS at all. Code reads: **0**. They are the v2 equivalent of the 14 already removed from v1.
 

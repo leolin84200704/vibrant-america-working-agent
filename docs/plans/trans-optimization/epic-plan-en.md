@@ -133,7 +133,52 @@ Dates for Phase 1 are firm enough to commit; later ones are targets that firm up
 
 ---
 
-## 6. Open items that need a decision or another team
+## 6. Consumer inventory and migration runbook
+
+Two instruments were used, because neither alone is sufficient. **GitHub code search across all 138 repos in the `Vibrant-America` org** finds callers that hard-code a URL, but cannot see a value that lives only in a Kubernetes ConfigMap. **A scan of every ConfigMap in the production cluster** finds those, but cannot see a repo that is not deployed there. Run together on 2026-09-21, they agree, and the result is a closed list.
+
+Code search returned exactly two repos outside the trans services themselves: `LIS-backend-billing` (a hard-coded cloud-proxy URL) and `LIS-setting-consumer` (its own docs and a source comment). Everything else that matched — `LIS-Shipping`, `LIS-backend-results-*`, `LIS-backend-coreSamples`, `LIS-Sample`, `lis-backend-emr-v2`, `LIS-Report` — matched on gRPC *method names* that those services **implement**. They are downstream of the proxy, not callers of it. `Vibrant-knowledge` and `knowledge-graph` are documentation mirrors.
+
+### Who is actually configured to call the proxy
+
+| Consumer | ConfigMaps | Keys pointing at a proxy | Evidence |
+|---|---|---|---|
+| **LIS-setting-consumer** | `lis-setting-consumer-config`, `-local-config`, `-st-config`, `-local-st-config` | 4 each | **Confirmed by traffic.** In a window where every pod predated the traffic, 100% of `/proxy/grpc/getKitStatus` requests came from its three replicas (`axios/1.4.0`, no `x-forwarded-for`, so in-cluster) |
+| **LIS-transformer-v2** | `lis-transv2-config`, `-st` | 4 | Three are stale — the code is mode-gated to `grpc` and reads none of them. `skin_placepatientorders` is still read |
+| **LIS-transformer (trans v1 itself)** | `lis-trans-config`, `-st` | 14, all `…/lis/cloud-proxy/…` | 0 code reads. **See the note below — these were reported removed and are present** |
+| **LIS-backend-billing** | — (hard-coded in source) | 1 | `ProZOrderServiceImpl.java:115`, addresses the on-prem cloud-proxy |
+
+> **A correction this scan produced.** The Phase 1 page listed trans v1's 14 dead cloud-proxy keys (item S6) as already removed. They are all present in `lis-trans-config` today — and also in `lis-trans-config-st`, which rules out the "removed, then reverted by a `kubectl apply`" explanation, because a staging-first removal would have left staging clean. S6 was never executed; it was recorded as shipped in error, and the Phase 1 page has been corrected. The work itself is unchanged and small: delete 14 keys that no code reads. The lesson is the reason Phase 0 wants ConfigMap drift detection — cluster state is not verifiable from a document, and a claim about it has to be re-read from the cluster.
+
+### Runbook — what each consumer changes, and to what
+
+**LIS-setting-consumer** — the only confirmed live consumer, and the owner of the busiest proxy route. Four keys, in all four ConfigMaps (prod, st, local, local-st — staging first).
+
+| Key | Today | Change to | What must come with it |
+|---|---|---|---|
+| `proxy_getkit` | `lis-trans-service…:3146/proxy/grpc/getKitStatus?sample_id=` | LIS-Shipping gRPC `getKitStatusBySampleId` | The metadata construction (`createMetadataForCoresampleV2`) and the proto3 normalisation that turns an omitted `packages` into `[]` — omitting the latter is Sentry #68038 |
+| `proxy_getresult` | `…/proxy/grpc/getPatientTestsResult?patient_id=` | test-connect gRPC | The same metadata construction |
+| `url_downloadTestOrderPDFv2` | `…/proxy/old-report/downloadTestOrderPDF` | **Interim:** same host, path `/trans/downloadTestOrderPDF`. **Target:** lis-order, once it owns the endpoint | Both routes enforce sample ownership, but they differ in identity resolution — the proxy route reads `req.user` only, the `/trans` route uses `resolveIdsForHttpOptional`, which falls back to query arguments when a claim is absent from the JWT. setting-consumer authenticates with a service token whose `user_id` is `0`, so **verify on staging that the trusted-internal bypass resolves the same way on both routes before switching** |
+| `skin_placepatientorders` | `…/proxy/grpc/sendSkinPlacePatientOrders` | `crmapi` directly | The payload rewrite (`comments` is set from `julien_barcode`) and the forwarded `Authorization`. **Configured but with no observed traffic in 15 days — confirm it is used at all before migrating; if not, delete the key** |
+
+**LIS-transformer-v2** — two ConfigMaps.
+
+| Key | Today | Change to |
+|---|---|---|
+| `proxy_getkit`, `proxy_getteststatus`, `proxy_getQuestionaire` | trans v1's proxy routes | **Delete.** The code selects gRPC directly and reads none of them; they are the stale keys Phase 1 item P1-F removes alongside the `TRANS_PROXY_GRPC_MODE` branches |
+| `skin_placepatientorders` | trans v1's proxy route | Still read. Follows the same destination as setting-consumer's: `crmapi` directly, carrying the payload rewrite |
+
+**LIS-transformer (trans v1)** — delete all 14 `…/lis/cloud-proxy/…` keys from `lis-trans-config` and `-st`, after confirming the 0-read finding against current `main`. No code change.
+
+**LIS-backend-billing** — replace the hard-coded `…/lis/cloud-proxy/grpc/sendSkinPlacePatientOrders` at `ProZOrderServiceImpl.java:115` with a direct `crmapi` call, carrying the payload rewrite. Needs a ticket on that team; the on-prem cloud-local-proxy cannot be scaled to zero until it lands.
+
+### Sequencing note
+
+Nothing above should move before the route it targets is confirmed. Two of the four setting-consumer keys are ready to plan now; `downloadTestOrderPDF` wants the staging identity check first; `skin_placepatientorders` wants a usage check first. Staging ConfigMaps change before production in every case, and the previous value is recorded in the ticket so a rollback is a single `kubectl edit`.
+
+---
+
+## 7. Open items that need a decision or another team
 
 1. **Branch protection** on `main` in both repos, marking the test job as required. One-time admin action.
 2. **On-prem ingress access logs** for `cloud-local-proxy` — needed to finish the retirement and not available from this side.
