@@ -640,3 +640,18 @@ Leo merge 了 setting-consumer #176，要求 deploy 後測試再進行下一步�
   → **直接換 gRPC，所有沒帳號的 customer 會從 Pending 翻成 Created**，是畫面上看得到的錯誤。
 - 可以從 code 自身推斷 HTTP 確實回空值：否則 Pending 分支是死碼。
 - **所以映射時必須把 `user_id === 0` 正規化成「無值」**——與 S2 當初那條 proto3 `packages → []` 同一類（proto3 的預設值吃掉了「缺值」語意）。shadow 應該是拿來確認乾淨，而不是拿來發現這件事。
+
+### [2026-09-21 21:20]
+Leo：「1. 要（重跑 deploy） 2. 不動，等他（VP-18152 是 Zhibin 的票）」。重跑並驗證完成，VP-18152 停手。
+
+**重跑成功並驗證（一次部署同時驗兩件事）**：
+- run 35639933793 rerun → success 21:06:09Z；live image `24d8c5c` = #176 merge commit；三個新 pod 1/1、restarts=0。
+- **正向證據**：prod request URL 現在帶 `&clinic_id=10697` / `45218` / `139823`——真實且各異的值（來自 sample 的 `order.clinic_id`），不是佔位符。
+- **零行為變更**：部署後 **Request 28 / Response 28，全部 200**，完美配對。
+- **prod ConfigMap 刪 skin key 的第一次實際生效**：新 pod 內 `skin_placepatientorders` unset、`inventory_url_skin` 還在、沒有崩。刪 key 那步到此才算真的驗證完（先前只有 staging）。
+- 錯誤判讀：新 pod 3 分鐘 32 筆 error-level，但 17 筆是 `check order tag`——查 Datadog 發現它部署前每小時 271–1,832 筆，是既有的高頻應用訊息被標成 error；其餘是重啟時的 Kafka consumer rebalance。**沒有新種類**。
+  → 又一次「先查基線再判斷」救回誤報。**這個服務的 error level 被雜訊污染得很嚴重**（正常訊息標成 error），所以在這裡數 error 數量沒有意義，只能比對種類。
+
+**deploy 被取消那件事的結論**：查不出誰取消，重跑即成功，沒有重現。**教訓不變：部署驗證看 live image SHA。** 本 session 兩次 merge≠上線都是靠這個發現的。
+
+**VP-18152 停手**：形狀對照與 proto3 `user_id` 零值地雷的分析已記在 09-21 20:15 那則，等 Zhibin。不在他的票上動 code。
