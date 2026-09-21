@@ -1,6 +1,6 @@
 # Retiring /proxy and cloud-local-proxy — Classification and Migration Targets
 
-**Epic:** VP-18260 · **Parent:** Trans v1 / v2 Optimization — Phased Plan · **Status:** classification rule agreed; three assignments pending caller identification
+**Epic:** VP-18260 · **Parent:** Trans v1 / v2 Optimization — Phased Plan · **Status:** every assignment resolved. The last unknown caller was identified on 2026-09-21 by attribution logging in production, and the one interim migration has a recipe measured on staging
 
 The agreed end state is that every `/proxy/*` route in trans v1 and the whole of `cloud-local-proxy` disappear. They are a 2023 artefact from when Azure and the on-prem network had no DNS between them; that gap closed years ago, and nothing should be reaching a destination through a wrapper any more.
 
@@ -75,10 +75,10 @@ No route on this page is "stuck". Where a caller is still unidentified, that dec
 | `/proxy/grpc/getTestStatus` | test-connect gRPC | delete | nobody | **VP-18320**, removal 2026-10-02 |
 | `/proxy/grpc/getQuestionaireBySampleId` | interactive-report gRPC | delete | nobody | as above |
 | `/proxy/grpc/listTnpCode` | test-connect gRPC | delete | nobody | as above |
-| `/proxy/grpc/getKitStatus` | shipping gRPC `getKitStatusBySampleId` | in-cluster caller → **shipping gRPC directly**; front end → **trans v2** (GraphQL field exists today) | the calling team | which branch — PR #800 |
-| `/proxy/grpc/getPatientTestsResult` | test-connect gRPC | in-cluster caller → **test-connect gRPC directly**; front end → **trans v2** (PHI, so it needs the authenticated edge) | the calling team | which branch — PR #800 |
+| `/proxy/grpc/getKitStatus` | shipping gRPC `getKitStatusBySampleId` | **LIS-setting-consumer** is the caller and it is an in-cluster service, so the branch is settled: the owning service's own API, as a **code change** in that repo — not a config swap. See the runbook | LIS-setting-consumer | scheduling |
+| `/proxy/grpc/getPatientTestsResult` | test-connect gRPC | Same caller, same branch, also a **code change**. Its call sits behind a 500-second Redis cache whose key and shape must survive the move | LIS-setting-consumer | scheduling |
 | `/proxy/grpc/sendSkinPlacePatientOrders` | `crmapi` over the public internet | **`crmapi` directly**, with the payload rewrite in §4.3 carried by the caller | `LIS-backend-billing` | a ticket on that team |
-| `/proxy/old-report/downloadTestOrderPDF` | **lis-order, twice** (order summary + redraw), merged | **lis-order** — see §5 | the calling team, then lis-order | caller identity; lis-order's roadmap |
+| `/proxy/old-report/downloadTestOrderPDF` | **lis-order, twice** (order summary + redraw), merged | **Interim:** `/trans/downloadTestOrderPDF` plus one added parameter — recipe measured, see §5. **Target:** lis-order | LIS-setting-consumer, then lis-order | scheduling; lis-order's roadmap |
 | `/proxy/old-report/*` (other 10) | — | delete | nobody | none |
 | `/trans/downloadTestOrderPDF` | same as above | **lis-order** — see §5 | lis-order | that team's roadmap |
 | `/trans/GenerateBatchReqOrReportV2` | on-prem report server `192.168.60.77:8081/secure/nologin/…` | **base-report-service** — see §6 | report team | that team's roadmap |
@@ -114,9 +114,25 @@ Two steps, and the first does not wait for the second:
 
 | | Now | Later |
 |---|---|---|
-| Action | repoint the unidentified caller to `/trans/downloadTestOrderPDF` | lis-order takes the endpoint |
-| New code | **none** — same operation, same service class, gate already present, already serving 1,436 calls | a new endpoint on another team's service |
+| Action | point `LIS-setting-consumer` at `/trans/downloadTestOrderPDF` and add one query parameter | lis-order takes the endpoint |
+| New code | one line in the caller — see the measured recipe below | a new endpoint on another team's service |
 | Unlocks | deleting all 11 `/proxy/old-report` routes | two cross-service calls and a PDF merge collapse into one call; trans stops holding PDFs on disk |
+
+**The caller is confirmed, not inferred.** Attribution logging went live on this route on 2026-09-21. Every request comes from the three `lis-setting-consumer` replicas — same pod addresses, same `axios/1.4.0`, same `user_id: 0` service token seen on the gRPC routes. Configuration evidence and traffic now agree.
+
+**The migration recipe, measured rather than reasoned about.** A probe from inside the staging setting-consumer pod, using that pod's own OAuth2 service token, called both routes with the caller's exact query string:
+
+| Request | Result |
+|---|---|
+| `/proxy/old-report/downloadTestOrderPDF`, as the caller sends it today | 200, 3,093,587 bytes of PDF |
+| `/trans/downloadTestOrderPDF`, same query | **400 Bad Request** |
+| `/trans/downloadTestOrderPDF`, same query plus `&clinic_id=` | **200, byte-identical: 3,093,587 bytes** |
+
+So it is not a drop-in, and the whole difference is one parameter. The service token carries `customer_id: null` and `clinic_id: null`; the `/trans` route resolves identity through `resolveIdsForHttpOptional`, which falls back to the query when a claim is absent from the JWT, and the caller sends `customer_id` but not `clinic_id`. The proxy route reads `req.user` only and bypasses ownership via `isTrustedInternalCaller`, so it never needed the parameter.
+
+Worth flagging for whoever picks this up: **the `clinic_id` value does not affect authorisation here.** The token is trusted-internal, `ownsSample` bypasses the ownership check, and the parameter exists only to satisfy the resolver. A required-but-inert parameter is a smell. The alternative fix — relaxing the `/trans` validation for trusted-internal callers — changes validation on a live route, so the smaller change is the caller supplying the parameter.
+
+The change lands at `setting-consumer.controller.ts:15086`, where the query is built as a template literal.
 
 A same-named `transService.downloadTestOrderPDF` exists and is a different thing — it calls the on-prem report server and is used by notifications and other report routes. It belongs to §6, not here.
 

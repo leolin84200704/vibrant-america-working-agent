@@ -583,3 +583,23 @@ Token claims：`role=INTERNAL`、`internal_user_role=service`、`internal_user_i
 - **prod 兩份（`lis-setting-consumer-config`、`-local-config`）沒動，等 Leo。**
 
 **方法論筆記**：我一開始用 `grep -icE "error|exception"` 數到 82 行就差點當成問題回報——那個 pattern 會打到 JSON 欄位名（`recoverable` 之類）。改用 `"level":"error"` 才是這個服務的錯誤訊號。**數錯誤要用該服務實際的錯誤欄位，不是字串比對。**
+
+### [2026-09-21 18:25]
+Leo merge 了 #802，要求「等 deploy 後測試確認沒問題再繼續」。deploy 成功並驗證通過。
+
+**部署**：run 35635109563，test gate → buildImage → deploy 全綠，18:09:07Z。live image `35c972eaf7be...` = #802 的 merge commit；三個 pod 1/1 Running、restarts=0。
+→ **這次特地做了「merge ≠ 上線」的檢查**（#801 的教訓）：先確認 `origin/main` 的檔案內容有 wiring，再確認 live image SHA。
+
+**正向證據（最大收穫）**：`/proxy/old-report/downloadTestOrderPDF` 的 attribution 一上線就吐出來，來源是 `10.224.1.167` / `10.224.0.226` / `10.224.2.53`——**正是 `lis-setting-consumer` 的三個 pod**，`axios/1.4.0`、`user_id:0`。那 20,715 次先前只有 ConfigMap 推論，**現在有流量證據**。Classification 頁最後一個 pending assignment 結掉。
+→ 順帶：**新 route 的 log 存在本身就證明新 image 在跑**（那段 code 只存在於 35c972e）。行為證據比讀 image tag 硬。
+
+**沒有造成傷害的證據，以及我差點誤讀的地方**：
+- PDF 路由 6 小時內 **100% status 200**，跨越部署點無非 200。
+- 部署後 **Request 11 / Response 11 完美配對**——這才是「串流沒被 interceptor 干擾」的決定性證據（每條串流都完整走完）。
+- 部署後 error log **0 筆**。但 **0 太漂亮，先排除「錯誤 log 停掉」**：同窗口有 2,260 筆 info log，pipeline 活著。
+- **更重要的自我修正**：部署前 638 筆錯誤有 **552 筆是 Kafka `ECONNRESET`**（打 `vibrant-notification-events.servicebus.windows.net`，約 89%）。它在部署點消失是**因為 pod 重啟、連線重建**，不是我的改動造成的。**所以「錯誤歸零」不能當成無害的證據**——真正的證據是 PDF 路由的 request/response 配對。
+→ 通用形式：**部署後的指標改善，第一嫌疑是重啟本身**（連線重建、快取清空、計數器歸零），不是變更的功勞。要挑出不受重啟影響的指標來判斷。
+
+**staging 探測的結論已寫進 Classification 頁 v4**：`/trans/downloadTestOrderPDF` 不是 drop-in，缺 `clinic_id` 會 400，補上之後位元組完全相同（3,093,587）。原本頁面上「New code: **none**」那格是錯的，已改成「一行」。
+
+**環境**：Azure MFA 過期導致 kubectl 中途失效，Leo 跑 `az login` 後恢復。期間驗證全部改走 Datadog，沒有受阻——**log tag 與行為證據可以替代 kubectl 做部署驗證**，值得記住。
