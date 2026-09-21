@@ -511,3 +511,25 @@ Leo：「可以直接做，但是一定不能影響到現在的狀況」→ old-
 - **PR #801 is still `base = feature/leo/TRANS-OPT-proxy-caller-logging`** (head `77fd13b`, 0 status checks) two days after #800 merged. The 09-18 17:45 note above ("#800 merge 後 GitHub 會自動把它 retarget 到 main") was wrong: GitHub only retargets a stacked child when the base branch is **deleted**, and `feature/leo/TRANS-OPT-proxy-caller-logging` still exists at `d2274f3`. This is the same trap as VP-17408 (patterns.md "Stacked PR 陷阱"). Fix = manually retarget #801 to `main` (`gh pr edit 801 --base main`) so `ci-tests.yml` runs; if merged as-is it would land in the dead feature branch, not `main`. Work-session action, not done in dream.
 - Health in window (2026-09-20T01:41Z → 09-21T01:35Z): result pushes = 1 (TRANSMITTED + ACKNOWLEDGED at 01:33Z, i.e. after the reschedule — the pipeline is live), 0 hl7_file_input rows; Sunday baseline is 0–72 pushes / 0 intake (09-06, 09-13), so the quiet day is not a signal. emr-v2 prod pod 0 error lines since creation. `lis-core-deploymentv7` (not ours) shows repeated liveness/readiness probe timeouts (2 s timeout) on the two heavy pods since the reschedule — noted for the digest, no restarts.
 
+### [2026-09-21 09:30]
+Leo：「繼續做 doc 裡面的每一步」＋「看 Vibrant-America org 所有 repo 有沒有人在用，記到 Phased Plan 並給 runbook」。
+
+**先踩到一個我自己造成的事故：#801 沒有進 main。** 它 target 的是 #800 的 feature branch，我在 PR body 寫「#800 merge 後 GitHub 會自動 retarget」——**那只在 base branch 於 merge 時被刪除才會發生**。Leo 09-21 merge 了 #801，commit 進的是那個 feature branch，`origin/main` 的 `old-report.controller.ts` 仍然是 `@UseInterceptors(SentryInterceptor)`。→ cherry-pick 到新 branch 開 **PR #802**（base main，CI 四項全綠）。
+**教訓**：stacked PR 不會自己接上 main。要嘛 merge 時刪 base branch，要嘛一開始就別疊。而且「merge 成功」≠「上線」——要去 `origin/main` 驗檔案內容，不是看 PR 顯示 MERGED。
+
+**#800 已經回答了那個問題——caller 是 `lis-setting-consumer`。**
+- 乾淨窗口（2026-09-20 03:45 之後，所有 pod 都已存在）內 **100% 的 `/proxy/grpc/getKitStatus` 來自它的三個 replica**，`axios/1.4.0`、`x-forwarded-for` 空（叢集內）、`user_id=0`（service token）。
+- **UA 更正**：先前多處寫 `axios/1.16.0`，實測是 **`axios/1.4.0`**。那個 1.16.0 沒有來源，是我早期未驗證就寫進去的。
+- **IP 歸屬差點誤判**：第一次查到 `10.224.1.184` → `lis-ordermanage`，但那些呼叫發生在 09-19 14:03–22:01，而該 pod 09-20 03:36 才啟動——**pod IP 會被回收，IP→pod 只有在 pod 生命期涵蓋 log 時間時才成立**。收回 ordermanage 那條，改用「所有 pod 都已存在之後」的窗口重查才乾淨。
+
+**兩個儀器合起來才是封閉清單**（單用任一個都不夠）：
+- **GitHub code search 掃 org 全部 138 repo** → 找得到硬編 URL 的 caller，但**看不到只存在於 k8s ConfigMap 的值**。
+- **掃 prod 叢集全部 ConfigMap** → 找得到那些，但看不到沒部署在那裡的 repo。
+- 兩者結果一致。code search 的其他命中（LIS-Shipping、results-*、coreSamples、Sample、emr-v2、LIS-Report）**全是 gRPC 方法名的「實作端」，是下游不是 caller**——這是最大的假陽性來源。
+
+**配置在打 proxy 的只有三方**：`lis-setting-consumer`（4 個 ConfigMap × 4 個 key，含 20,715 次的 downloadTestOrderPDF）、`lis-transv2-config`（3 個 stale + 1 個仍在讀的 skin）、`lis-trans-config`（14 個 cloud-proxy key）、外加 `LIS-backend-billing` 硬編。
+
+**第二個我自己的錯**：Phase 1 頁把 **S6（v1 的 14 個 cloud-proxy key 已移除）列為 shipped**——叢集顯示 prod **和 staging 兩邊都還有全部 14 個**。「staging 先刪」若真發生過，staging 會是乾淨的 → 所以是**從來沒執行**，不是漂回來。我第一版 runbook 還把它寫成 drift 並影射 `kubectl apply`，那是把自己的記錄錯誤歸咎於環境。已改：Phase 1 頁 S6 劃掉、P1-B 擴大成涵蓋兩個服務共 22 個 key；plan 頁的註記改成如實敘述。
+**教訓**：文件裡「已完成」的宣稱，只要對象是叢集狀態，就必須回叢集重讀才算數；而發現不一致時，先假設是自己的記錄錯，不是環境漂移。
+
+**產出**：Phased Plan 頁 **v4 → v5** 新增 §6「Consumer inventory and migration runbook」——逐 key 寫 today → change to → 要帶走什麼（metadata、proto3 packages 正規化、payload rewrite）。Phase 1 頁 **v3**。VP-18320 的 comment 草稿寫進 `jira-drafts-20260918.md`（Draft 3，**未發**——Leo 上次只授權了 VP-18262 那一則，沒有概括授權）。
