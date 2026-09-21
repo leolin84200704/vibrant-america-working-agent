@@ -1,7 +1,7 @@
 # Journal Index (Episodic Memory — L3a)
 
 > Auto-maintained by the dream pipeline. One line per entry, newest first.
-> Last updated: 2026-09-19. No new entries since 2026-09-14 (already distilled by the 09-15 run); nothing to distill or archive on 09-19. Archived 4 distilled >30d entries
+> Last updated: 2026-09-20. No new entries since 2026-09-14 (already distilled by the 09-15 run); nothing to distill or archive on 09-20. Archived 4 distilled >30d entries
 > (2026-08-16 x2, 2026-08-18 x2) → archive/journal/.
 
 | Date | Slug | Related | Distilled |

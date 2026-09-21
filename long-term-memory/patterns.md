@@ -6,7 +6,7 @@ status: active
 score: 0.2079
 base_weight: 0.8
 created: 2026-04-22
-updated: 2026-09-19
+updated: 2026-09-20
 links:
 - INCIDENT-20260528
 - INCIDENT-20260529
@@ -2649,7 +2649,7 @@ Atlassian MCP 斷線時的 fallback：`~/src/credential/atlassian-api-token.md`�
 ### log-only interceptor 的「不影響現狀」要用 object identity 斷言（TRANS-OPT #800/#801）
 - `ProxyCallerLogInterceptor` 記 user-agent / x-forwarded-for / x-real-ip / remote_address / route / method / JWT userId（operation `proxyGrpcCaller`），**刻意不記 query string**（sample_id/patient_id）與 bearer；try/catch + detached `.catch()`，logger throw / log write reject 都不能影響回應（有 test）。
 - `/proxy/old-report/*` 回 `StreamableFile`。證明 interceptor 沒包 response：`return next.handle()` 無 pipe/tap，測試斷言 `expect(returned).toBe(handlerObservable)`——**identity 才是「不緩衝、不延遲、不重送」的那個性質**，斷言值只證明這一次沒壞。
-- 疊 PR（#801 base = #800 的 branch）避免同功能兩份檔；GitHub 在 base merge 後自動 retarget。但 `.github/workflows/ci-tests.yml` 只在 `pull_request: branches: [main, stage_test]` 觸發 → **stacked PR 在 retarget 前不跑 CI**，回報只能說「本機全綠」。
+- 疊 PR（#801 base = #800 的 branch）避免同功能兩份檔。~~GitHub 在 base merge 後自動 retarget~~ **【更正 2026-09-20 dream】不會**：#800 09-18 merge 後兩天，#801 仍 base = feature branch、0 checks，因為 head branch 沒被刪——GitHub 只在 base branch 被**刪除**時 retarget（與本檔「Stacked PR 陷阱」VP-17408 一致，以該條為準）。要 CI 跑就得手動 `gh pr edit --base main`；否則 merge 進的是死掉的 feature branch。另 `.github/workflows/ci-tests.yml` 只在 `pull_request: branches: [main, stage_test]` 觸發 → **stacked PR 在 retarget 前不跑 CI**，回報只能說「本機全綠」。
 - 09-18 22:55Z 上線後 ~2.5 h `proxyGrpcCaller` 0 筆——與同窗 0 次 `/proxy/grpc/*` 一致，是「沒被打到」不是壞了；預期 ~0.6/h，隔天再看。
 
 ### Confluence 共用帳號下的 409：用 strip-tag diff 分辨正規化與真人編輯（TRANS-OPT 09-18）

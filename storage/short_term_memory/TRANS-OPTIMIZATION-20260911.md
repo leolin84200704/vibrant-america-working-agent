@@ -17,7 +17,7 @@ tags:
 - vp-18152
 - core-v1-retirement
 created: 2026-09-11
-updated: '2026-09-19'
+updated: '2026-09-20'
 links:
 - CONFLUENCE-2684321795
 - INCIDENT-20260518
@@ -504,3 +504,10 @@ Leo：「可以直接做，但是一定不能影響到現在的狀況」→ old-
   - `getPatientTestsResult` ← `getPatientTest()` (~L9159) ← `getTestNameWithTNPReason()` (L8917) ← `consume_notify_patient_when_basic_redraw()` (L4431).
 - Consequence for VP-18320: the two "keep until caller found" routes now have one owner. Retirement = point `lis-setting-consumer` at the gRPC client (or the transv2 route) via configmap + code, then retire both routes; no external caller seen in 27 h. Not acted on — work-session decision (Leo's announce-then-retire cadence). No ticket comment posted.
 - Health in window (2026-09-19T01:52Z → 09-20T01:35Z): 40 result pushes all TRANSMITTED, 1 MDHQ order parsed, emr-v2 prod pod 0 error lines / 0 restarts.
+
+### [2026-09-20 dream] RE-CHECK day 2: `proxyGrpcCaller` silent for 22 h; cluster-wide pod reschedule (not a deploy); #801 was NOT auto-retargeted
+- **0 `proxy_grpc_caller` events** in the 3 trans v1 pods' whole lifetime (22 h, `--since=24h` capped by pod age). Consistent with the 09-19 attribution: the only caller is `lis-setting-consumer`'s BullMQ notify flows (~0.2/h, bursty, weekend-quiet). No new caller appeared; nothing changes for VP-18320 (still `Dev To Do`, only Jira Automation touched Duration/Start date on 09-19/20).
+- **Every prod pod in default / setting / emr-v2 / transv2 was recreated 2026-09-20T03:14Z–03:41Z** (staggered ~5-min steps across `aks-agentpool` and `aks-userpool` nodes). ReplicaSets are unchanged (trans v1 `56df76746` created 09-18T23:05Z = the #800 deploy; emr-v2 prod `74688f6774` 09-17T18:38Z; setting-consumer `7dc8bdd8df` 09-17T22:34Z) → **node-pool rotation / drain, not a deploy**. Restart counters all 0 because the pods are new. `kubectl get nodes` is Forbidden for this account, so the node-side reason is unverifiable from here.
+- **PR #801 is still `base = feature/leo/TRANS-OPT-proxy-caller-logging`** (head `77fd13b`, 0 status checks) two days after #800 merged. The 09-18 17:45 note above ("#800 merge 後 GitHub 會自動把它 retarget 到 main") was wrong: GitHub only retargets a stacked child when the base branch is **deleted**, and `feature/leo/TRANS-OPT-proxy-caller-logging` still exists at `d2274f3`. This is the same trap as VP-17408 (patterns.md "Stacked PR 陷阱"). Fix = manually retarget #801 to `main` (`gh pr edit 801 --base main`) so `ci-tests.yml` runs; if merged as-is it would land in the dead feature branch, not `main`. Work-session action, not done in dream.
+- Health in window (2026-09-20T01:41Z → 09-21T01:35Z): result pushes = 1 (TRANSMITTED + ACKNOWLEDGED at 01:33Z, i.e. after the reschedule — the pipeline is live), 0 hl7_file_input rows; Sunday baseline is 0–72 pushes / 0 intake (09-06, 09-13), so the quiet day is not a signal. emr-v2 prod pod 0 error lines since creation. `lis-core-deploymentv7` (not ours) shows repeated liveness/readiness probe timeouts (2 s timeout) on the two heavy pods since the reschedule — noted for the digest, no restarts.
+
