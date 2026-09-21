@@ -152,29 +152,57 @@ Code search returned exactly two repos outside the trans services themselves: `L
 
 ### Runbook — what each consumer changes, and to what
 
-**LIS-setting-consumer** — the only confirmed live consumer, and the owner of the busiest proxy route. Four keys, in all four ConfigMaps (prod, st, local, local-st — staging first).
+**A correction to an earlier draft of this section.** It presented each change as a ConfigMap key pointing somewhere new, including entries like "`proxy_getkit` → LIS-Shipping gRPC". That is not a thing you can configure. These keys are read as `axios.get(process.env.X + id)`; an HTTP call site cannot be redirected to a gRPC service by changing a URL. Each row below now says which kind of change it is, and the code changes are described as code changes.
 
-| Key | Today | Change to | What must come with it |
-|---|---|---|---|
-| `proxy_getkit` | `lis-trans-service…:3146/proxy/grpc/getKitStatus?sample_id=` | LIS-Shipping gRPC `getKitStatusBySampleId` | The metadata construction (`createMetadataForCoresampleV2`) and the proto3 normalisation that turns an omitted `packages` into `[]` — omitting the latter is Sentry #68038 |
-| `proxy_getresult` | `…/proxy/grpc/getPatientTestsResult?patient_id=` | test-connect gRPC | The same metadata construction |
-| `url_downloadTestOrderPDFv2` | `…/proxy/old-report/downloadTestOrderPDF` | **Interim:** same host, path `/trans/downloadTestOrderPDF`. **Target:** lis-order, once it owns the endpoint | Both routes enforce sample ownership, but they differ in identity resolution — the proxy route reads `req.user` only, the `/trans` route uses `resolveIdsForHttpOptional`, which falls back to query arguments when a claim is absent from the JWT. setting-consumer authenticates with a service token whose `user_id` is `0`, so **verify on staging that the trusted-internal bypass resolves the same way on both routes before switching** |
-| `skin_placepatientorders` | `…/proxy/grpc/sendSkinPlacePatientOrders` | `crmapi` directly | The payload rewrite (`comments` is set from `julien_barcode`) and the forwarded `Authorization`. **Configured but with no observed traffic in 15 days — confirm it is used at all before migrating; if not, delete the key** |
+Each row was written after reading the call site, not from the key name.
 
-**LIS-transformer-v2** — two ConfigMaps.
+#### LIS-setting-consumer
 
-| Key | Today | Change to |
-|---|---|---|
-| `proxy_getkit`, `proxy_getteststatus`, `proxy_getQuestionaire` | trans v1's proxy routes | **Delete.** The code selects gRPC directly and reads none of them; they are the stale keys Phase 1 item P1-F removes alongside the `TRANS_PROXY_GRPC_MODE` branches |
-| `skin_placepatientorders` | trans v1's proxy route | Still read. Follows the same destination as setting-consumer's: `crmapi` directly, carrying the payload rewrite |
+**1. `proxy_getkit` — code change**
 
-**LIS-transformer (trans v1)** — delete all 14 `…/lis/cloud-proxy/…` keys from `lis-trans-config` and `-st`, after confirming the 0-read finding against current `main`. No code change.
+Used once, at `setting-consumer.controller.ts:8825` inside `getKitShip(sample_id)`. Called from `bull.consumer.ts:367` and `:1654`. Those two consumers read **only** `return_from.kits[].kit_status` and `return_from.kits[].kit_name` — one decides whether to email a patient who has not returned a kit, the other checks whether every kit reads `LAB_RECEIVED`. That is the whole consumed surface.
 
-**LIS-backend-billing** — replace the hard-coded `…/lis/cloud-proxy/grpc/sendSkinPlacePatientOrders` at `ProZOrderServiceImpl.java:115` with a direct `crmapi` call, carrying the payload rewrite. Needs a ticket on that team; the on-prem cloud-local-proxy cannot be scaled to zero until it lands.
+Directly above the HTTP call, the original gRPC call survives commented out (`this.shipService.getKitStatus({ accession_id })`). This is the 2023 artefact in its original form: the gRPC path was commented out and an HTTP hop through the trans proxy put in its place. Restoring it is not an uncomment, though — `protos/shipping.proto` is still in the repo but the `shipService` client is no longer wired into the controller, and the commented call passes `accession_id` where the function receives `sample_id`.
+
+*Destination:* whichever API the owner of kit data exposes. Two candidates, and the test between them is narrow because the consumed surface is: **LIS-Shipping's `getKitStatusBySampleId`** (what the trans proxy calls today) or **LIS-Sample's `GET /v1/lis/samples/patients/v2/kits?accession_id=`** (already used elsewhere in the estate as `get_pns_kit_status`). Pick the one that returns kit status and kit name per sample; the parameter differs between them (`sample_id` vs `accession_id`), so that has to be resolved either way.
+
+*Not needed here:* the proto3 `packages` normalisation. It applies to `send_out[].packages`, and this consumer never reads `send_out`.
+
+**2. `proxy_getresult` — code change**
+
+Used once, at `setting-consumer.controller.ts:9187`, inside a Redis-cached lookup keyed `lis_frontend_service_getPatientTest_<patient_id>` with a 500-second TTL. Same shape as above: the original gRPC call (`this.testsService.getPatientTestsResult({ id })`) is commented out directly beneath it, the client is not wired, and unlike shipping there is **no** test-result proto in the repo at all.
+
+*Destination:* the owning service's own API for patient test results. Whatever it is, the cache key and the cached shape have to stay put, or every consumer of that Redis entry changes with it.
+
+**3. `url_downloadTestOrderPDFv2` — config change, after one check**
+
+Used once, at `setting-consumer.controller.ts:15084`, inside `getOrderReport(...)`, which streams the response to a file with a service token. It builds `?sample_id=…&opt=download&customer_id=…&order_status=…&language=…`.
+
+That query contract is the same one `/trans/downloadTestOrderPDF` accepts, so this one **is** a URL change: same host, path `/proxy/old-report/downloadTestOrderPDF` → `/trans/downloadTestOrderPDF`.
+
+*The check that has to happen first.* Both routes enforce sample ownership, but they resolve identity differently — the proxy route reads `req.user` only, the `/trans` route uses `resolveIdsForHttpOptional`, which falls back to query arguments when a claim is absent from the JWT, and their trusted-internal bypasses key on different claims. setting-consumer authenticates with a service token and passes `customer_id` in the query, so it sits exactly where those two differ. Verify on staging that the same request returns the same PDF before touching production.
+
+*Later:* lis-order, once it owns the endpoint.
+
+**4. `skin_placepatientorders` — delete the key, there is nothing to migrate**
+
+At `setting-consumer.controller.ts:6122` the key is read into a variable `url`, and the very next statement posts to `url_v2` (`inventory_url_skin`) instead. **`url` is never used.** This call site already migrated to the inventory service and the assignment was left behind, which is why the route shows no traffic. Remove the key from all four ConfigMaps.
+
+#### LIS-transformer-v2 — config change
+
+`proxy_getkit`, `proxy_getteststatus` and `proxy_getQuestionaire` are stale: the code selects gRPC directly and reads none of them. Delete, with the `TRANS_PROXY_GRPC_MODE` branches, as Phase 1 item P1-F. `skin_placepatientorders` is still read here and follows the `crmapi` destination, carrying the payload rewrite that trans performs today.
+
+#### LIS-transformer (trans v1) — config change
+
+Delete the 14 `…/lis/cloud-proxy/…` keys from `lis-trans-config` and `-st` after re-confirming 0 reads against current `main`. No code change.
+
+#### LIS-backend-billing — code change
+
+`ProZOrderServiceImpl.java:115` hard-codes the on-prem cloud-proxy URL. Replace with a direct `crmapi` call carrying the payload rewrite (`comments` set from `julien_barcode`). Needs a ticket on that team; the on-prem cloud-local-proxy cannot be scaled to zero until it lands.
 
 ### Sequencing note
 
-Nothing above should move before the route it targets is confirmed. Two of the four setting-consumer keys are ready to plan now; `downloadTestOrderPDF` wants the staging identity check first; `skin_placepatientorders` wants a usage check first. Staging ConfigMaps change before production in every case, and the previous value is recorded in the ticket so a rollback is a single `kubectl edit`.
+One of the six changes is config-only and ready to schedule once its staging check passes; one is a key deletion with nothing behind it; the rest are code changes on other teams' services and belong on their backlogs, not in a ConfigMap edit window. Staging ConfigMaps change before production in every case, and the previous value goes in the ticket so a rollback is a single `kubectl edit`.
 
 ---
 
