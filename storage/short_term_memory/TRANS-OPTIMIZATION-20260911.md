@@ -603,3 +603,21 @@ Leo merge 了 #802，要求「等 deploy 後測試確認沒問題再繼續」。
 **staging 探測的結論已寫進 Classification 頁 v4**：`/trans/downloadTestOrderPDF` 不是 drop-in，缺 `clinic_id` 會 400，補上之後位元組完全相同（3,093,587）。原本頁面上「New code: **none**」那格是錯的，已改成「一行」。
 
 **環境**：Azure MFA 過期導致 kubectl 中途失效，Leo 跑 `az login` 後恢復。期間驗證全部改走 Datadog，沒有受阻——**log tag 與行為證據可以替代 kubectl 做部署驗證**，值得記住。
+
+### [2026-09-21 19:30]
+Leo 授權三件全做。1 與 2 完成，3 完成前置調查。
+
+**(1) prod skin 死 key 已刪。** 先備份兩份 yaml，`kubectl patch --type=json` remove：`lis-setting-consumer-config` 136→135、`-local-config` 123→122，`inventory_url_skin` 完好。
+→ **刻意不強制重啟 prod**：刪 key 對執行中的 pod 無影響（38h 未重啟），而重啟後行為 staging 已驗證過。**沒有理由為了「證明」而在 prod 製造一次重啟**——那會把已知安全的操作變成有風險的操作。
+
+**(2) setting-consumer：票 VP-18324（assign Leo）＋ PR #176（step 1 已送出）。**
+- 實作：`getOrderReport` 加 optional `clinic_id`，query 條件式附加；呼叫點傳 `list_sample.sample[0]?.order?.clinic_id`。
+- **型別繞了一圈**：先寫 `sample[0].clinic_id` → TS2339，`sample` DTO 沒宣告。查到 `OrderSample_in_samplev2` 有 `clinic_id`，而且 trans 的 proxy 讀同一個 RPC 時也是走 `sample[0].order.*`。改用那條，typecheck 過。**proto 有欄位 ≠ 手寫 DTO 有欄位**。
+- **最重要的一次量測：發布順序**。code 與 config 不可能同時生效，所以先量「舊路由會不會被多出來的參數打壞」→ `/proxy/old-report/...` 帶 `clinic_id` 回 **200 且位元組相同**。所以 step 1 可獨立上線、零行為變更，step 2 再翻 URL，中間沒有壞掉的空窗，兩步各自可回退。**這種「中間態」的量測比端點等價性更容易被忘記，但它決定了能不能安全分兩步。**
+- 測試：typecheck 乾淨；jest **改動前後都是 2 suites / 1 test 紅**（對乾淨 main 跑過對照）→ 既有基線，非我造成。
+- **新發現的洞**：`LIS-setting-consumer` 的 workflow 只在 `push: main` 觸發，**PR 沒有任何 CI gate**，而 merge to main 就是部署。跟 trans 兩個 repo 在 Phase 0.3 之前同款。值得開票。
+
+**(3) VP-18152 前置調查**：
+- v1 呼叫點 `setting.practiceInfo.service.ts:9039`（`axios.get(list_customer_by_id_carlos + clinic_id)`，讀 `response.data.customers`），已有我 09-11 留下的 TRANS-OPT 註解。v2 在 `setting/setting.service.ts:1562`。
+- **目標 rpc `ListClinicCustomersByClinicID` 的 proto 已經 vendored 在 trans v1**（`protos/clinic.proto:17`），不需要新增 proto。
+- 還沒做：`ListClinicCustomerByIDResponse` 與 HTTP `customers` 的形狀對照、下游實際消費哪些欄位、以及 shadow 比對。**這條是活的客戶路徑（14 天 5,023 次），照本 program 的紀律要 shadow 到零差異才切**，不是直接換 client。
