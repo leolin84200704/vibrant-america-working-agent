@@ -621,3 +621,22 @@ Leo 授權三件全做。1 與 2 完成，3 完成前置調查。
 - v1 呼叫點 `setting.practiceInfo.service.ts:9039`（`axios.get(list_customer_by_id_carlos + clinic_id)`，讀 `response.data.customers`），已有我 09-11 留下的 TRANS-OPT 註解。v2 在 `setting/setting.service.ts:1562`。
 - **目標 rpc `ListClinicCustomersByClinicID` 的 proto 已經 vendored 在 trans v1**（`protos/clinic.proto:17`），不需要新增 proto。
 - 還沒做：`ListClinicCustomerByIDResponse` 與 HTTP `customers` 的形狀對照、下游實際消費哪些欄位、以及 shadow 比對。**這條是活的客戶路徑（14 天 5,023 次），照本 program 的紀律要 shadow 到零差異才切**，不是直接換 client。
+
+### [2026-09-21 20:15]
+Leo merge 了 setting-consumer #176，要求 deploy 後測試再進行下一步；並批准 VP-18152 用 S2 模式。
+
+**#176 merge 了但沒有上線——本 session 第二次「merge ≠ 上線」，機制不同。**
+- deploy run 35639933793 在 `Build and push image to ACR` 那一步被 **cancelled**（18:42:25，啟動約 100 秒後），同時另一個不相干的 CodeQL run 也被取消。workflow 內**沒有** concurrency 設定。
+- **prod 實際跑的是 `c3e166d`**（09-16 那次成功部署），pod 39 小時未動。變更不在線上。
+- API 的 actor 是 Leo 帳號，但那只是觸發者，看不出誰按取消。**沒有重跑**——不知道取消原因就重跑 prod 部署不是我該自己決定的事，而且「沒部署」本身是安全狀態，等待零成本。
+→ **教訓**：部署驗證要看 **live image SHA**，不是 PR 狀態、也不是「有 run 被觸發」。第一次是 stacked PR 進錯 base，這次是 run 被取消——兩次都靠查 `origin/main` 內容 + live image 才發現。
+
+**另一個我要更正的說法**：我說 `LIS-setting-consumer` 的「PR 沒有任何 CI gate」是錯的。它有一個 org 層級的 **CodeQL** run（不在 repo 的 workflow 檔裡，所以只讀 yml 的 trigger 會漏掉）。正確說法是**沒有 typecheck / test gate**，deploy 路徑上也沒有。**「repo 裡沒有 workflow 檔」不等於「沒有 CI」。**
+
+**VP-18152 形狀對照完成，挖到一個會靜默改行為的地雷：**
+- 巢狀差一層：HTTP `response.data.customers` vs gRPC `clinic_customers.customers`（`ListClinicCustomerByIDResponse` → `ClinicCustomers`）。`FullCustomer`（`protos/customer.proto:547`）有 code 讀的全部欄位（`customer_id`/`user_id`/`customer_first_name`/`customer_last_name`）。proto 已 vendored，不用加。
+- **地雷**：`setting/tool.ts:91` 的 `isEmpty` 有一行 `if (!a && a !== 0 && a !== '') return true;` → **`isEmpty(0) === false`、`isEmpty(null) === true`**。而 proto3 的 `int32 user_id` 無值時是 `0` 不是 `null`。該路徑用它決定 `invite_status`：
+  `isEmpty(user_id) ? 'Account Pending' : 'Account Created'`
+  → **直接換 gRPC，所有沒帳號的 customer 會從 Pending 翻成 Created**，是畫面上看得到的錯誤。
+- 可以從 code 自身推斷 HTTP 確實回空值：否則 Pending 分支是死碼。
+- **所以映射時必須把 `user_id === 0` 正規化成「無值」**——與 S2 當初那條 proto3 `packages → []` 同一類（proto3 的預設值吃掉了「缺值」語意）。shadow 應該是拿來確認乾淨，而不是拿來發現這件事。
