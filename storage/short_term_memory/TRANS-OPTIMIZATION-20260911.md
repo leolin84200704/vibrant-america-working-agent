@@ -556,3 +556,30 @@ Leo 授權四件：發 VP-18320 comment、推進 staging 身分驗證、推進 s
 - 14 天內 `list-customer-by-id` 出現 **120+ 個不同 pod IP**，pod 汰換太頻繁，無法逐一解析；但這不影響 scope 結論。
 
 **未完成（下一輪）**：staging 驗 `/trans/downloadTestOrderPDF` 身分解析；skin 死 key 的四個 ConfigMap 刪除（staging 先）。先做 VP-18152 量測是因為它有 10-31 的外部硬期限。
+
+### [2026-09-21 14:10]
+Leo：「其他不能同步做嗎？」→ 對，兩件互相獨立。都做完了。
+
+**(1) staging 身分驗證：`/trans/downloadTestOrderPDF` 不是 drop-in，但差異定位到單一參數。**
+方法：`lis-setting-consumer-st` pod 內沒有 curl，用 node 寫探測腳本（OAuth2 client_credentials 拿 token → 同一 token、同一 query 打兩條路由）。第一版 `TOKEN PARSE FAIL` 是我自己把 body 截到 300 字元、JWT 比那長。
+Token claims：`role=INTERNAL`、`internal_user_role=service`、`internal_user_id=10018`、**`customer_id=null`、`clinic_id=null`**、`user_id=0`。
+
+| 變體 | 結果 |
+|---|---|
+| `/proxy/old-report/downloadTestOrderPDF` 原 query | **200**, 3,093,587 bytes PDF |
+| `/trans/downloadTestOrderPDF` 原 query | **400 Bad Request** |
+| `/trans/...` + `&clinic_id=1` | **200, 3,093,587 bytes（位元組完全相同）** |
+| `/trans/...` + `clinic_id` + `internal_user_id` | 200, 同樣 bytes |
+
+→ **成因**：`/trans` 版用 `resolveIdsForHttpOptional(req.user, query, ['customer_id','clinic_id'])`，service token 兩者皆 null 就回退到 query；setting-consumer 只送 `customer_id` 不送 `clinic_id` → 400。proxy 版只讀 `req.user` 且用 `isTrustedInternalCaller` 直接 bypass，所以不需要。
+→ **`clinic_id` 的值不影響授權**：token 是 trusted-internal，`ownsSample` 會 bypass，那個參數只是用來滿足 resolver。一個「必填但對受信任呼叫者無作用」的參數，本身是個異味。
+→ **所以遷移是「setting-consumer 的 URL 組字串多加一段 `&clinic_id=`」的小 code 改動**（`setting-consumer.controller.ts:15086` 那行 template literal），不是純換 ConfigMap 值。另一個選項是改 `/trans` 版對 trusted-internal 放寬驗證，但那會動到一條每 15 天 1,436 次的活路由的驗證邏輯，比較不划算。
+
+**(2) skin 死 key：兩個 staging ConfigMap 已刪並重啟驗證。**
+- 先備份兩份 CM yaml 到 scratchpad。
+- `kubectl patch --type=json -p '[{"op":"remove","path":"/data/skin_placepatientorders"}]'`：`lis-setting-consumer-st-config`（剩 135 keys）、`lis-setting-consumer-local-st-config`（剩 122 keys）。
+- **刪 key 對執行中的 pod 沒有影響（env 在啟動時注入），所以唯一能證明安全的是重啟**。動手前先確認 `ConfigModule.forRoot` **沒有 `validationSchema`**，缺 env 不會擋啟動。
+- 兩個 deployment 都 rollout restart：1/1 Running、restarts=0、**`level:error` 各 0 筆**、pod 內 `skin_placepatientorders` 確認 unset 而 `inventory_url_skin` 仍在。log 裡 8 筆 "skin" 全是 `skin_care*` 的 Kafka consumer group 啟動訊息，info level。
+- **prod 兩份（`lis-setting-consumer-config`、`-local-config`）沒動，等 Leo。**
+
+**方法論筆記**：我一開始用 `grep -icE "error|exception"` 數到 82 行就差點當成問題回報——那個 pattern 會打到 JSON 欄位名（`recoverable` 之類）。改用 `"level":"error"` 才是這個服務的錯誤訊號。**數錯誤要用該服務實際的錯誤欄位，不是字串比對。**
