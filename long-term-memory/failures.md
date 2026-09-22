@@ -7,7 +7,7 @@ score: 1.4189
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-09-20
+updated: 2026-09-21
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -134,7 +134,7 @@ summary: Auto-aggregated failure index from 102 entries across STM
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-09-20 — total 102 entries
+> Last updated: 2026-09-21 — total 102 entries
 
 ## Themes
 
@@ -149,8 +149,8 @@ summary: Auto-aggregated failure index from 102 entries across STM
 - [Error handling / throw vs log](#error-handling) — 4 entries
 - [Test / mock / spec](#test-mocking) — 2 entries
 - [gRPC / network / timeout](#grpc-network) — 2 entries
-- [Tool / cwd / branch / repo confusion](#tool-usage) — 1 entries
 - [GraphQL / API design](#graphql-api) — 1 entries
+- [Tool / cwd / branch / repo confusion](#tool-usage) — 1 entries
 
 ---
 
@@ -167,18 +167,6 @@ summary: Auto-aggregated failure index from 102 entries across STM
 - Used `app=lis-emr-v2-deployment-prod` (deployment name) as label selector — actual label is `app=lis-emr-v2-prod` (`-deployment-` not in label).
 - Tick 1 returned `FAIL pod_not_found`. Fixed by checking `--show-labels` and re-running.
 - Lesson: always confirm label keys with `kubectl get pod ... --show-labels` before selecting; deployment-name ≠ pod-label.
-
-### **[[LIS-7690]]** — `2026-08-18 18:20` — on-prem configmaps hold plaintext secrets — grep them narrowly
-
-`kubectl get cm -A -o yaml | grep -i lis-emr-v2` dumps `lis-emr-v2-config{,-prod}` in full, and
-their `data` carries prod DB URLs with passwords, `JWT_SECRET`, Kafka SAS connection strings,
-Adobe/OAuth client secrets and long-lived `VIBRANT_API_TOKEN` bearers in cleartext. Nothing was
-persisted from that output. Next time select fields (`-o jsonpath` on the specific keys) instead
-of grepping whole configmaps.
-
-### **[[VP-15460]]** — `2026-04-28` — redlock Lock API confusion (#90)
-
-Picked `lock.release()` from redlock@5 docs while installing redlock@4. The two versions have different Lock prototypes (`unlock` vs `release`). Cosmetic in production (TTL covered the leak) but log noise + would have been a real bug if TTL was raised.
 
 ### **[[VP-16166]]** — [2026-08-26 14:2x PDT] 用錯檔名 → 錯的根因寫進了 Jira 票
 
@@ -517,6 +505,18 @@ decode failure, see side finding). Switched to patient 3076377 (VP-17628 E2E pat
   orderable under 999997/10136). Cancelled within 30 s. Staging placements share the prod sample
   sequence — treat every 201 as real.
 
+### **[[LIS-7690]]** — `2026-08-18 18:20` — **
+
+`kubectl get cm -A -o yaml | grep -i lis-emr-v2` dumps `lis-emr-v2-config{,-prod}` in full, and
+their `data` carries prod DB URLs with passwords, `JWT_SECRET`, Kafka SAS connection strings,
+Adobe/OAuth client secrets and long-lived `VIBRANT_API_TOKEN` bearers in cleartext. Nothing was
+persisted from that output. Next time select fields (`-o jsonpath` on the specific keys) instead
+of grepping whole configmaps.
+
+### **[[VP-15460]]** — `2026-04-28` — **
+
+Picked `lock.release()` from redlock@5 docs while installing redlock@4. The two versions have different Lock prototypes (`unlock` vs `release`). Cosmetic in production (TTL covered the leak) but log noise + would have been a real bug if TTL was raised.
+
 ### **[[VP-16968]]** — `2026-06-11` — **
 
 - 我把 225 列設 FULL_INTEGRATION + result_enabled=true → 納入 result/report 投遞管線，但 order_clients 無 result config (ehr_vendor_id/sftp_result_path/sftp_host/legacy_emr_service/msh06 全 225 null; npi 缺3; emr_name/folder 只 27/225)。225 全 result-pipeline-eligible → 報告完成會被選中然後失敗。
@@ -558,22 +558,6 @@ decode failure, see side finding). Switched to patient 3076377 (VP-17628 E2E pat
 **錯誤**：看到 prod log 還有 `Using fallback data` 就以為 fix 沒效。
 **實際**：prod pod 還沒 rollout，跑的是舊 image。Image build + push + pod restart 大約 15-20 分鐘。
 **Preventable**：是。下次 deploy 後先 `kubectl exec ... grep -c <新 marker> /app/dist/...js` 驗證 dist 真的有新 code。
-
-### **[[LIS-7690]]** — `2026-08-18 17:25` — pre-push hook fails in a fresh worktree (environment, not the change)
-
-`.git/hooks/pre-push` runs `npx prisma generate`; a fresh worktree has no `node_modules`, so npx
-pulls **Prisma 7.9.1**, which rejects `datasource.url` in `schema.prisma` (P1012) — the repo pins
-`prisma ^6.15.0`. Validated the schema with the pinned binary
-(`node_modules/.bin/prisma validate` + a dummy `DATABASE_URL`) → "schema is valid", then pushed
-with `--no-verify`. Any fresh-worktree push in this repo will hit the same wall.
-
-### **[[VP-15460]]** — `2026-04-27` — Wrong proto file edited initially
-
-Edited `src/proto/customer.proto` (`package lis`, legacy LIS host) before realizing v2 RPC lives in `src/proto-v2/customer.proto` (`package coresamples_service`, coreSamples host). Reverted both `proto/` + `dist/proto/` and applied to `proto-v2/`. Detection trigger: reading `src/config/grpc.config.ts`. Lesson already in `long-term-memory/patterns.md` (under "lis-backend-emr-v2 雙 proto 樹").
-
-### **[[VP-15460]]** — `2026-04-28` — redlock CommonJS interop (#88)
-
-Production NestFactory crash at startup: `TypeError: redlock_1.default is not a constructor`. Root cause: `redlock@4` is plain CommonJS (`module.exports = Redlock`, no `.default`); this repo's `tsconfig.json` only sets `allowSyntheticDefaultImports`, not `esModuleInterop`, so `import Redlock from 'redlock'` compiled to `redlock_1.default` (undefined). Should have caught this at code review by recognizing redlock's package age + checking `tsconfig`.
 
 ### **[[VP-16934]]** — `2026-06-09` — 部署後 CrashLoopBackOff（我的疏失：跳過 start:dev）
 
@@ -700,6 +684,22 @@ See the lesson extracted to `long-term-memory/patterns.md`.
   (choose-bundle/shortcut class); quote-side updates are VP-18081 (Rui).
   My Confluence page 2485977089 (Order Intake API) still shows PascalCase
   eligibility list — needs manual edit (MCP has no page-update tool).
+
+### **[[LIS-7690]]** — `2026-08-18 17:25` — **
+
+`.git/hooks/pre-push` runs `npx prisma generate`; a fresh worktree has no `node_modules`, so npx
+pulls **Prisma 7.9.1**, which rejects `datasource.url` in `schema.prisma` (P1012) — the repo pins
+`prisma ^6.15.0`. Validated the schema with the pinned binary
+(`node_modules/.bin/prisma validate` + a dummy `DATABASE_URL`) → "schema is valid", then pushed
+with `--no-verify`. Any fresh-worktree push in this repo will hit the same wall.
+
+### **[[VP-15460]]** — `2026-04-27` — **
+
+Edited `src/proto/customer.proto` (`package lis`, legacy LIS host) before realizing v2 RPC lives in `src/proto-v2/customer.proto` (`package coresamples_service`, coreSamples host). Reverted both `proto/` + `dist/proto/` and applied to `proto-v2/`. Detection trigger: reading `src/config/grpc.config.ts`. Lesson already in `long-term-memory/patterns.md` (under "lis-backend-emr-v2 雙 proto 樹").
+
+### **[[VP-15460]]** — `2026-04-28` — **
+
+Production NestFactory crash at startup: `TypeError: redlock_1.default is not a constructor`. Root cause: `redlock@4` is plain CommonJS (`module.exports = Redlock`, no `.default`); this repo's `tsconfig.json` only sets `allowSyntheticDefaultImports`, not `esModuleInterop`, so `import Redlock from 'redlock'` compiled to `redlock_1.default` (undefined). Should have caught this at code review by recognizing redlock's package age + checking `tsconfig`.
 
 ### **[[VP-16520]]** — `2026-05-28` — **
 
@@ -828,10 +828,6 @@ Leo 急著補發、不想 build。我多次 commit + push 沒先問是否需要 
 VP-16760 創 `ehr_vendor_inquiry_status_history` table、migration SQL commit 進 repo、但只 apply 到 prod DB (`lisportalprod2`)、漏 apply staging DB (`192.168.60.11`)。今天 staging 部署後 FE call reject endpoint 才爆 P2021 500。
 
 LTM patterns.md 304-308 行早就有「兩 DB 都要 apply」、但實際上線時還是踩了 — 因為**沒有自動化驗證機制**、純靠人記得。已建議寫進 Jenkinsfile pre-deploy。
-
-### **[[VP-15460]]** — `2026-04-28` — Migration not applied automatically
-
-Agent committed migration SQL to repo and assumed release pipeline would `prisma migrate deploy` it. Leo had to remind: "你 sftp_folder_mapping 的改動還沒真的上傳到 database". Then `prisma migrate deploy` failed with P3005 (DB never baselined for prisma migrations) → fell back to `prisma db execute --file <sql>` (raw SQL apply). Then "192.168.60.11:3306 也要 apply" — second DB. Lesson: this repo has two MySQL instances + Prisma is not the migration source-of-truth in prod.
 
 ### **[[VP-16166]]** — `2026-08-25 15:34` — 我用 `git restore --staged --worktree src` 清掉了 Leo 正在編輯的東西
 
@@ -993,6 +989,10 @@ billing（見上一節）。這是本次驗證的範圍上限，已在 PR #316 �
   the LIS-7690 configmap-grep incident (select specific fields, never grep
   whole env/configmaps). Staging-only long-lived token; flag to Leo.
 - PROD DEPLOY PENDING: staging→main promotion PR (Leo). No prod E2E yet.
+
+### **[[VP-15460]]** — `2026-04-28` — **
+
+Agent committed migration SQL to repo and assumed release pipeline would `prisma migrate deploy` it. Leo had to remind: "你 sftp_folder_mapping 的改動還沒真的上傳到 database". Then `prisma migrate deploy` failed with P3005 (DB never baselined for prisma migrations) → fell back to `prisma db execute --file <sql>` (raw SQL apply). Then "192.168.60.11:3306 也要 apply" — second DB. Lesson: this repo has two MySQL instances + Prisma is not the migration source-of-truth in prod.
 
 ---
 
@@ -1185,22 +1185,6 @@ ConfigMap 快照，但那兩個檔只存在主 repo 工作目錄 → 在 worktre
 - `.spec.ts` 文件不能信賴 — 跟 service code 不同步演進（4b10e1a + 多次 service refactor 都沒同步 spec），可能長期沒人跑
 - 應該每個 PR 跑該 service spec；或者 CI gate 上有 spec 必過要求
 
-### **[[LIS-7690]]** — `2026-08-18 17:10` — on-prem cluster not inspectable — RESOLVED 18:10 by Leo
-
-First attempt `ssh -o BatchMode=yes leo@192.168.60.5` → `Permission denied (publickey,password)`
-(same wall as failures.md:496). **Resolution: the account takes PASSWORD auth, not a key** — Leo
-supplied the password in-session. Key auth genuinely is refused, which is why every previous
-BatchMode attempt failed and the blocker looked absolute. Mechanics that work from this laptop
-(no `sshpass` on macOS, `ssh` will not read a password from a pipe): drive it with `/usr/bin/expect`,
-password passed in via env var, never written to disk:
-```
-spawn ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no leo@192.168.60.5 $cmd
-expect -re {[Pp]assword:} { send -- "$env(ONPREM_PW)\r" }
-```
-`kubectl` is at `/usr/local/bin/kubectl` on appserver04 (control-plane node, k8s v1.22.3, 6 nodes
-`appserver01-06` = `192.168.60.2-7`). The password is NOT recorded here — ask Leo, or read it from
-`~/src/credential/` if he chooses to store it there.
-
 ### **[[VP-17755]]** — `2026-08-27` — `git add -A` 在共用 checkout 掃進了別人的編輯
 
 - 現象：commit 61e6e70 目標只含 VP-17753 變更，實際混入了 Leo 同時在 working tree 做的
@@ -1215,6 +1199,22 @@ expect -re {[Pp]assword:} { send -- "$env(ONPREM_PW)\r" }
 
 - First BE commit was made with `core.hooksPath=/dev/null`. The repo points `core.hooksPath` at the factory githooks; bypassing them was wrong and pointless. Reset and recommitted through the hooks.
 - `git push` to va-portal: 403. `gh api repos/Vibrant-America/va-portal --jq .permissions.push` → false. Leo's account cannot write to the FE repo; the FE half needs the FE team or a permission grant.
+
+### **[[LIS-7690]]** — `2026-08-18 17:10` — **
+
+First attempt `ssh -o BatchMode=yes leo@192.168.60.5` → `Permission denied (publickey,password)`
+(same wall as failures.md:496). **Resolution: the account takes PASSWORD auth, not a key** — Leo
+supplied the password in-session. Key auth genuinely is refused, which is why every previous
+BatchMode attempt failed and the blocker looked absolute. Mechanics that work from this laptop
+(no `sshpass` on macOS, `ssh` will not read a password from a pipe): drive it with `/usr/bin/expect`,
+password passed in via env var, never written to disk:
+```
+spawn ssh -o PreferredAuthentications=password -o PubkeyAuthentication=no leo@192.168.60.5 $cmd
+expect -re {[Pp]assword:} { send -- "$env(ONPREM_PW)\r" }
+```
+`kubectl` is at `/usr/local/bin/kubectl` on appserver04 (control-plane node, k8s v1.22.3, 6 nodes
+`appserver01-06` = `192.168.60.2-7`). The password is NOT recorded here — ask Leo, or read it from
+`~/src/credential/` if he chooses to store it there.
 
 ---
 
@@ -1298,14 +1298,6 @@ None that cost rework. Two near-misses worth naming:
 
 ---
 
-## Tool / cwd / branch / repo confusion <a id='tool-usage'></a>
-
-### **[[VP-15460]]** — [2026-04-27 → 28] Cwd persistence in Bash tool calls
-
-After `cd /Users/hung.l/src/EMR-Backend && gh pr view 156`, subsequent Bash calls without explicit `cd` defaulted to EMR-Backend. Created `bugfix/leo/VP-15460-redlock-import` in the wrong repo, had to clean up. Lesson: always explicit `cd` in cross-repo flows.
-
----
-
 ## GraphQL / API design <a id='graphql-api'></a>
 
 ### **[[VP-17076]]** — `2026-06-22` — 收尾動作
@@ -1314,5 +1306,13 @@ After `cd /Users/hung.l/src/EMR-Backend && gh pr view 156`, subsequent Bash call
 - 差異清單 doc（pricing team）：page 2506653698。掃 14 clinic 證實 **Total Baseline (Male/Female) 13/14 缺 Magnesium**（test 384）；**Fashion Island 144510 有重複 Total Baseline shortcut**(大小寫兩套，含/不含 Magnesium)→ resolver first-match 不確定；建議 catalog 去重 + 統一大小寫。
 - Task 4 結論：**Next Health 無任何 customer/clinic 專屬 VACP bundle**（只用 shortcut）→ 外部 doc(2506457090) 更新 v2 為 shortcut-only 範例，VACP 改為通用可選說明。
 - 3 份 Confluence：內部 rules(2506326018) / 外部 vendor guide(2506457090) / 差異清單(2506653698)，皆在 folder 2032697346。
+
+---
+
+## Tool / cwd / branch / repo confusion <a id='tool-usage'></a>
+
+### **[[VP-15460]]** — **
+
+After `cd /Users/hung.l/src/EMR-Backend && gh pr view 156`, subsequent Bash calls without explicit `cd` defaulted to EMR-Backend. Created `bugfix/leo/VP-15460-redlock-import` in the wrong repo, had to clean up. Lesson: always explicit `cd` in cross-repo flows.
 
 ---
