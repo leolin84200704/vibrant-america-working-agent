@@ -6,6 +6,7 @@
 
 | Date | Slug | Related | Distilled |
 |------|------|---------|-----------|
+| 2026-09-22 | vp18194-per-report-pdf | VP-18194, PH-907, SIIR-291, VP-18138, VP-17344, VP-17715, LIS-7716 | false |
 | 2026-09-14 | trans-opt-phase1-2-execution | TRANS-OPTIMIZATION-20260911, VP-18276, VP-17348, VP-18152 | true |
 | 2026-09-10 | vp18034-pr-b-wiring | VP-18034, VP-18032, VP-18031, VP-18089, INCIDENT-20260910-emr-v2-di-crashloop | true |
 | 2026-09-09 | vp18085-menu-section | VP-18085, PH-871, VP-17724 | true |
