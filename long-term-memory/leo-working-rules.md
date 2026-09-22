@@ -7,7 +7,7 @@ score: 0.1615
 base_weight: 0.9
 urgency: 4
 created: 2026-08-16
-updated: 2026-09-11
+updated: 2026-09-21
 summary: Leo's working rules for this instance — reporting, ticket handling, Jira
   mechanics, and repo hygiene. The job-specific residue of the native auto-memory
   store; universal engineering discipline lives in factory ENGINEERING-LESSONS.
@@ -427,3 +427,10 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 規則（承 09-03、09-11）：**每次 scope 變更／部署後起草一則英文結案 comment 給 Leo 貼**；別人開的票（Mingxi / Xiaoye / Zhenhe）Done 時票上必須有一則說明「做了什麼、在哪裡可以看到」；Inactive/Done 前列出未完成項與 owner。dream 對「Done 早於工作」的票**跟 STM 不跟票**——VP-18138 這次就是靠 STM 才審到三次 deploy。
 
 好的樣態（保留）：VP-18270 / VP-18138 的 prod 寫入全部三連驗證（in-tx、第二連線、獨立 read-only 帳號）並留 canary 證據列；VP-18138 canary 抓到自己 canary 的缺陷（raw Queue）後重做而不是宣稱過；TRANS-OPT 每次被打回都在 PR body / Confluence / STM 三處同步更正，不留舊說法。
+
+## Leo 09-21 的決定（TRANS-OPT / VP-18324 / VP-18152 / VP-18320）
+- **「其他不能同步做嗎？」**：互相獨立的授權項目（staging 身分驗證、skin 死 key 刪除）要並行做完，不要因為其中一件有外部硬期限就把其他排到「下一輪」。
+- **「等 deploy 後測試確認沒問題再繼續」**（#802、#176 各一次）：每次 merge 後的驗證是下一步的 gate，不是收尾的附註。驗證內容 = live image SHA + 行為證據 + 與部署前基線比對過的錯誤種類。
+- **「1. 要（重跑 deploy） 2. 不動，等他」**：被取消的 prod deploy 要不要重跑是 Leo 的決定；VP-18152 雖然稍早說「直接做」，確認是 Zhibin 的票之後改成不動——先前的授權不會蓋過票的所有權，分析寫進 STM 即可。
+- **Jira comment 授權仍是一則一則給**：VP-18320 的 Draft 3 在 09-21 06:00 前寫好但未發，直到 Leo 當天明說「發」才發（188522）。上次授權 VP-18262 那一則不構成概括授權。
+- **Leo 的「可以直接做」是對某一件事**，不是對整個 program；每件新事（prod ConfigMap、重跑 deploy、別人的票）都重新問。

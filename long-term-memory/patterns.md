@@ -6,7 +6,7 @@ status: active
 score: 0.2079
 base_weight: 0.8
 created: 2026-04-22
-updated: 2026-09-20
+updated: 2026-09-21
 links:
 - INCIDENT-20260528
 - INCIDENT-20260529
@@ -2684,3 +2684,44 @@ Atlassian MCP 斷線時的 fallback：`~/src/credential/atlassian-api-token.md`�
 - 歸因步驤：`kubectl get pods -A -o wide | grep <ip>` 把 pod IP 對回 namespace/pod（AKS pod CIDR 10.224.0.0/16；node IP 也在同段，先查 pods 再查 nodes）→ 進該 repo 找 env/configmap 裡的 URL（`kubectl get configmap -n <ns> <name> -o json`；**prod configmap 常覆寫 repo `.env` 的公網 URL 成 `*.svc.cluster.local`**，只看 repo 會誤判成外部呼叫方）→ grep `process.env.<key>` 找呼叫點，再往上找 `@Process()`/`@Processor('queue')` 或 consumer 方法名。
 - 這次結果：`/proxy/grpc/getKitStatus` 與 `getPatientTestsResult` 的唯一呼叫方是 `setting/lis-setting-consumer`（BullMQ `notify_patient_when_not_return_kit_after_days`、`notify_patient_ship_to_patient_confirm`、`consume_notify_patient_when_basic_redraw`）。retire 前要先改它的 configmap + client。
 - 陷阱：configmap `-o json` 會把含密碼的 DB URL 一起印出來——過濾 key 再印，不要整份貼進 log / STM。
+
+## 【更新 2026-09-21】merge ≠ 上線的第二種機制、ConfigMap 刪 key、proto3 零值、指紋不是身分、重啟是第一嫌疑（TRANS-OPT / VP-18324 / VP-18152）
+
+### 部署驗證只看 live image SHA（同一天兩種「merge 了但沒上線」）
+- 機制一：stacked PR 的 base 是 feature branch，GitHub **不會**在 base merge 後自動 retarget（#801 進了死分支，#802 重開到 main 才上線）。
+- 機制二：`LIS-setting-consumer` #176 merge 後 deploy run 35639933793 在 `Build and push image to ACR` 被 **cancelled**（workflow 沒有 `concurrency` 設定，同時另一個 CodeQL run 也被取消，查不出誰按的）；main 有 commit、prod 跑的仍是 09-16 的 `c3e166d`。重跑後成功。
+- 兩次都是靠「`origin/main` 檔案內容 + `kubectl get deploy -o jsonpath=image`（或 Datadog `image_tag`）」抓到的。**行為證據更硬**：新 route 的 log 只存在於新 image，log 出現 = 新 code 在跑。
+- `LIS-setting-consumer` 的 workflow 只在 `push: main` 觸發，**PR 沒有 typecheck / test gate**；有 org 層級 CodeQL（不在 repo yml 裡）——「repo 沒有 workflow 檔」≠「沒有 CI」。Merge to main 即部署，且 main 上的 run 會被取消而沒有人通知。
+- 不知道取消原因時不要自己重跑 prod 部署——「沒部署」是安全狀態，等 Leo 決定（09-21 他說「要」才重跑）。
+
+### ConfigMap 刪 key 的驗證邏輯（setting-consumer skin 死 key，staging → prod）
+- 刪 key 對執行中的 pod 沒有影響（env 在啟動時注入），**唯一能證明安全的是重啟**。動手前確認 `ConfigModule.forRoot` 沒有 `validationSchema`（缺 env 不會擋啟動）。
+- staging 兩份 CM `kubectl patch --type=json '[{"op":"remove","path":"/data/<key>"}]'` + `rollout restart` 驗證；prod 兩份只刪 key、**刻意不強制重啟**——沒理由為了「證明」在 prod 製造一次重啟；下一次自然部署（#176）時新 pod 內 key unset、服務正常，那時才算驗證完。先 `kubectl get cm -o yaml` 備份到 scratchpad。
+- 數 error 時 `grep -icE "error|exception"` 會打到 JSON 欄位名（`recoverable`）；這個服務要用 `"level":"error"`。
+
+### `/trans/downloadTestOrderPDF` 不是 `/proxy/old-report/downloadTestOrderPDF` 的 drop-in
+- service token（client_credentials）的 claims：`role=INTERNAL`、`internal_user_role=service`、`customer_id=null`、`clinic_id=null`、`user_id=0`。`/trans` 版用 `resolveIdsForHttpOptional(req.user, query, ['customer_id','clinic_id'])`，兩者皆 null 就回退到 query → 少 `clinic_id` 直接 **400**；補上（值任意，trusted-internal 會 bypass `ownsSample`）→ 200 且位元組完全相同。proxy 版只讀 `req.user` + `isTrustedInternalCaller` bypass。
+- 分兩步遷移前要量「中間態」：舊 proxy 路由帶多出來的 `clinic_id` 仍 200 且位元組相同 → step 1（code 加參數）可獨立上線零行為變更，step 2 才翻 ConfigMap URL。
+- setting-consumer 的 `sample` DTO 沒宣告 `clinic_id`（TS2339），要走 `sample[0].order.clinic_id`（`OrderSample_in_samplev2`）——**proto 有欄位 ≠ 手寫 DTO 有欄位**。
+- `getOrderReport` 的 `AxiosError 400` 是**既有基線**：7 天 33 筆、全部 `call_function=getOrderReport`、約 4.7/天、平日會叢集（09-16 兩小時 4 筆）。axios 失敗時會 dump 整個 request config（`path:`/`url:`/`_header:` 各一行），**那些 URL 行只在失敗時出現，不是每次呼叫的 log**；後面跟著的 qpdf `file is damaged` 是 400 body 被餵進 qpdf。
+
+### 服務的 error level 被雜訊污染時，比對「種類」不是「數量」
+- `lis-setting-consumer` 的 `check order tag` 是 info 語意卻標 error，每小時 271–1,832 筆；重啟時還有 Kafka consumer rebalance / `ECONNRESET`。這裡數 error 數量沒有意義，只能列 pattern 種類跟部署前基線比對。
+- **部署後指標改善的第一嫌疑是重啟本身**：#802 部署前 638 筆錯誤有 552 筆是 Kafka `ECONNRESET`（打 servicebus），部署點消失是因為 pod 重啟、連線重建，不是變更的功勞。要挑不受重啟影響的指標（例如串流路由的 Request/Response 配對數、100% 200）。0 筆 error 也要先排除「log 停了」——同窗口要有 info log 證明 pipeline 活著。
+
+### proto3 零值吃掉「缺值」語意（VP-18152 前置調查，S2 `packages → []` 同類）
+- HTTP `response.data.customers` ↔ gRPC `ListClinicCustomerByIDResponse.clinic_customers.customers`（`FullCustomer`，`protos/customer.proto:547`，trans v1 已 vendored `protos/clinic.proto:17`）。
+- `setting/tool.ts:91` `isEmpty`：`if (!a && a !== 0 && a !== '') return true` → **`isEmpty(0) === false`、`isEmpty(null) === true`**。`invite_status = isEmpty(user_id) ? 'Account Pending' : 'Account Created'`；proto3 `int32 user_id` 無值是 `0` → 直接換 gRPC 會把所有沒帳號的 customer 翻成 Created。映射時必須把 `user_id === 0` 正規化成無值。shadow 是拿來確認乾淨，不是拿來發現這種事。
+- VP-18152 是 Zhibin 的票；分析留 STM，不在別人的票上動 code（Leo 09-21：「不動，等他」）。
+
+### 共享的技術特徵不是身分證（同一 session 踩兩次）
+- **pod IP 會被回收**：`10.224.1.184` 對到 `lis-ordermanage`，但那些呼叫發生在該 pod 啟動之前——IP→pod 只有在 pod 生命期涵蓋 log 時間時才成立。乾淨做法是取「所有 pod 都已存在之後」的窗口重查。
+- **axios 版本**：v1 `^1.6.0`→1.13.6、v2 `^1.12.2`→1.16.0 看起來對得漂亮，但 `/api/user/lis_log_in` 有 121 筆 `axios/1.16.0` 而兩個 trans repo 都沒引用它——別的服務跑同一版。library 版本／UA／語言只能縮小範圍；身分要用該服務獨有的東西（pod IP＋生命期驗證、專屬 env、專屬路由）。VP-18140 log 的 `service_name=unknown`、`jwt_sub=''`，只能靠 `remote_ip`。
+- 先前多處寫的 setting-consumer UA `axios/1.16.0` 是未驗證的，實測 **`axios/1.4.0`**。
+- **文件裡「已完成」的宣稱只要對象是叢集狀態，必須回叢集重讀**：Phase 1 頁把 S6（v1 14 個 cloud-proxy key 已移除）列 shipped，叢集顯示 prod 與 staging 都還有全部 14 個——staging 乾淨才可能是「漂回來」，兩邊都在就是從來沒執行。不一致時先假設自己的記錄錯，不是環境漂移。
+
+### 儀器小抄（本輪新增）
+- trans v1 attribution：`service:lis-trans-deployment @operation:proxy*Caller`（route 字串在 attributes，free-text `old-report` 搜不到）。`service:3146` 不存在——3146 只是 consumer URL 裡的 port。
+- 核心 v1 HTTP 流量：`@event:core_v1_http_request`（VP-18140 log），14 天窗；`list-customer-by-id` 14 天 120+ 個不同 pod IP，逐一解析不可行但不影響 scope 結論。
+- emr-v2 prod DB 從筆電走 mysql2 要 `ssl:{rejectUnauthorized:false}`（`require_secure_transport=ON`）；vibrant MCP `mysql_query` 連的是 `lisportalprod`，**沒有 `lis_emr`**。`result_transmission_records` 沒有 `status` 欄位——是 `generation_status` / `transmission_status` / `acknowledgment_status`。
+- kubectl 因 Azure MFA 過期中途失效時，Datadog 的 `image_tag` / `kube_replica_set` tag + 行為 log 可以替代 kubectl 做部署驗證。

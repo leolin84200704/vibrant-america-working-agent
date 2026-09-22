@@ -17,7 +17,7 @@ tags:
 - vp-18152
 - core-v1-retirement
 created: 2026-09-11
-updated: '2026-09-20'
+updated: '2026-09-21'
 links:
 - CONFLUENCE-2684321795
 - INCIDENT-20260518
@@ -655,3 +655,11 @@ Leo：「1. 要（重跑 deploy） 2. 不動，等他（VP-18152 是 Zhibin 的�
 **deploy 被取消那件事的結論**：查不出誰取消，重跑即成功，沒有重現。**教訓不變：部署驗證看 live image SHA。** 本 session 兩次 merge≠上線都是靠這個發現的。
 
 **VP-18152 停手**：形狀對照與 proto3 `user_id` 零值地雷的分析已記在 09-21 20:15 那則，等 Zhibin。不在他的票上動 code。
+
+### [2026-09-22 01:40] Dream closeout probe — both of today's deploys live and healthy; trans v1 image already moved on
+- **trans v1 prod image is now `c546210`, not `35c972e`.** After #802 (17:55Z) three non-Leo PRs merged to `LIS-transformer` main and deployed: #803 (Zhibin, VP-18197 findPatientWithCharge, 21:30Z), #805 (Wang-tianhao, accession-lookup crash fix, 22:02Z), #787 (YFvibrant, LIS-7797 kafka retry storm, 22:05Z). Deploy run 35660819392 success 22:05Z. Error-level lines after that deploy: only `npm notice` x2 and `listOnTimeout` x2 at startup (22:14-22:18Z) — startup noise, nothing recurring.
+- **#802's attribution interceptor is still live under `c546210`**: `service:lis-trans-deployment @operation:proxy*Caller` = 894 lines 18:09-22:05Z, 439 lines 22:05-01:37Z (evening decline). The route string lives in attributes, so a free-text `old-report` search returns 0 — query by `@operation`, not by message.
+- **#176 live on all three setting-consumer pods** (`image_tag:24d8c5c…`, replicaset `57cdddc9cb`, 4.5 h, 0 restarts). PDF URLs in prod carry real `clinic_id` values (45218 seen at 21:12Z).
+- **400s on `getOrderReport` are baseline, not a #176 regression**: 7-day count = 33 `AxiosError 400`, ALL `call_function=getOrderReport`, ~4.7/day with weekday bursts (09-16 had 4 within 2 h, 09-17 six, 09-18 six). Post-deploy 4 in 4.3 h (21:12, 23:47, 00:46, 00:47Z) is inside that pattern. Identical error dumps (`path:`/`url:`/`_header:` lines) exist pre-deploy without `clinic_id`, same `order_status=order_processing|order_received` shape. **Those URL lines are axios error dumps, not per-call logs** — 12 lines since 21:00Z ≠ 12 calls. The qpdf `file is damaged / can't find PDF header` warnings that follow are the 400 body being fed to qpdf; also present pre-deploy (7 in the prior 72 h).
+- Datadog service tag for trans v1 is `lis-trans-deployment` (LTM patterns.md already says so); `service:3146` returns nothing — 3146 is only the port in the consumer's URL.
+- No STM carries `unblocked_by`/`unblock_when` naming VP-18324 or VP-18260 — nothing to propagate.
