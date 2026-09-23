@@ -11,7 +11,7 @@ unblock_when: 'BioInsights grants account perms (test: sftp key-auth to sftp.bio
   then ls / — currently auth OK but ls/stat/put all fail); waiting on Thomas reply
   to 2026-07-21 email'
 created: 2026-07-21
-updated: 2026-09-18
+updated: 2026-09-23
 links:
 - BETA-E2E-20260729
 - BIOINSIGHTS-SFTP-KEY
@@ -215,6 +215,57 @@ score: 1.1706
 - Datadog noise: "Test code exceeds 50 characters ... test_id=7126, ehr_vendor_id=1" logs are UNRELATED (test_id, not hl7_file_input id).
 - SIDE FINDING: `/incoming/` holds ~150 result `.hl7` files for customer 30248 dated 2026-07-29 .. 2026-09-18 (from the double-delivery P2P+BioInsights setup) that the vendor has NEVER picked up. Vendor result consumption not happening; raise with vendor / decide on P2P retirement.
 - NEXT: Leo replies to Olena (draft given 09-18): file received, ORC-12 must be 1730269200, new file name on resend, test codes pending catalog. When a fixed file lands, expect emr_code_not_found until catalog mapping is done.
+
+### [2026-09-23 11:00] devcom SECOND test file arrived (V00000416.hl7) — NPI fixed, now fails emr_code_not_found on retired codes (daily triage 2026-09-23)
+- hl7_file_input 7154, received 2026-09-22 13:15 UTC, cloud pod 74688f6774-4dzfp. ORC-12/OBR-16 = 1730269200 (fixed), MSH-4 = 132493. Customer resolved to JAG (integration cms3icsz700010xlgywfuj8do) — the NPI fix worked. Still John Doe test patient, IN1-2.1 = C.
+- OBR-4: `VAREQUISTION279^Gut Zoomer 3.0^L` + `VATEST2270^Vitamin D^L`. Both EXIST in getLegacyPackagePriceMapping but isOrderable=false / priceVa=-1, and the names do not match: VAREQUISTION279 = Gut Zoomer 4.0 (orderTypeId 454), VATEST2270 = Copper Serum. devcom is working from a stale/wrong catalog. Correct orderable codes: VAREQUISTION463 (Gut Zoomer 5.0, priceVw 550) and VATEST70 (Vitamin D, 25-OH, priceVa 20).
+- quarantined_orders id 14, failure_class test_code_not_found, OPEN, expires 2026-09-29 14:00 UTC. last_error lacks the VP-17752 "(not orderable in the catalog: ...)" suffix even though PR #375 has been on main since 08-18 — parse ran on the image before f52c6dd (PR #430 rolled 09-23 01:53 UTC); not chased further.
+- NEXT: tell Olena the NPI is right, swap the two codes (463 / 70), resend under a NEW file name; confirm which catalog devcom received vs Zhenhe's. Do NOT flip isOrderable on 279/2270 to make the test pass. Report: DailyJob/hl7_fail/triage_2026-09-23.md.
+
+### [2026-09-23 10:05 PT] Full field-level audit of V00000416.hl7 (Leo asked: what else is wrong besides the codes)
+Read against `lis-backend-emr-v2` origin/main f52c6dd (`parser.service.ts`, `obr-parser.service.ts`,
+`patient-detail-parser.service.ts`, `diagnosis-parser.service.ts`). Findings beyond the two test codes:
+
+**Would corrupt or lose data (vendor must fix)**
+- **Email sits in PID-19 -> written to the patient's SSN.** `patient-detail-parser.service.ts` L142 reads
+  **PID-20.1** as email (the Vibrant convention, DriversLicense field); L151 reads **PID-19** as SSN. The file
+  has `john_doe@grr.la` in PID-19, so `patientSSN` -> `patient-grpc-logic.service.ts` L170 `patientSsn` ->
+  createPatientV2 `patient_ssn`, and `patient_email_id` comes out empty. Affects every order once real
+  patients start flowing, not just this test.
+- **ORC-12 / OBR-16 XCN carries one extra empty component.** `1730269200^^Balandan^Paola^^^^^N` -> XCN.2
+  (family) empty, XCN.3=Balandan, XCN.4=Paola. `parser.service.ts` L172-173 reads XCN.2 as last name and
+  XCN.3 as first name, which is exactly why 7126's error string was `customer_not_found=Balandan`
+  (message = `${first} ${last}`.trim(), L179/L192). NPI is in XCN.1 so ordering is not blocked; the provider
+  name we read is wrong. Correct form `1730269200^Balandan^Paola^^^^^^N`. Trailing `N` currently lands in
+  XCN.9 (assigning authority); `obrSourceTable` reads XCN.8 (`obr-parser.service.ts` L131) and gets ''.
+- **OBR-7 = 202609141151, 7 days before MSH-7 (202609212151).** `parser.service.ts` L259 assigns
+  `sampleCollectionTime` from each OBR unconditionally, so a backdated OBR-7 becomes the sample's collection
+  time verbatim. Empty OBR-7 would default to now (`obr-parser.service.ts` L117-119).
+
+**Sent but never consumed (no impact, but do not assume it arrived)**
+- FASTING/NON-FASTING is in **OBR-26**; we read **OBR-19** (`obr-parser.service.ts` L132). Moot either way:
+  `fastStatus`, `obrActionCode`, `obrSourceTable`, `obrBatteryText` only populate the OBRHL7 DTO --
+  grep shows zero downstream consumers in emr-v2.
+- PID-3 UUID is ignored; external id is read from **PID-2** (L138) and patient identity is
+  (customer, first, last, gender, dob) via `findByFullNameAndGender`.
+- DG1 per-OBR association is flattened: `collectDg1Codes` walks every DG1 in the message into one list.
+  DG1-1 starting at 0 and DG1-3 without a coding system are both harmless (only CE.1 is read).
+- MSH-5/MSH-6 = `IN OFFICE`/`LC` are receiving application/facility; unread by us (MSH-4 only matters for
+  PracticeFusion, `obr-parser.service.ts` L167-171). "IN OFFICE" looks like a draw-location value stuffed
+  into the wrong field -- ask the vendor what they meant.
+- OBR-11 `N` is not a valid specimen action code; OBR-15 `0`; MSH-12 2.5 vs integration hl7_version 2.3. None read/blocking.
+
+**Next gate after the codes are fixed**
+- IN1-2 = `C` -> `ChargeMethod.CUSTOMER_PAY` (`parser.service.ts` L588-590), i.e. the practice is billed.
+  JAG's EMR-ordering payment method is still unconfirmed (open item since 2026-07-27) -- that is what the
+  next corrected file will hit. Confirm with JAG in parallel.
+- Resend must use a NEW file name (dedup by file name). MSH-10 dedup (`parser.service.ts` L128-135) only
+  bites once an emr_sample exists, which it does not here, but a fresh control id is still advised.
+
+**Deliverable**: English reply to Olena drafted at
+`drafts/BIOINSIGHTS-devcom-reply-20260923-draft.md` (9 numbered items + optional paragraph about the ~150 unpicked result
+files in /incoming/). Not sent -- Leo reviews. The draft commits us to sending the current test catalog,
+which still depends on Zhenhe.
 
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.

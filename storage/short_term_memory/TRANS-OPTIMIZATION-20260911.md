@@ -837,3 +837,39 @@ answer 到 `@operation:proxyGrpcCaller`，查「誰在打 grpc proxy」會拿到
 （已確認在 .gitignore 第 40 行）。
 
 **待辦**：runbook `vp18324-proxy-pdf-route-cutover.md` §8 那段關於「沒有歸因」的敘述要改掉。
+
+### [2026-09-23] VP-18345 實作（Leo 批准 shadow）— PR #179 -> main
+**票上的前提對一半，錯的那一半會送出靜默錯誤答案**
+- `getPatientTestsResult`：註解掉的程式碼確實是同一個 method 同一個 key（`{id: patient_id}`）→「解除註解」成立。
+- `getKitStatus`：**不成立**。註解掉的是 `getKitStatus({accession_id})`，proxy 實際打的是
+  `GetKitStatusBySampleId({sample_id})`——不同 method、不同識別碼。而且 vendored
+  `protos/shipping.proto` **根本沒宣告** `GetKitStatusBySampleId`（只有舊的 `GetKitStatus(AccessionId)`）。
+- 兩邊共同：註解掉的 client options 指向寫死的 on-prem 位址（`192.168.60.6:30600` / `:31865`），已死。
+  改建在 `SHIPPING_RPC` / `TEST_RESULT_RPC` 上（值從跑著的 trans v1 pod 讀出來）：
+  `lis-shipping-service-grpc.shipping.svc.cluster.local:63142` /
+  `lis-test-connect-grpc-service.results.svc.cluster.local:6889`。
+  **動工前先從兩個 prod deployment 各一顆 pod 做 TCP 連通測試，都 CONNECT**（`-local` 那組不能假設）。
+
+**設計**：`SETTING_GRPC_MODE` = `proxy`（預設，逐位元組等於今天）| `shadow`（兩邊都打、**送 proxy 的答案**、
+記錄差異）| `grpc`。仿 trans v2 2026-09-16 的 `TRANS_PROXY_GRPC_MODE`。部署不改變任何行為，
+之後每一步都是改 env 不是部署。
+
+**接手 trans v1 的兩個行為**：
+1. metadata 用本服務自己的 `createOAuth2Metadata`。**刻意差異**：`service-name` 是 `lis_setting_bot`
+   而非 proxy 的 `lis_frontend_service`——那是歸因不是授權，誠實的值是真正在呼叫的服務。已寫進 PR。
+2. proto3 正規化 `send_out[i].packages -> []`（Sentry #68038）。
+
+**比對邏輯是最該 review 的部分**：naive deep-equal 會讓 shadow 廢掉（幾乎每次都報差異就沒人看）。
+正規化掉三種非差異：absent vs `undefined`（proxy 答案過了 JSON）、absent vs `[]`（proto3 省略空 repeated）、
+`1` vs `"1"`（64-bit 欄位以字串回來）。**其中兩種是被我自己的測試打出來的——實作比它自己的註解更嚴格。**
+報告只帶路徑與型別、不帶值（病人資料），且有上限避免一次結構性不符洗版。
+
+**測試**：17 個新測試（純比對與 mode 邏輯）。全套與 tsc 在 clean origin/main 上重跑對照：
+2 個既有紅 suite、0 type error，前後相同。
+誠實但書：`git stash` 不收未追蹤檔，所以 baseline 那輪仍載入新 spec；它隔離的是三個已追蹤檔案的影響。
+
+**stage_test 那份先不開**：本次預設 `proxy`，staging 少了它不會壞（跟 VP-18324 不同），
+等 #179 review 定案再 cherry-pick，避免兩條線帶到不同版本。
+
+**後續**：#179 merge → prod 設 `SETTING_GRPC_MODE=shadow` → 讀 `grpcShadow` 日誌到分歧率為零
+→ `grpc` → 刪兩個 ConfigMap key 與 trans v1 兩條路由。
