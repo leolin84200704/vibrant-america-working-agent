@@ -917,3 +917,29 @@ answer 到 `@operation:proxyGrpcCaller`，查「誰在打 grpc proxy」會拿到
 1. 把 `SHIPPING_RPC` / `TEST_RESULT_RPC` 加進要啟用那個環境的 ConfigMap，用**該環境自己的**值。
 2. 記住 staging 的 shipping 位址從 setting-consumer pod 是 ECONNREFUSED → kit-status 那半
    第一次 shadow 只能在 prod 做。
+
+### [2026-09-23 ~22:00Z] 舊 proxy 路由流量確認：**0**（Datadog 掛掉，改從來源證）
+Datadog MCP 連續失敗（先 "Was there a typo in the url or port?"，後 "Unable to connect"），
+沒有盲目重試，改去 **trans v1 pod 自己的日誌**數——那是來源，比聚合器更直接。
+
+最近 60 分鐘，三顆 prod trans v1 pod（image `ad5ab17`）：
+| pod | old-report/downloadTestOrderPDF | trans/downloadTestOrderPDF | 總行數 |
+|---|---|---|---|
+| 679b79bb5d-4g5dl | **0** | 0 | 86 |
+| 679b79bb5d-6q9hc | **0** | 6 | 407 |
+| 679b79bb5d-zbvvd | **0** | 8 | 265 |
+
+**這個零有對照組**：同一條 grep、同一份日誌，`trans` 那欄抓得到 14 次 → 證明日誌含這類路由字串、
+pattern 有效、pod 有在產出。零不是查詢寫壞（「自己拼的查詢回零筆先驗必然存在的值」這條紀律）。
+切換前的基準是 4-10/分鐘，所以一小時的零 ≈ 300-600 次預期命中沒有發生。
+
+**視窗限制**：trans v1 於 21:00Z 剛重新部署（image `ad5ab17`），pod 日誌只回溯到那時，所以只有約 60 分鐘。
+更長的歷史要等 Datadog 恢復。
+
+**一個我差點誤用的「佐證」**：我順手數了 VP-18346 的新 label（`proxyOldReportCaller` / `proxyGrpcCaller`），
+兩者都 0。但 `proxyGrpcCaller` 不該是 0（setting-consumer 的兩個呼叫仍走 proxy，`proxy_getkit`/`proxy_getresult`
+env 確認仍指向 `/proxy/grpc/*`）。查證後：**攔截器的輸出不進 pod stdout**（它的四個欄位在日誌裡一個都沒有），
+所以那組數字是無效資訊、不是第二個確認。已捨棄，不當佐證用。
+
+**另外**：VP-18346 的 PR #813 已 merge 並部署（`ad5ab17` 含它），但新舊 label 是否真的分開，
+要等 Datadog 恢復才能驗（label 只存在於送往 Datadog 的那條路徑）。
