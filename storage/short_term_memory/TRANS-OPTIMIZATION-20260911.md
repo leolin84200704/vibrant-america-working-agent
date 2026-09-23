@@ -943,3 +943,27 @@ env 確認仍指向 `/proxy/grpc/*`）。查證後：**攔截器的輸出不進 
 
 **另外**：VP-18346 的 PR #813 已 merge 並部署（`ad5ab17` 含它），但新舊 label 是否真的分開，
 要等 Datadog 恢復才能驗（label 只存在於送往 Datadog 的那條路徑）。
+
+### [2026-09-23 ~22:15Z] Datadog 恢復 — 7 天流量驗完，公告草稿完成（Leo：「請你把 ... 要移除寫進doc，我會發到slack，等一個禮拜後移除」）
+**7 天逐小時（`@url:*downloadTestOrderPDF*`）**：切換前 proxy 尖峰每小時 100-650
+（09-17T20 552、09-21T21 568、09-22T22 646）；**09-23T00:00Z 起 proxy 每小時都是 0**，
+只有兩個例外：09-23T18 與 T19 各 4 筆——那是我自己的驗證探針（每次跑 2 個 sample、每個 request 2 行 log）。
+同期 `/trans` 承接 100-600/小時。**工作沒有消失，是搬家了。**
+
+**歸因交叉確認**：`@operation` 查詢顯示 18 時與 19 時 old-report 各 **2 個 request**
+（= 2 行 url log/request × 2 = 4，對得上），使用者代理 axios/1.4.0。有機流量為 0。
+
+**attribution 上線 5.3 天以來（09-18 16:32 PDT 起）全家族只有一條有呼叫者**：
+`downloadTestOrderPDF` 2,936 筆，其餘 **十條全部 0**——量出來的，不是 code search 推的。
+
+**VP-18346 的 label 分離：已部署但尚未被觸發，因此未驗證。**
+trans v1 於 21:00Z 換到 `ad5ab17`（含 PR #813），但所有歸因事件都在 21:00Z **之前**，
+所以 `@operation:proxyOldReportCaller` 還沒出現過。**不可宣稱它有效**；等有 request 打到再驗。
+（先前我在 pod stdout 裡數 label 得到 0/0，已確認攔截器輸出不進 stdout，那組數字無效、已捨棄。）
+
+**公告草稿**：`drafts/proxy-old-report-removal-announcement.md`（英文，Leo 發 Slack）。
+- 主段只講 `downloadTestOrderPDF`，移除日 **2026-09-30**（09-23 起算一週）。
+- 第 2 段涵蓋其餘十條，標為可刪——理由寫在「Notes for Leo」：同一次刪除、現在有量測支撐、
+  分兩次公告等於邀請第二輪「沒人通知我」。
+- 遷移指引點名那個會咬人的差異：`/trans` 需要 `clinic_id`，否則 400（service token 兩個 claim 都沒有）。
+- 草稿裡誠實標註「VP-18346 的 label 分離尚未觀察到生效」，不讓未驗證的事混進公告的證據裡。
