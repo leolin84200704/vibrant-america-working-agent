@@ -900,3 +900,20 @@ answer 到 `@operation:proxyGrpcCaller`，查「誰在打 grpc proxy」會拿到
   → kit-status 那半**今天在 staging 沒有可用目標**，第一次真正的 shadow 只能在 prod 做。
 
 **PR**: #180 -> main（待 review）。
+
+### [2026-09-23] #180 部署驗證 — 缺陷確認關閉（在部署產物上實跑，不是靠單元測試）
+- main `69f8581`，六顆 prod pod 全換新、Ready、0 restart。
+- **這次盯的結構性風險**：env 未設時 client 的 `url` 是空字串，而 `getService()` 在 `onModuleInit` 就跑。
+  結果六顆全部乾淨啟動、**0 個 URL/grpc-init/DI 錯誤** → grpc-js 接受空 URL 而不在建立時爆炸。
+- **在 pod 裡載入部署中的 `dist/setting-consumer/proxy-grpc-mode.js` 實跑保護邏輯**：
+  `SETTING_GRPC_MODE=undefined`、`SHIPPING_RPC=""`、`TEST_RESULT_RPC=""` → 兩邊都解析成 `proxy`；
+  而且 `resolveMode("shadow", "")` 也回 **`proxy`** ——「就算現在有人把模式設成 shadow 也不會走直連」，
+  這是缺陷關閉的直接證據。
+- VP-18324 兩條路由仍位元組一致（480,857 / 2,057,367），六顆 pod 零錯誤。
+- **未完成**：Datadog 查詢工具在此時連續回 "Was there a typo in the url or port?"（同組查詢稍早可用），
+  所以「舊 proxy 路由流量是否已歸零」這一項**沒驗到**，留待下次。
+
+**啟用 shadow 前必須先做的事（不是現在）**：
+1. 把 `SHIPPING_RPC` / `TEST_RESULT_RPC` 加進要啟用那個環境的 ConfigMap，用**該環境自己的**值。
+2. 記住 staging 的 shipping 位址從 setting-consumer pod 是 ECONNREFUSED → kit-status 那半
+   第一次 shadow 只能在 prod 做。
