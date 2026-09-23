@@ -1051,3 +1051,32 @@ Datadog 顯示最後一筆 caller-log 是 20:37Z（deploy 之前），3 小時�
    Bull 在 on-prem redis db 4，與 `-st` 的 Azure db 1 隔離）—— 要不要一起開，待 Leo 決定。
 2. staging trans v1 的 `tnp_rpc` 仍指向死的 `192.168.60.6:30600`。
 3. `grpc.options.ts` 的 prod 預設值要不要改成「無預設、缺少就啟動失敗」。
+
+### [2026-09-23] VP-18320 合併十條 old-report 路由（Leo：「可以合併」）+ 證據重新量過
+
+**重新量測（15 天窗口已滑到 09-08 → 09-23，不是公告當時的 09-03 → 09-18）**：
+- `/proxy/grpc` 逐日：`getTestStatus` 與 `getQuestionaireBySampleId` 切換前 129–1,876/日、每日 lockstep，
+  **09-17 起連續 7 天整整 0**（公告當時只有 2 天）。`listTnpCode` 15 天完全不出現。
+  `getKitStatus` 7–15/日、`getPatientTestsResult` 1–5/日，兩條都還活著。
+- `/proxy/old-report`：只有 `downloadTestOrderPDF` 有量（**20,669**），其餘十條 15 天全 0。
+- **儀器筆記**：`@url` 含 query string，直接 GROUP BY 會炸成上萬列（第一次查就中了，被 truncate）。
+  要用 `split_part("@url", '?', 1)` 才是逐路由計數。
+
+**替代路徑逐條對過 code（origin/main，不是本機——本機落後 39 commits）**：十條每條都有同名
+`/trans/*` 雙胞胎。**先前 classification doc 寫「呼叫同一個 OldReportProxyService class」是對的，
+但路徑不是直接的**：八條是 `TransService.X` → `oldReportProxyService.X`（多包一層，順便多了 navigator
+gate + Kafka audit + language），只有 `getRequisitionForm` / `oneClickPersonalizedReport` 是直接呼叫。
+結論不變（同下游、同 env key），但描述要修正。
+
+**兩條不是 drop-in（新挖到的，之前沒人講）**：
+- `GetSpecificReports`：proxy 版串原始 `.gz`，`/trans` 版解壓縮 + parse 後回 **JSON**。回應形狀不同。
+- `getOrderSummaryReportZip`：proxy 版走 `generateOnlineZipNoJWT` 以 `customer_id_arr` 定範圍；
+  `/trans` 版那行被註解掉、改走 JWT 定範圍的 `generateOnlineZip`。同一份產物、不同的定範圍機制。
+
+**刪除 PR 最危險的地方**：`OldReportProxyService` 與它全部的 env key **必須留著**——`/trans` 雙胞胎
+走的就是那些方法。DTO 只能刪 5 個（`GenerateOrderpdfQuery` 給存活的路由、`GenerateProducctReportQuery`
+被 service 自己 import）。
+
+**產出**：`docs/plans/trans-optimization/vp18320-removal-and-replacements.md`（要刪的 13 條 + 逐條替代
++ 明確留下什麼 + PR 形狀 + config key 要重新盤點的理由）、`drafts/vp18320-widening-comment.md`（英文
+comment 草稿，**未發**）。Jira description 的 Scope 段與 QA twin QH-7163 都還只寫三條，要不要改等 Leo。
