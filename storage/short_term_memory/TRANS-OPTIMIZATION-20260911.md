@@ -17,7 +17,7 @@ tags:
 - vp-18152
 - core-v1-retirement
 created: 2026-09-11
-updated: '2026-09-21'
+updated: '2026-09-23'
 links:
 - CONFLUENCE-2684321795
 - INCIDENT-20260518
@@ -988,3 +988,66 @@ claude / gh / git / node / caffeinate / osascript / launchctl 全部找得到。
 **尚待**（09-30 當天或之前）：
 1. VP-18346 的 label 分離仍未被觀察到生效（那條路由已無流量，所以還沒機會觸發）。
 2. 公告草稿 `drafts/proxy-old-report-removal-announcement.md` 等 Leo 發 Slack。
+
+### [2026-09-23 14:55 PT / 21:55Z] staging trans v1 兩個 gRPC 目標修復 + VP-18345 在 staging 開 grpc mode 實測
+
+**起因**：Leo 要我在 #179 部署後測 VP-18345。在 staging pod 內用它自己的 `getServiceToken` 打
+`proxy_getkit`，三個 sample 全部 `http=500`。到 trans v1 staging 追，錯誤是
+`14 UNAVAILABLE: connect ECONNREFUSED 192.168.60.6:31865` —— **正是 VP-18345 票裡那個「已死的寫死
+on-prem shipping 位址」，staging 的 trans v1 到今天還在打它**。24h 內同樣錯誤 48 筆、最早
+`08:47:19Z`，早於 #179 部署（17:13Z）8.5 小時 → 既有狀態，不是這次部署造成。
+
+**變更 1（Leo 批准）`lis-trans-config-st`**：`SHIPPING_RPC` `192.168.60.6:31865` →
+`lis-shipping-service-staging-grpc.shipping.svc.cluster.local:63142`；`TEST_RESULT_RPC`
+`192.168.60.6:30600` → `lis-test-connect-staging-grpc-service.results.svc.cluster.local:6889`。
+prod 的 `lis-trans-config` 早就是 in-cluster 位址，這只是把 staging 對齊。`trans.grpc.options.ts:82`
+是 `url: process.env.SHIPPING_RPC` **無 fallback**，ConfigMap 即唯一來源。rollout restart 後同一支
+探測腳本：**500 → 200**。`tnp_rpc` 仍是死的 `192.168.60.6:30600`，未動。
+
+**變更 2（Leo 批准）`lis-setting-consumer-st-config`**：加
+`SETTING_GRPC_MODE=grpc` + `SHIPPING_RPC` + `TEST_RESULT_RPC`（staging 位址）。
+
+**⚠️ 地雷：`grpc.options.ts:25,37` 的預設值寫死的是 PROD 位址**
+（`lis-test-connect-grpc-service...` / `lis-shipping-service-grpc...`）。任何環境只設
+`SETTING_GRPC_MODE=grpc` 而不設另外兩個 URL，**就會直接去打 prod 的 shipping / test-result service**。
+三個 key 必須成組設定。這是我在 gate 的 Gate 1「改前」階段才挖出來的，票和 PR 都沒標。
+
+**A/B 實測（同一個 pod、同一個 sample、兩條路各打一次）**：staging kit 資料稀疏，掃了 44 個
+sample id 才找到一個非空的（`500000`）：
+```
+proxy  : {"return_from":{"kits":[{"tracking_number":"796075684150","kit_status":"LAB_RECEIVED"}]}}
+direct : {"return_from":{"kits":[{"tracking_number":"796075684150","kit_status":"LAB_RECEIVED"}]}}
+raw JSON equal : true
+diffShadow     : null      <- 用 PR 自己的比對函式跑的
+```
+其餘 sample 兩邊都回空物件，一致。`protos/shipping.proto:7` 確認已宣告 `GetKitStatusBySampleId`。
+
+**VP-18345 已經在 prod 了，不是只有 staging**：21:06Z 有人推 main（`31da65c`，PR #181
+sync-core-patient-proto），main 同時觸發 `setting-consumer-staging` 與 `setting-consumer` 兩個
+workflow，四個 deployment（prod/staging × cloud/local）全換成該 image，而它含 88bcca7。
+prod ConfigMap 三個 key 皆不存在 → 仍是 `proxy` mode、行為未變。預設值設計擋住了這次，
+但「staging 先、prod 後」的節奏實際上已被 main 的 auto-deploy 繞過。
+
+**修正我自己稍早的數字**：我曾用 `kubectl logs | grep` 統計 prod trans v1 的 `getKitStatus`，
+得到「24h 內 0 筆」。**錯的** —— caller-log 走 LisLoggingService 進 Datadog、不進 stdout。
+Datadog 實際：24h 內 `/proxy/grpc/getKitStatus` 9 筆、`/proxy/grpc/getPatientTestsResult` 3 筆、
+`/proxy/old-report/downloadTestOrderPDF` 504 筆。結論不變（shadow 樣本累積會很慢），但數字要以
+Datadog 為準。這是 patterns.md 那條「stdout ≠ 全部日誌」的又一次實例。
+
+**VP-18346 續**：#813 merge 後 prod 部署 **failure** —— 掛在它自己沒更新到的另一支 spec
+`old-report-caller-log.spec.ts:83`（`expect(operation).toBe('proxyGrpcCaller')`，與新行為對撞）。
+該 spec 在 #813 的 branch head `039b18b` 上就已存在且已紅，`gh pr checks 813` merge 前就是 fail
+—— 不是 merge skew，是「只跑了改到的那一支 spec」。斷言在 rxjs subscribe callback 內，一炸就
+`done()` 不會被呼叫，jest 只報成 5000ms timeout，掩蓋了真因。`176503a`（YFvibrant，20:12Z）已修，
+20:47Z / 21:33Z 兩次 prod 部署成功，prod transformer 現為 `11e67d8`。label 分離仍未觀察到生效：
+Datadog 顯示最後一筆 caller-log 是 20:37Z（deploy 之前），3 小時內全域只有 5 筆，流量是突發式的。
+
+**回滾**：兩個 ConfigMap 改前完整備份在該次 session 的 scratchpad
+（`backup-lis-trans-config-st.yaml` / `backup-lis-setting-consumer-st-config.yaml`）。
+兩者皆不在任何 repo 內，只能 `kubectl patch`，無 PR 可開。
+
+**未解**：
+1. `lis-setting-consumer-local-st` 仍是 proxy mode（自己的 ConfigMap、`platform_type=local`、
+   Bull 在 on-prem redis db 4，與 `-st` 的 Azure db 1 隔離）—— 要不要一起開，待 Leo 決定。
+2. staging trans v1 的 `tnp_rpc` 仍指向死的 `192.168.60.6:30600`。
+3. `grpc.options.ts` 的 prod 預設值要不要改成「無預設、缺少就啟動失敗」。
