@@ -663,3 +663,177 @@ Leo：「1. 要（重跑 deploy） 2. 不動，等他（VP-18152 是 Zhibin 的�
 - **400s on `getOrderReport` are baseline, not a #176 regression**: 7-day count = 33 `AxiosError 400`, ALL `call_function=getOrderReport`, ~4.7/day with weekday bursts (09-16 had 4 within 2 h, 09-17 six, 09-18 six). Post-deploy 4 in 4.3 h (21:12, 23:47, 00:46, 00:47Z) is inside that pattern. Identical error dumps (`path:`/`url:`/`_header:` lines) exist pre-deploy without `clinic_id`, same `order_status=order_processing|order_received` shape. **Those URL lines are axios error dumps, not per-call logs** — 12 lines since 21:00Z ≠ 12 calls. The qpdf `file is damaged / can't find PDF header` warnings that follow are the 400 body being fed to qpdf; also present pre-deploy (7 in the prior 72 h).
 - Datadog service tag for trans v1 is `lis-trans-deployment` (LTM patterns.md already says so); `service:3146` returns nothing — 3146 is only the port in the consumer's URL.
 - No STM carries `unblocked_by`/`unblock_when` naming VP-18324 or VP-18260 — nothing to propagate.
+
+### [2026-09-22] VP-18324 step 2 起手 — 卡在 staging 沒有 step 1 的程式
+Leo 指派 VP-18324，選方案 A（照票的順序：staging 先）。
+
+**現況查證（不靠記憶）**
+- 四份 ConfigMap（ns `setting`）全部還是舊路由：`lis-setting-consumer-config` /
+  `-st-config` / `-local-config` / `-local-st-config` 的 `url_downloadTestOrderPDFv2` 都是
+  `.../proxy/old-report/downloadTestOrderPDF`。
+- prod 六顆 pod（`lis-setting-consumer` x3 + `lis-setting-consumer-local` x3）全在 `24d8c5c`
+  = #176 merge commit → **step 1 在 prod 已上線**。
+- **阻擋點**：staging 兩顆跑 `9dc0a3e`，來自 `stage_test`，**不含 clinic_id 那個 commit**。
+  這個 repo 是刻意雙軌（`main`→prod 的 `setting-consumer.yml`、`stage_test`→staging 的
+  `setting-consumer-staging.yml`，各自 `push:` 觸發），main 多 8 個 commit / stage_test 多 6 個，
+  同一個修正在兩邊是不同 commit。所以先翻 staging config = staging 全部 400。
+- 四份都是 `envFrom: configMapRef` → **改 ConfigMap 不影響執行中的 pod，一定要 restart**。
+- ConfigMap **沒有**被 repo 追蹤（repo 內 grep 不到 `url_downloadTestOrderPDFv2` 的 yaml），
+  所以 live patch 就是唯一的變更點，沒有 repo drift 問題，但改前要備份。
+
+**在 prod 重量一次（票上的數字是 9/21 staging 的，不是現況）**
+從 prod pod 內、用該 pod 自己的 OAuth2 service token，sample 2640083（customer 19838, clinic 100627）：
+| 呼叫 | status | bytes | 耗時 |
+|---|---|---|---|
+| proxy + clinic_id | 200 | 482,019 | 8.8 s |
+| trans + clinic_id | 200 | 482,019 | **3.0 s** |
+| trans 無 clinic_id | 400 | 42 | — |
+第二個 sample 2640082 同樣結論（2,055,992 bytes 雙方一致）。**`/trans` 快約 3 倍**（少一跳 proxy）。
+
+**修正一個先前的說法：兩條路由不是 byte-identical。**
+長度一樣但 sha256 不同 → 做了對照組：**同一條路由連打兩次，sha256 也不同**。差異位元組只出現在
+offset ~481,913 起的 PDF trailer `/ID [<...> <...>]`，是算繪器每次重產的文件識別碼。
+所以正確說法是「除了 per-render 的 `/ID` 之外相同」。#176 的 commit message 寫 byte-identical
+不精確，已在 #177 的 PR body 更正。**對非決定性元件下結論前先量同一輸入的重複變異** 這條救回一次誤判。
+
+**已做**：PR **#177 -> stage_test** https://github.com/Vibrant-America/LIS-setting-consumer/pull/177
+cherry-pick `2e10628` 無衝突；typecheck 乾淨；jest 在 stage_test **改動前後都是 2 suites / 1 test 紅**
+（ECONNABORTED，測試裡打真實 HTTP），baseline 是在這條 branch 上實跑對照的，不是沿用 main 的紀錄。
+
+**等 Leo merge #177 → staging 部署 → 翻兩份 staging config + restart → 驗證 → 再翻兩份 prod config。**
+
+### [2026-09-22] proxy 家族全貌盤點 + 開三張後續票（Leo：「不要再call proxy, 直接call ... abc 都開都做」）
+**完整路由清單（Explore agent，trans v1）**：只有兩個子家族、共 17 條。
+`proxy.controller.ts:26` = `/proxy/grpc`（6 條），`old-report.controller.ts:45` = `/proxy/old-report`（11 條）。
+- `/proxy/grpc`：5 條 gRPC fan-out（getKitStatus→ShippingService、getPatientTestsResult / getTestStatus
+  →TestResultGrpcService、getQuestionaireBySampleId→ShippingService、listTnpCode→TnpService）
+  + **1 條不是 gRPC**：`sendSkinPlacePatientOrders` 是純 HTTP POST 到**外部 CRM**
+  `https://www.vibrant-america.com/crmapi/placepatientorders`（`proxy.service.ts:220-223`），
+  而且會轉發呼叫者的 raw bearer、並用 `julien_barcode` 覆蓋 `comments`。
+- `/proxy/old-report`：11 條全部 front legacy Java on-prem `:8081/secure/nologin/*`
+  （dev 192.168.10.153 / prod 192.168.60.77），其中 3 條另外打 order-management 的 PDF 端點。
+  **每一條在 `trans-reports.controller.ts` 都有 1:1 雙胞胎，共用同一個 `OldReportProxyService`。**
+
+**授權不對稱（兩個家族不同，重要）**
+- `/proxy/old-report`：有 `assertSamplesOwned` + `isTrustedInternalCaller` 繞過（`:63-67`），
+  且**不跑** `resolveIdsForHttpOptional`（註解自稱 spoof-safe）。`/trans` 雙胞胎則會跑，身分可從 query 補。
+- `/proxy/grpc`：**完全沒有 ownership gate**，只有 `CustomJwtAuthGuard`，`req.user.userId` 純粹當
+  metadata 做歸因。=> 改直連**不會失去任何授權行為**，只少一次 JWT 驗證跳。這點讓 VP-18345 風險遠低於 old-report 那條。
+
+**VP-18345 之所以便宜**：直連的程式碼還在 repo 裡，只是被註解掉——
+`controller.ts:8832-8843`（kit）、`:9193-9203`（result）、client 在 `grpc.options.ts:24-32`，
+proto `protos/shipping.proto` / `protos/tests.proto` 都已 vendored。直連路徑雙雙 prod-proven
+（trans v2 `proxy-grpc.service.ts:129` 自 09-16；LIS-Report `grpc.service.ts:205` 長期高流量）。
+
+**解掉 agent 留的未決問題 #2**：它說 setting-consumer 的 `.env` 還指向 cloud-proxy、不確定 prod 切了沒。
+我今天實讀四份 live ConfigMap：`proxy_getkit` / `proxy_getresult` 都已是
+`lis-trans-service.default.svc.cluster.local:3146/proxy/grpc/...`，**cutover 已生效**，
+所以 VP-18320 comment 裡 Datadog 歸因查到的殘餘流量就是 setting-consumer，兩邊對得起來。
+
+**新開三張（掛 VP-18260，assign Leo）**
+- **VP-18345** setting-consumer 兩條 gRPC 改直連
+- **VP-18346** `/proxy/old-report` 補 `ProxyCallerLogInterceptor`（目前只有 `/proxy/grpc` 有，
+  所以「10 條零流量」是 code search 推的，看不到瀏覽器/外部/未 clone repo 的呼叫者）
+- **VP-18347** `sendSkinPlacePatientOrders` 的 billing 寫死網址（`ProZOrderServiceImpl.java:120`，
+  自帶 TODO "Blocks cloud-local-proxy scale-to-0"）+ trans v2 未 gate 的呼叫
+
+**cloud-local-proxy** = trans v1 proxy 家族的 route-for-route 複製（on-prem），兩個 controller 都帶
+"TRANS-OPT RETIRING" banner。退場三階段：cloud-local-proxy → trans v1 `/proxy/*` → `/trans/*` 或直連。
+
+**Gotcha**：`mcp__vibrant__create_jira_issue` 建票回 **403**（service account 無權限）；
+改用 `mcp__claude_ai_Atlassian__createJiraIssue`（以 Leo 帳號）成功。下次建票直接用後者。
+
+**未解**：Leo 說「跟著177一起merge」，但 B 在 LIS-transformer、C 在 LIS-backend-billing + trans v2，
+不同 repo 無法與 #177（LIS-setting-consumer / stage_test）同批 merge；且 #177 已開、照「一個 PR 一個 head」
+不再往該分支推 commit。已向 Leo 說明並建議 #177 照原訂走完。等回覆。
+
+### [2026-09-22 23:2x-23:33Z] VP-18324 step 2 DONE — 四份 ConfigMap 全部翻到 /trans（Leo：「177 merge 了，請你接著做」）
+- #177 merge 成 `22d09fe`；**兩顆 staging pod 的 image 就是 `22d09fe`**（看 live image SHA，不看 PR 狀態——
+  本 program 已兩次踩到 merge≠上線）。另外在 staging 的 `/dist` 裡 grep 到 `clinic_id=${clinic_id}`，
+  確認新程式真的在跑，不只是 tag 對。
+- 順序：staging 兩份 → 驗 → prod `lis-setting-consumer` → 驗（含真實 PDF）→ prod `-local`。
+  兩個 prod deployment 分開做，前者當 canary（各自吃不同 ConfigMap，可以分開翻）。
+- 四份都先 `kubectl get cm -o yaml` 備份到 scratchpad 才 patch；patch 後 key 數量不變
+  （135/122/135/122），只有值變。
+- **`envFrom: configMapRef` → 改 ConfigMap 不影響執行中的 pod**，四個 deployment 都 rollout restart。
+  **踩到一次值得記的**：`kubectl rollout status` 回報 "successfully rolled out" 時，**舊 pod 還在**
+  且還帶著舊的 env。判準要看「只剩新 pod」+ 逐顆 exec 讀 env，不是 rollout status。
+- 最終狀態：8 顆 pod（6 prod + 2 staging）全部 Ready / 0 restart，逐顆 exec 確認
+  `url_downloadTestOrderPDFv2` 都是 `/trans/downloadTestOrderPDF`。prod image 仍是 `24d8c5c`（只有設定變）。
+- **正向驗證（prod，用 pod 自己的 env）**：5 個真實 sample 全部 200，且 `/trans` 與舊 proxy 的
+  **位元組長度完全一致**：482,019 / 2,055,992 / 493,190 / 481,611。sha 不同是 per-render `/ID`（已證）。
+- 六顆 prod pod 啟動後 0 個 getOrderReport 錯誤、0 個非例行錯誤。
+- **日誌裡看不到 `/trans/downloadTestOrderPDF` 字串是預期的**——那些 URL 行是 axios 的錯誤傾印，
+  不是 per-call log，沒失敗就不會出現。別把它讀成「沒有流量」。
+- 回滾：把四份 ConfigMap 的該 key 改回 `/proxy/old-report/downloadTestOrderPDF` 再 restart；
+  備份 yaml 在 scratchpad `cm-backup/`。step 1（程式帶 clinic_id）不需要回滾，舊路由接受該參數。
+
+**VP-18324 剩下**：`/proxy/old-report/downloadTestOrderPDF` 的流量要歸零兩週後才能刪那 11 條路由，
+而刪除前應先做 **VP-18346**（補歸因攔截器）——目前「其他 10 條零流量」是 code search 推的，看不到外部呼叫者。
+
+### [2026-09-22] Backup/rollback 方案做實（Leo：「先不刪，把可以backup 的方案做好先」）
+- **發現：四份 ConfigMap 有真機密**（`Azure_kafka_connection_string`、`Azure_redis_pass`、
+  `Azure_noti_topic_connection`、`OAUTH2_CLIENT_ID`）→ `kubectl get cm -o yaml` 的 dump
+  **絕不可進任何 git repo**。session 暫存的那份已刪。
+- **而且整份 dump 本來就是錯的備份物件**：只動了一個 key，沒人會為了退一個 key 還原 135 個。
+  正確的備份是「那個 key 的前後值 + 指令」，而前值是 URL 不是機密，甚至可以從路由名重建。
+- **回滾在 staging 實際演練過，不是寫出來的**：patch 回 proxy → restart → 新 pod
+  `66b4c4c849-97z7h` 帶舊值且 proxy 路由實際可用（且 `/trans` 無 clinic_id 仍 400，證明真的退回去了）
+  → 再 patch 回 `/trans` → `66cc5f79f-pqdjf`。單 pod deployment 每次約 60-90 秒。
+- Runbook（無機密）：`runbooks/vp18324-proxy-pdf-route-cutover.md`，commit `2fd02b1`。
+  裡面釘住三件容易踩的事：(a) dump 不能進 repo 且不是正確的備份物件；
+  (b) `rollout status` 說完成時舊 pod 還在、還帶舊值，判準要看「只剩新 replicaset」+ 逐顆 exec 讀 env；
+  (c) 比對 PDF 要比長度不能比 hash（`/ID` 每次重產），且路由字串在 `custom.url` 屬性不在 message
+  （free-text 搜 `old-report` 回零筆不等於沒流量）。
+
+### [2026-09-22] 切換後的流量實測（trans v1 request log，`@url:*downloadTestOrderPDF*`，每分鐘）
+```
+23:20-23:29Z  proxy 4-10/min   trans 0
+23:30-23:31Z  proxy 4-6        trans 4-8     <- rolling restart，新舊 replicaset 並存
+23:32Z 起     proxy 0          trans 8-14
+23:38Z        proxy 4          trans 8       <- 我自己的驗證腳本（它會故意打舊路由對照）
+```
+23:38 那 4 筆能從時間與數量推是自己的 probe，但**無法證明**——因為 `/proxy/old-report` 沒有歸因
+（`old-report.controller.ts` 只有 `@UseInterceptors(SentryInterceptor)`）。這正是 VP-18346 的理由，
+也是「如果流量沒歸零會怎樣」的真正答案：數得到、認不出來。
+
+**更正一個我自己在 VP-18324 描述裡寫太滿的說法**：那裡寫「#802 的 attribution logging 確認每一筆
+`/proxy/old-report/downloadTestOrderPDF` 都來自 setting-consumer」。已查證 `ProxyCallerLogInterceptor`
+**只掛在 `/proxy/grpc`**，old-report 的呼叫者其實是 ConfigMap 掃描 + code search + 流量吻合**推論**出來的。
+
+### [2026-09-22] VP-18346：我搞錯了前提，而且錯在同一條紀律上
+**錯誤**：我說 `/proxy/old-report` 沒有歸因攔截器，因此開了 VP-18346、在 VP-18324 發了「更正」comment、
+還寫進 runbook §8。**全部是錯的。** `5a9473f`（2026-09-18）早就把 `ProxyCallerLogInterceptor`
+掛上去了，部署中的 prod image `e9a5ec0` 也含它。
+
+**根因（不是「忘了 fetch」，比那個更糟）**：我 `git fetch` 了，然後 grep **工作樹**——而工作樹在
+`9264e9e`，落後 origin/main 20 個 commit。而且 `git status -sb` 印出的 `[behind 20]` **就在我自己那一次
+指令的輸出裡，我讀過去了**。AGENTS.md 原則 0 的第二段寫得很清楚：「確認過之後就直接讀本地檔」——
+前提是**確認過**。我做了 fetch 這個動作，跳過了確認這個判斷。
+派出去的 Explore agent 也讀同一份 stale checkout，我給了路徑卻沒有釘 ref，所以它的報告繼承了同一個錯。
+
+**實際量到的（attribution 一直在記，只是沒人看）**：4 天內
+| route | ua | xff | events |
+|---|---|---|---|
+| `/proxy/old-report/downloadTestOrderPDF` | axios/1.4.0 | 空（叢集內） | 2,932 |
+| 其他 10 條 old-report | — | — | **0** |
+=> 那 10 條「沒有呼叫者」現在是**量出來的**，比原本 code-search 推論強得多。這是個好消息，
+只是我用錯誤的方式發現它。
+
+**VP-18346 重新定義**：真正剩下的是兩個 family 共用同一組 label——2,932 筆 old-report 事件現在
+answer 到 `@operation:proxyGrpcCaller`，查「誰在打 grpc proxy」會拿到 99.8% 不是 grpc 的結果。
+兩邊的退場決策都靠這些查詢，所以值得修。
+- PR **#813 -> main** https://github.com/Vibrant-America/LIS-transformer/pull/813
+- family 從 route path 推導**而非建構子參數**：Nest DI 下 `family = 'grpc'` 這種預設值會被解析成
+  必要的 `String` 依賴而讓整個 app 起不來（factory 那條 `@Optional() @Inject(TOKEN)` 教訓），
+  而且 controller 還是可能被接錯 label；路徑不會跟自己不一致。
+- grpc 的 label 逐字不變，且新增測試逐字釘住——VP-18320 的證據就建立在那個搜尋字串上。
+- 9/9 測試過；tsc 的 10 個既有錯誤在 clean origin/main 上重跑對照過，逐字相同。
+
+**另一個踩到的**：LIS-transformer 的 pre-push DI boot smoke 在**乾淨 worktree** 會失敗
+（`JwtStrategy requires a secret or key`），因為受測 code 的 `dotenv.config()` 讀 cwd 的 `.env`，
+而 worktree 沒有。主 clone 有 `.env` 所以會過。這正是 factory 的
+「Gate 宣稱的環境要由 gate 自己控制，不能靠受測程式碼的 dotenv」。暫解是把 `.env` 複製進 worktree
+（已確認在 .gitignore 第 40 行）。
+
+**待辦**：runbook `vp18324-proxy-pdf-route-cutover.md` §8 那段關於「沒有歸因」的敘述要改掉。

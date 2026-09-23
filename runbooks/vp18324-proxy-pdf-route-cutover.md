@@ -142,11 +142,16 @@ search for `old-report` returns zero and must not be read as "no traffic".
 
 Nothing has been deleted. The eleven `/proxy/old-report/*` routes are still served.
 
-Before any of them is removed, **VP-18346** should land: `old-report.controller.ts` carries only
-`@UseInterceptors(SentryInterceptor)`, so unlike `/proxy/grpc` there is no caller attribution on it.
-Traffic on those routes can be counted but not attributed, which means the standing claim that ten of
-them have no caller rests on a code search across locally cloned repos — a method that structurally
-cannot see a browser, an external partner, or a repo nobody cloned.
+**Correction, same day.** An earlier version of this section said `/proxy/old-report` had no caller
+attribution. That was wrong — it was written from a local checkout 20 commits behind origin.
+`ProxyCallerLogInterceptor` was wired onto that controller in `5a9473f` (2026-09-18) and the deployed
+prod image carries it. Attribution has been recording all along, and over the first four days it
+shows `downloadTestOrderPDF` at 2,932 events from a single in-cluster `axios/1.4.0` client and the
+other ten routes at **zero** — so those ten are backed by measurement, not by a code search.
+
+What VP-18346 is actually for is narrower: both proxy families log under the same labels, so the
+old-report events answer to `@operation:proxyGrpcCaller` and are separable only by their `route`
+field. PR #813 gives the old-report family its own `@operation:proxyOldReportCaller`.
 
 Also worth holding in mind: `cloud-local-proxy` serves a route-for-route copy of the same eleven
 routes. Zero traffic on trans v1 is sufficient to delete trans v1's copy; it is not evidence that the
