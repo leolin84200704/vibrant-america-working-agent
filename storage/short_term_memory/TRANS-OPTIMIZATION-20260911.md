@@ -967,3 +967,24 @@ trans v1 於 21:00Z 換到 `ad5ab17`（含 PR #813），但所有歸因事件都
   分兩次公告等於邀請第二輪「沒人通知我」。
 - 遷移指引點名那個會咬人的差異：`/trans` 需要 `clinic_id`，否則 400（service token 兩個 claim 都沒有）。
 - 草稿裡誠實標註「VP-18346 的 label 分離尚未觀察到生效」，不讓未驗證的事混進公告的證據裡。
+
+### [2026-09-23] 一次性排程已安裝（Leo：「merged. 請直接裝」）
+PR #48 merge（main `fa3d21a`）後安裝 `com.lis.proxy-old-report-removal`。
+**驗證是問 launchd 自己，不是看檔案**：
+`launchctl print gui/$(id -u)/com.lis.proxy-old-report-removal` →
+`Month 9 / Day 30 / Hour 9 / Minute 0`、`state = not running`、`runs = 0`、`last exit code = (never exited)`。
+安裝的 plist 與 repo 版 `diff -q` 相同（無漂移）；runner 可執行；`.done` marker 不存在（= 已武裝）。
+
+**Pre-flight**：在 runner 自己 export 的那條 PATH 底下用 `env -i` 逐一解析工具——
+claude / gh / git / node / caffeinate / osascript / launchctl 全部找得到。
+（launchd 給的是最小 PATH，這類 job 最常見的死法就是 `claude: command not found`，
+現在是量過的不是假設的。）
+
+**這個 job 的合約**（細節見 `DailyJob/proxy_old_report_removal/README.md`）：
+量流量 → 只有真零才開 ticket + **draft** PR；任何流量、Datadog 失敗、
+**對照組沒回資料**、或無法有把握解讀的結果 → 什麼都不開、只報告。永不刪路由、永不 merge、永不碰 ConfigMap。
+失敗的執行**不寫 marker**，所以沒跑成的工作會再響一次。
+
+**尚待**（09-30 當天或之前）：
+1. VP-18346 的 label 分離仍未被觀察到生效（那條路由已無流量，所以還沒機會觸發）。
+2. 公告草稿 `drafts/proxy-old-report-removal-announcement.md` 等 Leo 發 Slack。
