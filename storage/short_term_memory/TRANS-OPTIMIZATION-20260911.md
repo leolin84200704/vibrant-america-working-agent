@@ -873,3 +873,30 @@ answer 到 `@operation:proxyGrpcCaller`，查「誰在打 grpc proxy」會拿到
 
 **後續**：#179 merge → prod 設 `SETTING_GRPC_MODE=shadow` → 讀 `grpcShadow` 日誌到分歧率為零
 → `grpc` → 刪兩個 ConfigMap key 與 trans v1 兩條路由。
+
+### [2026-09-23] #178 merge + prod 部署驗證，並抓到我自己埋的一個缺陷
+**#178（stage_test -> main）review**：`origin/stage_test..origin/main` 為空 → merge 不會弄丟 main 任何東西；
+`clinic_id` 不會被套兩次（兩條線各有一個 commit 做同一修改，但 merge 在該區塊不增不減）。
+直接跑 merge 後的樹（= stage_test 的樹）：tsc 0 error、測試與 clean main baseline 相同
+（2 紅 suite / 1 紅 test）、兩個新 spec 全綠。
+**但它夾帶 VP-18182/18183（Fan Zhou，09-10，293 行，改抽血信發送條件）上 prod** —— 兩張票 Dev Complete，
+但在 stage_test 上單獨躺了 13 天且是客戶面行為。已向 Leo 指出「兩半的風險輪廓不同」：
+我的改動預設惰性（env 未設 = proxy，回退改 env），Fan 的立刻生效（回退要 revert code）。Leo 選擇一起 merge。
+
+**prod 部署驗證（image `e8986de`，6 顆 pod 全新）**：全部 Ready / 0 restart / 乾淨啟動 /
+**0 個 DI 或 proto 錯誤**（兩個新 `@Client` 是這次最大的結構性風險，已清）/ `SETTING_GRPC_MODE` 未設 /
+新程式在 dist / VP-18324 的兩條路由仍位元組一致（480,857 與 2,057,367，兩邊相同）/ 六顆 pod 零錯誤。
+
+**抓到的缺陷（我自己的，PR #180 修）**：我給 gRPC client 寫了 fallback 位址。
+- `SHIPPING_RPC` / `TEST_RESULT_RPC` **在八顆 pod 全部未設**（prod 與 staging 皆然）→ fallback 就是實際生效值。
+- 兩個環境的服務**不同**：prod 走叢集內 DNS，**staging 走 `192.168.60.6:31865` / `:30600`**。
+- 我寫死的是 prod 的。從 staging pod 實測：prod 位址 **CONNECT**、staging shipping **ECONNREFUSED**。
+  → 在 staging 開 shadow 不會失敗，會**安靜地讀 prod 資料**並產出無意義的比對。**會動的錯誤預設值比沒有預設值更糟。**
+- **順帶更正我自己的另一個說法**：我在原 commit 說那些 `192.168.60.6` 位址「已經死了」。
+  它們是 **staging 的位址，staging trans v1 今天還在用**。我從一則關於另一個 on-prem 位址的筆記過度一般化。
+- 修法：拿掉預設值；`resolveMode(mode, serviceAddress)` 在位址為空時一律回 `proxy`。
+  啟用直連變成兩個刻意動作（位址 + 模式）而非一個。
+- **副產品發現**：從 staging setting-consumer pod 連 staging 自己的 shipping 位址是 ECONNREFUSED
+  → kit-status 那半**今天在 staging 沒有可用目標**，第一次真正的 shadow 只能在 prod 做。
+
+**PR**: #180 -> main（待 review）。
