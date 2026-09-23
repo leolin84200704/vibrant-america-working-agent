@@ -1,7 +1,7 @@
 # VP-18320 — What gets deleted, and what replaces it
 
 **Ticket:** VP-18320 · **Epic:** VP-18260 · **Repo:** `LIS-transformer` (trans v1)
-**Announced:** 2026-09-18 · **Removal PR opens:** 2026-10-02 · **Ticket closes:** 2026-10-09
+**Announced:** 2026-09-18 · **Removal PR opens:** 2026-09-30 · **Ticket closes:** 2026-10-09
 **Widened 2026-09-23** to include the ten unused `/proxy/old-report/*` routes, per the proposal
 in comment 188522 which drew no objection in two days.
 
@@ -53,7 +53,7 @@ caller.
 Datadog log retention stops at 15 days — a 35-day query returns nothing before the retention
 edge, on flex storage too — so **a caller that runs monthly is invisible to this measurement**,
 and the code search only covers repos cloned locally. That gap is the entire reason this is
-announced two weeks ahead rather than simply deleted, and it is why §6 requires the counts to
+announced twelve days ahead rather than simply deleted, and it is why §6 requires the counts to
 be re-run on the day the PR opens rather than trusting this page.
 
 ---
@@ -206,7 +206,7 @@ caller.
 1. **Re-run the counts** over a fresh 15-day window — the three `/proxy/grpc` routes and the
    ten `/proxy/old-report` routes. Any non-zero row drops out of the PR; it does not get
    explained away.
-2. Check VP-18320 for replies. A comment before 2026-10-02 means that route stays until its
+2. Check VP-18320 for replies. A comment before 2026-09-30 means that route stays until its
    caller has moved.
 3. Open the PR against `main` with the §5 scope. `main` is deploy-on-merge in this repo, so
    the PR is the deploy.

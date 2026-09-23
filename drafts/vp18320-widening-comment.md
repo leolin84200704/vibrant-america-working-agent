@@ -58,10 +58,10 @@ and understate sparse traffic by two orders of magnitude.
 
 **What this evidence does not cover.** Log retention here stops at 15 days, so a job that runs
 monthly is invisible to us, and the code search only covers repos cloned locally. That gap is
-the whole reason this was announced two weeks ahead instead of simply deleted, and the counts
-will be re-run on 2026-10-02 before the PR opens rather than relying on today's numbers.
+the whole reason this was announced twelve days ahead instead of simply deleted, and the counts
+will be re-run on 2026-09-30 before the PR opens rather than relying on today's numbers.
 
-**If you call any of these 13 routes, comment here before 2026-10-02** and it stays until you
+**If you call any of these 13 routes, comment here before 2026-09-30** and it stays until you
 have moved. For the `/proxy/grpc` routes the migration is to call the gRPC service directly, and
 two things must come with you or the move is not equivalent: the JWT-to-gRPC metadata
 construction in `src/proxy/proxy.service.ts` (`createMetadataForCoresampleV2` — it propagates
@@ -69,7 +69,7 @@ the caller's subject to core; it is not an ownership check), and for kit lookups
 normalisation that fills an omitted `packages` with an empty array (leaving it out is Sentry
 #68038). LIS-transformer-v2 PR #629 is the worked example.
 
-**Unchanged plan.** 2026-10-02: re-check the logs, then open the removal PR for routes plus
+**Unchanged plan.** 2026-09-30: re-check the logs, then open the removal PR for routes plus
 config keys. 2026-10-09: merged, deployed, verified, ticket closed.
 
 Full per-route removal and replacement list, including what deliberately stays behind (the

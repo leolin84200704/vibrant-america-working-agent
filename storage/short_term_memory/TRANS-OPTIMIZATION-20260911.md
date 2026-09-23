@@ -1080,3 +1080,21 @@ gate + Kafka audit + language），只有 `getRequisitionForm` / `oneClickPerson
 **產出**：`docs/plans/trans-optimization/vp18320-removal-and-replacements.md`（要刪的 13 條 + 逐條替代
 + 明確留下什麼 + PR 形狀 + config key 要重新盤點的理由）、`drafts/vp18320-widening-comment.md`（英文
 comment 草稿，**未發**）。Jira description 的 Scope 段與 QA twin QH-7163 都還只寫三條，要不要改等 Leo。
+
+### [2026-09-23] 公告頁上 Confluence，移除日改 2026-09-30（Leo 定）
+
+**頁面**：LIS space 2703851521「Retiring 13 /proxy endpoints on trans v1 — what to change, and by when
+(VP-18320)」，掛在 Phased Plan 2697461770 底下。Leo 要的形狀：**三欄表格（原本連的 / 改成什麼 /
+最後期限）+ 三則 note，不要流量數字**。我原本那份 removal doc 留在 repo 當內部依據，不上 Confluence。
+
+**建頁機制**：Atlassian MCP **沒有** create/update page 工具（只有 read 系列），要用 `.env` 的
+JIRA_EMAIL/JIRA_API_TOKEN 直打 `/wiki/api/v2/pages`（POST 建、PUT 改；PUT 要帶 version.number+1）。
+跟 Jira 的情況一樣：comment 走 MCP，其餘寫入走 Leo 的 token。space id 查 `/wiki/api/v2/spaces?keys=LIS`。
+
+**一個差點變成覆蓋的狀況**：我建頁後 5 分鐘，Leo 在 UI 把 13 格日期改成 09-30（v2、v3），但漏了正文
+兩處。我改日期時是先 GET 當前版本、在那份 body 上做字串取代再 PUT，所以他的編輯被保留、只補上漏的兩處。
+**教訓：改共用文件一律「先讀當前版本、在其上改、帶 version 送出」**，不要用手上舊的一份覆蓋——同一個
+帳號的編輯在 version history 裡分不出是人是 agent，看不出來被蓋掉。
+
+**日期連帶**：Jira 票面 description 仍寫 "Removal 2026-10-02 / closes 2026-10-09"，QA twin QH-7163
+也還是三條路由。兩者都要 Leo 的 token 才能改，已告知未動。
