@@ -256,6 +256,32 @@ if ! git -C "$AGENT_ROOT" diff --quiet -- long-term-memory/failures.md 2>/dev/nu
        git -C "$AGENT_ROOT" commit -q -m "[dream] refresh failure index ($DATE)" \
            -- long-term-memory/failures.md; then
         echo "[$(date)] Committed regenerated failure index" | tee -a "$LOG_FILE"
+
+        # ...and push it. Until 2026-09-24 this commit was only ever committed.
+        # Nothing downstream noticed, because the dirty-memory guard above tests
+        # for UNCOMMITTED changes only: the next night started clean and swept
+        # this commit along with its own push. So it always reached origin
+        # eventually — a day late, and only if there was a next night. The two
+        # aborted nights (09-22, 09-23) are exactly the case where there was not:
+        # the 09-21 index sat unpushed for three days, and the regenerated index
+        # is the one memory artifact that exists in no other form.
+        #
+        # Guarded on the branch name: the dream works on main, but this function
+        # must never be the thing that pushes some other branch there.
+        #
+        # Non-fatal on failure. The pipeline has otherwise finished by this point,
+        # and an unpushed commit is recoverable (it is the pre-2026-09-24 behaviour);
+        # aborting here would throw away a good run over a transient network error.
+        DREAM_BRANCH=$(git -C "$AGENT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)
+        if [[ "$DREAM_BRANCH" != "main" ]]; then
+            echo "[$(date)] WARN: on branch '$DREAM_BRANCH', not main — leaving the failure index unpushed" \
+                | tee -a "$LOG_FILE"
+        elif git -C "$AGENT_ROOT" push --quiet origin main 2>>"$LOG_FILE"; then
+            echo "[$(date)] Pushed regenerated failure index" | tee -a "$LOG_FILE"
+        else
+            echo "[$(date)] WARN: could not push failure index — it stays local and the next run will carry it" \
+                | tee -a "$LOG_FILE"
+        fi
     else
         echo "[$(date)] WARN: could not commit failure index — the next run will abort on it" \
             | tee -a "$LOG_FILE"
