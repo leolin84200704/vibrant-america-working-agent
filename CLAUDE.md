@@ -22,6 +22,7 @@
 - 部署: feature/bugfix branch push 不會 auto-deploy；要 deploy 開 PR target `stage_test`／staging 流程，絕不直接 push staging
 - 例外（僅 personal repo `vibrant-america-working-agent` 與 `project-agent-factory`）: 允許 push 到 `main`；仍禁 force-push、reset --hard
 - **Automation 行為變更必須走 PR**：改 `scripts/dream.md`、`DailyJob/`、launchd 排程、`.claude/skills/` 等會改變 agent 自動行為的檔案，即使在 personal repo 也不得直接 commit main — 開 PR 讓 Leo 看到規則變了什麼（2026-07-06：dream 的 lesson-PR 規則曾被 agent 直接寫進 main，Leo 事後才發現）
+- **本 repo 的主 checkout 永遠停在 `main`**：STM／journal 這類記憶 commit 本來就直接進 main，不需要分支；只有 automation 變更需要分支，而那要用 `git worktree`（放 `.git-worktrees/`，已 gitignore），**絕不在主 checkout 切分支**。三個理由：(1) `run-dream.sh` 讀的是主 checkout（`$AGENT_ROOT`），它離開 main 就等於 dream 對著錯的樹跑；(2) 併行 session 共用同一個工作目錄，切分支會直接把另一個 session 腳下的地板換掉；(3) dirty-memory 守衛只問「有沒有未 commit」，不問「commit 到哪去了」——記憶 commit 落到分支上它照樣放行，dream 就會在缺那份內容的情況下蒸餾。2026-09-24 三種情況同時發生：一個 session 的 STM commit 落在另一個 session 的 feature branch 上，PR 沒帶到，merge 後內容不在 main，靠 reflog 才找回來。
 - Agent 不 merge — Leo 決定（例外不適用於 LIS 工作 repo）
 
 ## Ticket 系統
