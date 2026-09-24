@@ -7,7 +7,7 @@ score: 0.1615
 base_weight: 0.9
 urgency: 4
 created: 2026-08-16
-updated: 2026-09-21
+updated: 2026-09-24
 summary: Leo's working rules for this instance — reporting, ticket handling, Jira
   mechanics, and repo hygiene. The job-specific residue of the native auto-memory
   store; universal engineering discipline lives in factory ENGINEERING-LESSONS.
@@ -434,3 +434,21 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 - **「1. 要（重跑 deploy） 2. 不動，等他」**：被取消的 prod deploy 要不要重跑是 Leo 的決定；VP-18152 雖然稍早說「直接做」，確認是 Zhibin 的票之後改成不動——先前的授權不會蓋過票的所有權，分析寫進 STM 即可。
 - **Jira comment 授權仍是一則一則給**：VP-18320 的 Draft 3 在 09-21 06:00 前寫好但未發，直到 Leo 當天明說「發」才發（188522）。上次授權 VP-18262 那一則不構成概括授權。
 - **Leo 的「可以直接做」是對某一件事**，不是對整個 program；每件新事（prod ConfigMap、重跑 deploy、別人的票）都重新問。
+
+## Leo 09-22 ~ 09-24 的決定與打回（VP-18194 / VP-18342 / VP-18344 / TRANS-OPT / NEXTECH / LBS-1799 / QUARANTINE）
+- **跨 ticket 規則（Leo 原話）：「以前的不管了，只做未來的(這點很重要是accross ticket的)」**——不 backfill、不重送已送過的東西，任何票都適用。配套：「既往不咎，如果有需要過去要手動push」→ 過去的個案走既有的 manual repush，逐案處理。
+- **範圲裁決要建立在量過的事實上**：Leo 第一次問「我不懂問題，把這個人設定成好了就發不行嗎」時，正確回應是去 prod 量 amended 的兩種物理形態，不是再解釋一次；量出來之後他的「只做未來」才是知情的裁決。
+- **宣告某條 AC 不做時，要分清是「沒補既有的洞」還是「做壞了原本會動的東西」**（Leo 追問 "The acceptance criterion ... is not implemented... 這是什麼意思？"）：case 2 的缺口今天合併 PDF 就有，Jira comment 要明講 "this ticket does not change it in either direction"，否則 PM 會把既有行為讀成本次退步。
+- 「用散裝直接丟」（VP-18194 Cerbo 交付形狀）、「就這樣開」（不等 on-prem 版本問題釐清就開 canary）、「使用這個ticket 要求的那個customer 作為canary」——canary 要對回原始請求的那家。
+- **「v1 proto call v1 rpc, v2 proto call v2 rpc」**（VP-18344）：core 的 proto 在 v1→v2 遷移中不改 wire format；vendored 兩套各從自己上游同步、永不交叉解碼。這條推翻了我先建好、測過、live 驗過的 proto-v2 re-sync 方案——**建好 ≠ 該用**，Leo 的方向優先於已完成的工。
+- 「開票 修法 1 就可以」「兩張票都開，core-v2 Address 那張附比對結果」「開PR, 另外我估計他的意思是以後都用corev1的方式call corev2 rpc, 你試試看行不行(只使用 get 類型的)」——實驗限 GET；結果（10 條 OK、3 條只差 Address）成為 VP-18343 的證據。
+- 「不要再call proxy, 直接call ... abc 都開都做」「先不刪，把可以backup 的方案做好先」「請你把要移除寫進doc，我會發到slack，等一個禮拜後移除」「可以合併（十條 old-report 一起）」「merged. 請直接裝（一次性排程）」：announce-then-retire 節奏定版，移除日 **2026-09-30** 由 Leo 定；Confluence 頁要**三欄表（原本連的 / 改成什麼 / 最後期限）+ 三則 note，不要流量數字**；內部依據留 repo。
+- **「跟著177一起merge」在不同 repo 無法成立**時要說明（B 在 LIS-transformer、C 在 billing + trans v2），並照「一個 PR 一個 head」不往已開的 #177 補推。
+- 「1 ok done 2 要 3 不需要」（VP-18342：結案 / 開 Jenkins 票 / 不用回 W2W）；「VP-18344 幫我拉回來結案」（票被別人設成 Inactive 時，由 Leo 決定拉回 Done）。Jenkins 帳密在 chat 給過一次，**未持久化**，要用再問。
+- **release PR 夾帶別人的變更時，把兩半的風險輪廓分開講**（#178 帶了 Fan 的 VP-18182/18183 13 天）：我的改動預設惰性（env 未設 = 舊行為、回退改 env），別人的立刻生效（回退要 revert code）。Leo 選擇一起 merge——講清楚後由他選。
+- **Nextech**：Leo 說「MDHQ」而 thread 全是 Nextech → 先提出矛盾再動手，Leo 確認是口誤；practice 在 clinic 表找不到 → Leo 選 20834；兩步（先 PENDING 再 LIVE）也是 Leo 的選擇。刻意**不重現 `sendEmailNotifications()`**（會寄給 provider 與內部團隊，Leo 沒要求）。
+- **LBS-1799 做對的版本**：Leo 明說「comment 到 ticket 裡面然後 done」→ comment 188698 貼上（涵蓋每條 AC、file:line、驗證、兩封確認信、SIIR-312 建議）→ Open → Done。LBS 票的 reporter 是 support，看不到 prod DB，**沒 comment 等於沒交付**（09-11 那條規則這次守住了）。
+- **Done 早於工作又一例**：VP-18345 09-23 Done 時 prod 仍是 `proxy` mode（`SETTING_GRPC_MODE` 未設），只有 staging 開了 `grpc`；prod shadow → grpc → 刪兩條 proxy 路由沒有任何 open 票追（TRANS-OPT 只剩 VP-18347 / VP-18320 / VP-18261）。VP-18346 Done 時 label 分離尚未被觀察到生效（該路由已無流量）。dream 對這類票跟 STM 不跟票。
+- **QUARANTINE 分析的打回**：我報「要等 VP-16164 / VP-16168 解凍」，Leo 當場反駁；答案在我自己 08-25 寫的 `quarantine.service.ts:285-306` 註解裡。**能力問題問 code，不問 Jira；打開的檔案要讀完關鍵函式；查到的數字（0 筆 UNKNOWN_PROVIDER）要用來反問不是只用來佐證。**「先記下來」= 分析進 STM，不動工。
+- **夥伴回報 API 錯誤先要 raw error / requestId**——W2W 的名字不在任何 log 裡，40 分鐘白搜。
+- **教訓寫下來 ≠ 學會**：DI smoke 的 `.env` 洩漏 09-14 寫了 lesson（factory #81）、09-22 同一個坑同一個手動繞法；Leo「ok, 要修」→ 改成機制（factory #90）。回顧 program 時優先找「現在就能消除的重複錯誤」。

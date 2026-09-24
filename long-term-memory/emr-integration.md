@@ -3,10 +3,10 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 1.6335
+score: 1.683
 base_weight: 1.0
 created: 2026-04-22
-updated: 2026-09-11
+updated: 2026-09-24
 links:
 - BETA-E2E-20260729
 - BIOINSIGHTS-SFTP-KEY
@@ -27,7 +27,9 @@ links:
 - LBS-1773
 - LBS-1784
 - LBS-1785
+- LBS-1799
 - LIS-7716
+- NEXTECH-onboarding
 - PH-847
 - QH-1660
 - QH-2257
@@ -37,6 +39,7 @@ links:
 - QH-4352
 - QH-4608
 - QH-5840
+- QUARANTINE-ADMIN-API-GAP-20260924
 - RESULTCHECK-20260819-RCODE-2608186060
 - VEJO-DELETION-20260804
 - VP-14787
@@ -122,6 +125,7 @@ links:
 - VP-18086
 - VP-18138
 - VP-18185
+- VP-18194
 - VP-18243
 - VP-18270
 - VP-18288
@@ -1995,3 +1999,49 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 
 ### 「診所新加 provider，VA 端沒帳號也沒 integration」的 quarantine 樣態（hl7 7099 / 7119，MDHQ Upstream Functional Medicine）
 - 同一個 ORC-12 NPI 1316086630（NPPES：Johnny Elbert Davis PA-C，地址與診所一致）在 `ehr_integrations`（任何 status）與 core `customer` 皆 0 筆 → quarantine 11（09-14，expires 09-21）與 12（09-16）都 OPEN，兩張病人單沒下。同 practice peer（customer 9889 Jeff Hunter，`/ufm/`）正常。處置 = add-provider playbook（`emr-order-customer-resolution` skill），需要人決定；quarantine 到期會靜默過期。
+
+## 【蒸餾 2026-09-24】per-report PDF 交付、Nextech vendor 上線、quarantine 的 read/resolve 缺口、W2W sandbox 422 真因、Clinical Consult 六個月窗、devcom 檔案欄位審計（VP-18194 / NEXTECH-onboarding / QUARANTINE-ADMIN-API-GAP / VP-18342 / LBS-1799 / BIOINSIGHTS）
+
+### Per-report PDF 交付（VP-18194，PH-907 / SIIR-291，prod 09-22 21:14Z 起，canary = Maristany 127660）
+- **Cerbo = vendor 1 `MDHQ`，走 SFTP 不是 API**。PH-907 寫的 "Cerbo (API-based attachment delivery)" 是錯的：結果以 `{accession}.hl7` 丟進 practice 資料夾（Maristany `/eduardomaristanymdemr/results/`），合併 PDF 是 base64 `ED` OBX 掛在合成的 `VAPDF^Vibrant PDF Report` OBR 底下（`hl7-encoder.service.ts:205-209`，單一物件、`if` 不是迴圈，**encoder 今天只能帶一份 PDF**）。PM 轉述的 vendor 技術細節要 sanity-check。
+- MDHQ 是最大 vendor：371 integrations / 355 LIVE+result_enabled / 202 clinics → partner-level 預設一定要 OFF。**62/202 MDHQ 診所（31%）有多列 LIVE result_enabled**（FOLLOWTHATPATIENT 8/20）→ LIS-7716 的「任一 LIVE 列勝出」是常態不是邊界；設定要**對投遞目的地 `(legacy_emr_service, sftp_result_path)` 取 OR**，不是讀某一列。
+- 四個新欄位（DDL 09-22 已在 staging + prod）：`ehr_vendors.split_result_pdf_by_report`（預設 0）/ `deliver_combined_result_pdf`（預設 1）；`ehr_integrations` 同名兩欄 **nullable**（NULL = 繼承 vendor）。`resolveReportPdfDelivery()` 用 `??` 不用 `||`（boolean false 要活下來）；split=0 且 combined=0 的組合回 `{split:false, combined:true}` 不會讓客戶一份 PDF 都收不到。這是本系統第一組「vendor 預設 + integration 覆寫」的 coalesce（此前只有 `sftp_result_path` 一處）。
+- 交付形狀（Leo：「用散裝直接丟」）：**push 發生時**（不是新觸發）從 VP-18138 的 attachment 骨架（`result-attachment.service.ts`，掛在 TRANSMITTED 之後、永不 throw）取每份 Final 報告的 PDF → 一次 SFTP session 放 N 個 `{accession}_{SHORT}.pdf`（`uploadHL7Files()`，同一條 `runSerialized`）→ 每份一列 `result_attachment_records`（`attachment_type='REPORT_PDF'`，`file_name` 帶 short name）。`result_attachment_records.result_transmission_record_id` 是 **NOT NULL**，獨立觸發路徑掛不上稽核列。push level 決定時機、新開關決定內容，兩者正交（Maristany 是 WHOLE_ORDER 卻是第一個要拆 PDF 的客戶）。
+- 報告清單來源 `GET {VIBRANT_API_BASE_URL}/result/getReportStatusListV2?barcode=`（emr-v2 的 listener `isWholeReportFinal:1152` 已在呼叫）：每個元素同時有 `report_name` 長名與 `short_name`，且 `report_staus` 與 `report_status` **兩個 key 都故意存在**（PH-850 禁止改名）。`is_amended` 只加在 `finished_reports`，且 **prod 永遠開、非 prod 要 `AMENDED_OVERLAY_TESTING_BYPASS=true`**——gate 關著時 key **不存在**（不是 false），code 要當第三態。
+- **沒有 amendment 事件**：`lis_report_info.amended_reports` 362 列、最後寫入 07-30、手動批次（note 是 LIS Jira 連結）；admin `POST /amended-reports` 只讓 report cache 發 `personalized_report_updated`（prod-only、2 分鐘 Redis 去重、無 sample/customer/clinic），emr-v2 不消費。修訂有兩種物理形態：**結果重新核可**會重發完成事件、自然重送；**只改報告內容**不發任何我們收得到的事件。Leo 跨 ticket 裁決「以前的不管了，只做未來的」→ amended-redelivery AC 明知不做，Jira comment 188735 明講 "this ticket does not change it in either direction"（今天合併 PDF 也有同樣的洞）。
+- Cerbo **取檔後搬 `archive/`** → 同名重送不是冪等覆寫而是病歷裡第二份文件；SFTP v3 rename 目標存在會失敗，所以**刻意不用 `.part`+rename**（會弄壞每一次 repush），跟 `.hl7` 一樣直接 put。
+- Dedup 事實：`enqueuePartialPush:1207` key `(sample_id, integration_request_id, push_scope_key)`，REPORT / GROUP:MAIN 的 `repushAfterMs=null` → **TRANSMITTED 永久屏蔽該 scope**；eligibility dedup key 是 `legacy_emr_service + sftp_result_path`（`:562`）。`REPORT:{short}` scope 的 partial push 原本 `addReportOverride='0'`（data-only，`:946`）。
+- Canary 狀態（09-24 dream 讀）：Maristany LIVE 列 `cms56tk180041t807p7tt9nxm` split=1 / combined=NULL（繼承 1，合併 PDF 仍內嵌），全表 1131 列只有它非 NULL；`REPORT_PDF` 列 **0**，她最後一次 push 09-17、節奏約每週。on-prem 已滾過兩次（replicaset `7c6d4dd4b5` → `6fd4cc868c`），`280047b ⊂ f52c6dd`，兩條 pipeline 都有新 code。待：從外部用 MDHQ vendor 憑證 peer-verify 檔案落地；Terry 取得 Cerbo 書面確認散裝 PDF 會被歸到對的 test；Prospera/FOLLOWTHATPATIENT 由 Product 決定何時開。PM 09-23 comment 188877 再要求「加 Maristany」= 已開的同一家，未動。
+
+### Nextech（vendor 47，ATCA / George Moricz，VP-18336 / QH-7179）
+- vendor-hosted 密碼 SFTP（GoAnywhere 7.10.2）`interface02.nextechapp.com:22`，user `Vibrant.965721@nextechapp.com`，密碼只在 prod `ehr_vendors.sftp_password`。**email 的 "Export - Orders" / "Import - Results" 是標籤不是路徑**：真實 `/965721.Vibrant/Export/`（他們放 order）、`/965721.Vibrant/Import/`（我們放結果）。`sftp_folder_mapping` 288 `/965721.Vibrant/Export/ → /NEXTECH/Prod/Order/` **`pipeline_location=cloud`**（史上第二個 cloud 資料夾）；`ehr_vendor_sftp_templates` 33（沒有 template 的 vendor 自助建 integration 會 400）。AKS prod pod 每 15 分鐘掃 2 個 cloud 資料夾，09-22 17:45Z tick 已實證連上並列目錄。
+- 第一列 integration `cmufvrntc0000dq0x51sbd986`（09-24 18:43Z PENDING → 18:46Z LIVE）：customer 28981 / NPI 1215931902 / clinic **20834**（Leo 選；thread 說的 "Alzheimer's Treatment Centers of America" 在 `clinic` 表不存在，practice 對應仍未解——若 HL7 MSH-6 帶別的識別，`msh06` 與 `clinic_id` 要搬）。`msh06='20834'`、`report_option=CLASSIC`（clinic 無其他 LIVE 列所以不繼承）、`kit_delivery_option=BOTH_BLOOD_AND_NON_BLOOD`（唯一無指示的欄位，API 預設是 NO_DELIVERY、DB 預設與近期真實列是 BOTH）、`use_vendor_sftp_config=1`。`ehr_vendors.is_public` 仍 0，go-live 再翻。
+- **新 integration 列要照 `IntegrationRequestService.create()` 的欄位推導寫，不要抄 peer 列**：抄 MDHQ 會得到 `pipeline_location='onprem'`（沒有 pod 掃那個資料夾，order 靜默堆積）、`legacy_emr_service='MDHQ'`、沒有 `ehr_integration_status_history` 列。`pipeline_location` 取自該 order 資料夾的 `sftp_folder_mapping`。`{folder}` 佔位符只有 Cerbo/MDHQ 的 template 有——非 Cerbo vendor 直接複製 template 的具體路徑，「哪個資料夾」不是要問的問題。
+- 人給的指令與來源文件矛盾時（Leo 說 MDHQ、thread 全是 Nextech）：**剛佈建、有 template + mapping、零 integration 的 vendor 就是正在 onboarding 的那個**，DB 比重讀 email 更快定案。
+- `ehr_integrations.sftp_archive_path` 是死欄位（只有 CRUD 讀），但遠端 `archive/` **有用**：fetcher 依 `HL7_REMOTE_POST_FETCH_ACTION`（預設 `archive`）在 `hl7-order-fetch.service.ts` 懶建並搬檔，與那個欄位無關。
+- 至 09-24 尚無任何 Nextech 檔案抵達，OBR-4 test code 對應完全未驗證。
+
+### Quarantine admin API 缺口（VP-16167 / VP-16173，QUARANTINE-ADMIN-API-GAP-20260924，分析 only）
+- **VP-16167 Quarantine UI 零 endpoint**：VP-16166 只交付 `QuarantineService.capture` + 7 天 expiry cron，`quarantined_orders` / `resolution_logs` 在 prod 有資料但沒有任何 controller。VP-16629「Approve/Reject API」的 AC 寫的是 quarantine resolve，卻在 **表存在前三個月（05-20）就結案**——名義擁有者從沒做過，也沒有 open BE 票在追。
+- **VP-16173 Practice Integrations 有得接**：`IntegrationManagementModule` 已在 prod（`integration-management/auto-integrate/requests` 系列、`status-management` / `configuration-management` / `vendor-management`），prod base `https://api.vibrant-america.com/v1/lis/emr-service/{path}`（ingress 只 rewrite `/v1/lis/emr-service/(.*)` → `/api/v1/$1`，Swagger 外部打不到），`JwtAuthGuard` 只有 customer/clinic 過濾**沒有 role gating**。真正缺的是 `Awaiting Vendor` / `Suspend`（enum 只有 PENDING/APPROVED/LIVE/REJECTED，要 migration）與 practice 層級聚合——**不需要新表，practice 就是 clinic_id**。
+- **prod 0 筆 UNKNOWN_PROVIDER**（14 筆全表：OTHER_FAILURE 9、UNKNOWN_ORIGIN 5 的 `matched_practice_id` 全 null）。原因：`matchPractice(MSH-4)` 只認 `customer_id='-1'` 的 catch-all 列，全 prod 只有 **37 列 / 605 clinic**；其他 vendor 的 MSH-4 送的是 customer_id 不是 clinic id（VP-17827）。含意：三支 quarantine API 做完，`Matched Practice` 欄位也永遠是空的——真正缺口是 Step 4 practice 比對太窄，要另開一票、獨立 deploy。`ehr_integrations` 09-24：1132 列 / 605 clinic / LIVE 1109 / PENDING 7。
+- resolve 動作可用既有零件：`link_existing_provider` = 用 integration create 幫該 customer 在已知 clinic 補一列 + 補回 `hl7_file_input.retry_num` 讓 worker 重跑；不需要 `provisional_providers`（provider 是誰 HL7 裡就有）。唯一例外是 core 連 customer 都不存在——那是 PM/Sales 流程。
+
+### Ways2Wellness sandbox 422 `patient_not_found` 的真因（VP-18342，09-09 起 13 天沒人修）
+- 合作夥伴名字**永遠不會出現在任何 log / DB / Jira**：他們用共用 sandbox tenant customer 50687 / clinic 153895 / userId 179020，搜 "ways2wellness" 40 分鐘是死路。**夥伴回報 API 錯誤時先要 raw error body / requestId。**
+- `patient_not_found` 蓋住的是 gRPC decode 錯（emr-integration.md 早就寫過這條，這次再度成立）：vendored proto-v2 的 `samples.sample_id int32 → string` / `fasting_hours float → string` 漂移；且 v2 client 把**每個環境都指到 prod 32100**（staging 讀 prod 病人），v1 client 的 host/port 是 per-environment（LIS-7626 envPort 30276/30282，on-prem 30278）→ 改用 v1 client 順便修掉 routing，**不需要 ConfigMap 變更**。
+- 副修：v2 路徑把 keepCase 的 `patient_address` / `patient_contact`（snake_case）餵給讀 camelCase 的 parser → 自 VP-17283 起 API order 的 state / phone / email 靜默 undefined；live 修後 state=FL/TX、contacts 有 email+phone。
+- staging 驗證路徑：`kubectl port-forward svc/lis-emr-v2-service-staging 13000:3000` → `POST /api/v1/order-intake`（ingress `/v1/lis/emr-service-staging` 對這條回 404）；tenant token 用 staging `JWT_SECRET` HS256 本地簽。cancel 一張沒收費的 order 會回 HTTP 500 `refundFailed:true`（把「沒有可退款項」當退款失敗）但 order **確實**取消——既有行為。
+- 後續 core 團隊同日修 VP-18343（Address realign #1214）、VP-18348（v2 GetPatient 改回 NOT_FOUND）、VP-18361（`PatientName` field 7 → `patient_dob`，proxied CheckPatientsName 丟 DOB 過濾）——vendored copy 又多一輪同步（各 repo 09-23/24 的 `chore(proto): sync` PR）。
+
+### Clinical Consult 六個月窗是 FE-only（LBS-1799，manual booking 配方）
+- va-portal `src/utils/home/consultWindow.js` `CONSULT_WINDOW_MONTHS = 6`；兩個 provider 入口都用 **order service date** 擋（`PatientTestAction.vue:32` 隱藏選項、`SearchOrderList.vue:81` 停用該列），`SearchOrders.vue:454` 點擊時再檢查的是 **kit received date**（會過）但該列早已 inert → 寬鬆路徑是死碼。**LIS-transformer-v2 沒有任何日期窗**（`createEventByPatient` / `isAccessionClaimable` / `validateSlotAvailability` 都不看 service date）→ 不需要 override 機制，後端本來就接受。
+- 手動預約配方 = **重放 FE 的同一條呼叫鏈**（provider-as-patient）：本地用 `secretOrKeyProd` 簽帶 customer_id 的 token → `generateZoomLinkForProvider(providerId, clinicId, duration)` → `createEventByPatient({event_title=該 clinician 的 scheduling option 原字, customer_id, clinician_calendar_id, start/end, accession_ids, contact_email, notes=FE 括號慣例 + 例外稽核句})`。Zoom 連結、accession claim、participant 列、確認信、reminder 資格全部自動來，跟自助預約無法區分；audit 列顯示 `user:{customer_id}`。
+- 可用時段讀 prod `getRescheduleAvailability(ALL_CLINICIANS)` + 每位 `getProviderAvailability` 交叉；資格用 legacy `clinicians/find-specialties`（`{"Gut Zoomer (Stool Only)": []}` → 無指定專科 → 9 位全可）。`clinicians/scheduling-options?clinician_id=` 用的是 **legacy clinician_id（3,4,14,19..24）不是 customer_id**，從 `clinicians/first-available` 取。每位 clinician 只有一個 30 分鐘選項且標題字串各異。
+- 驗證：consumer 層用 prod GraphQL（`getProviderAvailability` 不再提供該時段、`isAccessionClaimable` 回 `claimable:false, currentEventId`、`getEventByEventId` 帶 Zoom URL）；反向稽核「引用該 accession 的 event 恰一筆」+「該 clinician 日曆同窗非取消 event 恰一筆」；Postmark 用 `tag=calendar_prod` 讀最新（`recipient=` 對某地址回 `TotalCount: null`）。transv2 consult 信走 Kafka `notification-email-template` → notification-center → Postmark，`calendar_prod.email_send_out_request` 不會有列。
+- SIIR-312 建議：窗要從 specimen receipt 或 report completion 起算，不是 `order_service_time`。
+
+### devcom（BioInsights）第二個測試檔的欄位審計（V00000416.hl7，hl7_file_input 7154，quarantine 14）
+- NPI 已修、customer 解到 JAG；掛在 `emr_code_not_found`：OBR-4 `VAREQUISTION279` / `VATEST2270` 存在但 `isOrderable=false / priceVa=-1`，且名稱不符（279 實為 Gut Zoomer 4.0、2270 是 Copper Serum）→ devcom 拿到的是過期目錄。正確 orderable：`VAREQUISTION463`（Gut Zoomer 5.0）/ `VATEST70`（Vitamin D, 25-OH）。**不要為了讓測試過而翻 279/2270 的 isOrderable。**
+- 會腐蝕資料（vendor 必修）：email 放在 **PID-19** 會被寫進 **SSN**（我們讀 PID-20.1 當 email、PID-19 當 SSN，`patient-detail-parser.service.ts:142/151`）；ORC-12 / OBR-16 XCN 多一個空 component（`NPI^^Balandan^Paola` → 姓空、名=Balandan，這就是 7126 `customer_not_found=Balandan` 的來源）；OBR-7 比 MSH-7 早 7 天會**原字**成為 collection time（`parser.service.ts:259` 無條件覆寫）。
+- 送了但沒人讀：fasting 在 OBR-26（我們讀 OBR-19，且 `fastStatus` 等只進 DTO 無下游）；PID-3 UUID 被忽略（external id 讀 PID-2，身分是 customer+first+last+gender+dob）；DG1 跨 OBR 攤平；MSH-5/6 `IN OFFICE`/`LC` 不讀。IN1-2 `C` → `CUSTOMER_PAY`（practice 付費）——JAG 的付款方式仍未確認，是下一個 gate。重送要**新檔名**（file name 去重）。回信草稿 `drafts/BIOINSIGHTS-devcom-reply-20260923-draft.md`，未發。

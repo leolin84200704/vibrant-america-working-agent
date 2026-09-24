@@ -25,7 +25,9 @@ links:
 - LBS-1773
 - LBS-1784
 - LBS-1785
+- LBS-1799
 - LIS-7716
+- NEXTECH-onboarding
 - PH-847
 - QH-1660
 - QH-2257
@@ -35,6 +37,7 @@ links:
 - QH-4352
 - QH-4608
 - QH-5840
+- QUARANTINE-ADMIN-API-GAP-20260924
 - RESULTCHECK-20260819-RCODE-2608186060
 - VEJO-DELETION-20260804
 - VP-14787
@@ -108,12 +111,13 @@ links:
 - VP-18086
 - VP-18138
 - VP-18185
+- VP-18194
 - VP-18243
 - VP-18270
 - VP-18288
 - emr-integration
 - fhir-api
-score: 0.1751
+score: 0.1639
 ---
 
 # BIOINSIGHTS-SFTP-KEY — key-based SFTP auth support

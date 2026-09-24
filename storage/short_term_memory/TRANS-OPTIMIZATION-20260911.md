@@ -24,6 +24,7 @@ links:
 - INCIDENT-20260528
 - INCIDENT-20260601-sftp-hang
 - INCIDENT-20260817-onprem-deploy-freeze
+- INCIDENT-20260908-grpc-dead-node-ip
 - INCIDENT-20260910-emr-v2-di-crashloop
 - QH-1104
 - QH-1130
@@ -74,13 +75,15 @@ links:
 - VP-18050
 - VP-18276
 - VP-18303
+- VP-18342
+- VP-18344
 - VP-9299
 - business-model
 - business-model-deep
 - failures
 - repo-catalog
 - repos
-score: 0.7763
+score: 0.81
 ---
 
 # Summary
@@ -1140,3 +1143,11 @@ setting-consumer）各自佈建後**當場看它 PASS 才留下**（setting-cons
 
 **未決**：#90 的 fail-open 取捨要 Leo 定——14 個 gated repo 我只驗過 4 個，改成硬擋的話其餘 10 個
 會在他下次 push 時才知道會不會壞。
+
+### [2026-09-24 19:10Z] Dream closeout probe (3-night catch-up) — VP-18324 / VP-18345 / VP-18346 / VP-18355 all Done 09-23 15:00 PDT
+- **VP-18324 PASS**: every `LIS-setting-consumer` deploy run in the window concluded success (#178 e8986de 18:43Z, #180 69f8581 19:15Z, #181 31da65c 21:06Z, #182 3c0a8bb 00:06Z 09-24; the last two are Zhibin's proto syncs deployed on top). Traffic evidence already in this STM (7-day hourly: proxy 0/h from 09-23T00Z except my own probes, `/trans` 100–600/h).
+- **VP-18345 deploy PASS, closure FLAG (soft)**: code live on all six prod pods and `SETTING_GRPC_MODE=grpc` is on for `lis-setting-consumer-st` only; **prod is still `proxy` mode** (three keys absent from both prod ConfigMaps). The remaining steps (prod shadow → grpc → delete the two `/proxy/grpc` routes + ConfigMap keys, decide on `-local-st`, fix `grpc.options.ts` prod-address defaults, dead `tnp_rpc` on staging trans v1) have **no open ticket**: the only open TRANS-OPT tickets are VP-18347 (skin CRM callers), VP-18320 (route removal) and VP-18261 (Yekai's plan). Done before the work — flag for Leo to decide whether to reopen or file a follow-up.
+- **VP-18346 deploy PASS after a failure**: #813's own prod deploy run failed on `old-report-caller-log.spec.ts:83`; YFvibrant's `176503a` (#817) fixed it and the next runs succeeded (prod transformer ≥ `11e67d8`; later runs 09-24 00:03Z f915385 failure → 00:05Z 015a3f6 success are other teams'). **Label separation still unobserved**: Datadog `service:lis-trans-deployment @operation:proxy*Caller` since 09-23 20:47Z = `proxyGrpcCaller` 9, `proxyOldReportCaller` 0 — the old-report route has had zero organic traffic, so the only way to prove the new label is a deliberate probe request (2 log lines per request). Not done tonight (dream is read-only against prod).
+- **VP-18355 PASS (first live proof)**: emr-v2 #433 merged into staging 18:39Z 09-24, release PR #434 opened 18:42Z, staging `c3b75db` Jenkins status success 18:51Z. Under the old rule the job would have been disabled at the next scan.
+- **In-flight, not closed**: emr-v2 #433 (INCIDENT-20260908 repoint) is on staging only; #434 staging → main awaits Leo. Prod main is still `f52c6dd`.
+- Removal job `com.lis.proxy-old-report-removal` is armed for 09-30 09:00 PT; announcement page on Confluence (2703851521) with 09-30 dates; Jira VP-18320 description still says 10-02 / 10-09 and QH-7163 still lists three routes (both need Leo's token).

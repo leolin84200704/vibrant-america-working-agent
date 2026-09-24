@@ -23,7 +23,9 @@ links:
 - LBS-1773
 - LBS-1784
 - LBS-1785
+- LBS-1799
 - LIS-7716
+- NEXTECH-onboarding
 - PH-847
 - QH-1660
 - QH-2257
@@ -33,6 +35,7 @@ links:
 - QH-4352
 - QH-4608
 - QH-5840
+- QUARANTINE-ADMIN-API-GAP-20260924
 - RESULTCHECK-20260819-RCODE-2608186060
 - VEJO-DELETION-20260804
 - VP-14787
@@ -106,6 +109,7 @@ links:
 - VP-18086
 - VP-18138
 - VP-18185
+- VP-18194
 - VP-18243
 - VP-18270
 - VP-18288
@@ -129,7 +133,7 @@ summary: 'hl7_file_input 6746 (order_28984_1785429636_83.hl7, /turnpaughemr/orde
   clinic 13505, active, no duplicates (core-verified). Leo direct request, no Jira
   ticket; requested_by=customer_not_found-fix-20260731.'
 jira_status: none
-score: 0.2286
+score: 0.214
 ---
 
 # HL7FAIL-20260730 — Turnpaugh customer_not_found (Vincent Grove)

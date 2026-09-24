@@ -23,12 +23,38 @@ related:
 - INCIDENT-20260817-onprem-stale-deploy
 links:
 - INCIDENT-20260518
+- INCIDENT-20260601-sftp-hang
+- INCIDENT-20260817-onprem-deploy-freeze
 - INCIDENT-20260910-emr-v2-di-crashloop
 - NEXTECH-onboarding
+- QH-1130
+- QH-1159
+- QH-1591
+- QH-1775
+- QH-211
+- QH-2259
+- QH-862
+- QH-918
+- QH-919
+- TRANS-OPTIMIZATION-20260911
+- VP-16499
+- VP-16513
 - VP-17217
 - VP-17312
+- VP-17422
+- VP-17714
+- VP-17766
+- VP-17825
+- VP-17870
+- VP-18048
 - VP-18303
-score: 0.1209
+- VP-18342
+- VP-18344
+- VP-9299
+- failures
+- repo-catalog
+- repos
+score: 0.4612
 ---
 
 # INCIDENT 2026-09-08 — result pushes failing: gRPC targets pointed at a dead AKS node IP

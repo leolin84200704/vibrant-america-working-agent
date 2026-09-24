@@ -3,7 +3,7 @@ id: INCIDENT-20260601-sftp-hang
 type: stm
 category: technical
 status: active
-score: 0.0135
+score: 0.0144
 base_weight: 0.9
 created: 2026-06-01
 updated: 2026-06-01
@@ -13,7 +13,10 @@ links:
 - INCIDENT-20260529
 - INCIDENT-20260601-followup-sftp-verify
 - INCIDENT-20260604
+- INCIDENT-20260817-onprem-deploy-freeze
+- INCIDENT-20260908-grpc-dead-node-ip
 - INCIDENT-20260910-emr-v2-di-crashloop
+- QH-1130
 - QH-1159
 - QH-1591
 - QH-1775
@@ -32,6 +35,7 @@ links:
 - VP-16391
 - VP-16410
 - VP-16499
+- VP-16513
 - VP-16521
 - VP-16759
 - VP-16785
@@ -43,8 +47,13 @@ links:
 - VP-17217
 - VP-17222
 - VP-17312
+- VP-17714
+- VP-17766
+- VP-17825
 - VP-17870
+- VP-18048
 - VP-18303
+- VP-18342
 - failures
 - repo-catalog
 - repos

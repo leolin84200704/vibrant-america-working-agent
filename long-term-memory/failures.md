@@ -3,7 +3,7 @@ id: failures
 type: ltm
 category: technical
 status: active
-score: 1.4189
+score: 1.4624
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
@@ -15,6 +15,7 @@ links:
 - INCIDENT-20260604
 - INCIDENT-20260604-mdhq-stale-connections
 - INCIDENT-20260817-onprem-deploy-freeze
+- INCIDENT-20260908-grpc-dead-node-ip
 - INCIDENT-20260910-emr-v2-di-crashloop
 - INCIDENT-2604156666
 - LBS-1541
@@ -113,6 +114,8 @@ links:
 - VP-18080
 - VP-18085
 - VP-18303
+- VP-18342
+- VP-18344
 - VP-9299
 - business-model
 - business-model-deep

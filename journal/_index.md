@@ -1,12 +1,13 @@
 # Journal Index (Episodic Memory — L3a)
 
 > Auto-maintained by the dream pipeline. One line per entry, newest first.
-> Last updated: 2026-09-21. No new entries since 2026-09-14 (already distilled by the 09-15 run); nothing to distill or archive on 09-21. Archived 4 distilled >30d entries
-> (2026-08-16 x2, 2026-08-18 x2) → archive/journal/.
+> Last updated: 2026-09-24. Two 09-22 entries distilled by the 09-24 run (vp18194-per-report-pdf → emr-integration/patterns/leo-working-rules; vp18342-w2w-patient-not-found → patterns/emr-integration/leo-working-rules;
+> the latter had no frontmatter, added tonight). Archived 3 distilled >30d entries (2026-08-20, 2026-08-24, 2026-08-25) → archive/journal/.
 
 | Date | Slug | Related | Distilled |
 |------|------|---------|-----------|
-| 2026-09-22 | vp18194-per-report-pdf | VP-18194, PH-907, SIIR-291, VP-18138, VP-17344, VP-17715, LIS-7716 | false |
+| 2026-09-22 | vp18342-w2w-patient-not-found | VP-18342, VP-18343, VP-18344, VP-18355, VP-17283, VP-18064, VP-17437 | true |
+| 2026-09-22 | vp18194-per-report-pdf | VP-18194, PH-907, SIIR-291, QH-7066, VP-18138, VP-17344, VP-17493, VP-17715, LIS-7716 | true |
 | 2026-09-14 | trans-opt-phase1-2-execution | TRANS-OPTIMIZATION-20260911, VP-18276, VP-17348, VP-18152 | true |
 | 2026-09-10 | vp18034-pr-b-wiring | VP-18034, VP-18032, VP-18031, VP-18089, INCIDENT-20260910-emr-v2-di-crashloop | true |
 | 2026-09-09 | vp18085-menu-section | VP-18085, PH-871, VP-17724 | true |
@@ -21,9 +22,6 @@
 | 2026-08-28 | vp17760-get-orders | VP-17760, VP-17517, VP-17531, VP-17497, VP-17499, PH-855, VP-17975, VP-17318 | true |
 | 2026-08-27 | vp17753-55-bug-to-task-and-handoff | VP-17753, VP-17754, VP-17755, VP-9299 | true |
 | 2026-08-26 | lis-7716-report-option | LIS-7716, VP-17408, VP-16980, VP-16734 | true |
-| 2026-08-25 | vp16166-quarantine | VP-16166, VP-17915, VP-17916, VP-16163, VP-16164, VP-17342, VP-17422, VP-17544 | true |
-| 2026-08-24 | vp17827-practice-id-blocked | VP-17827, VP-17826, VP-16163, VP-16164, VP-16165, VP-16166, QH-6775, HL7-NPI-PRACTICE-MATCH-20260820 | true |
-| 2026-08-20 | vp17812-prospera-spec | VP-17812, QH-6764, VP-16245, VP-16987, VP-17475, BIOINSIGHTS-onboarding | true |
 | ~~2026-08-18~~ | ~~vp9299-status-list-v2~~ | VP-9299, VP-17753, VP-17754, VP-17755, VP-16859, PH-850 | archived 2026-09-18 → `archive/journal/` |
 | ~~2026-08-18~~ | ~~factory-update-throughput-cost~~ | framework-sync, ENFORCEMENT-LADDER.md, WORK-LOOP.md | archived 2026-09-18 → `archive/journal/` |
 | ~~2026-08-16~~ | ~~remaining-memory-stores-migration~~ | native-auto-memory-retirement, RETRIEVAL.md, ENGINEERING-LESSONS.md | archived 2026-09-18 → `archive/journal/` |

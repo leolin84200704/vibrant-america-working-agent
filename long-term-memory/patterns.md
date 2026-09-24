@@ -6,7 +6,7 @@ status: active
 score: 0.2079
 base_weight: 0.8
 created: 2026-04-22
-updated: 2026-09-21
+updated: 2026-09-24
 links:
 - INCIDENT-20260528
 - INCIDENT-20260529
@@ -2725,3 +2725,75 @@ Atlassian MCP 斷線時的 fallback：`~/src/credential/atlassian-api-token.md`�
 - 核心 v1 HTTP 流量：`@event:core_v1_http_request`（VP-18140 log），14 天窗；`list-customer-by-id` 14 天 120+ 個不同 pod IP，逐一解析不可行但不影響 scope 結論。
 - emr-v2 prod DB 從筆電走 mysql2 要 `ssl:{rejectUnauthorized:false}`（`require_secure_transport=ON`）；vibrant MCP `mysql_query` 連的是 `lisportalprod`，**沒有 `lis_emr`**。`result_transmission_records` 沒有 `status` 欄位——是 `generation_status` / `transmission_status` / `acknowledgment_status`。
 - kubectl 因 Azure MFA 過期中途失效時，Datadog 的 `image_tag` / `kube_replica_set` tag + 行為 log 可以替代 kubectl 做部署驗證。
+
+## 【蒸餾 2026-09-24】Jenkins multibranch 與 release PR、producer 改動的測試形狀、vendored proto 同步配方、會動的錯誤預設值、ConfigMap 翻 key 的判準（VP-18342 / VP-18344 / VP-18355 / VP-18194 / TRANS-OPT / INCIDENT-20260908）
+
+### emr-v2 的 Jenkins multibranch：release PR 一開，staging 就不會 build（VP-18342 兩次踩、VP-18355 已修）
+- 09-23 前 `LIS-EMR-V2-BACKEND` 的 Branch Source 是「exclude branches that are also filed as PRs」：`staging → main` 的 release PR 一開，下一次 scan 就把 `staging` job 孤立成 disabled（沒有 Enable 鈕、commit 上連 `continuous-integration/jenkins/branch` status 都沒有，只剩 CodeQL）。09-17 #426、09-22 #428/#430 都撞到，之前沒被發現是因為 Leo 通常幾分鐘內就 merge release PR。
+- 當時的解法：`gh pr close <release PR>` → Jenkins 重掃 → staging 開始 build → 驗完再 reopen。**同一批有多個 staging merge 時，release PR 要一直關到最後一個 staging build 跑完**（09-22 同一天第二次踩就是 reopen 太早）。
+- **永久修法已做（VP-18355，Leo 在 UI 改）**：`BranchDiscoveryTrait strategyId 1 → 3`（All branches），從 `config.xml` 讀回確認。第一次真實證明：09-24 #433 merge 進 staging（18:39Z）後 #434 release PR 18:42Z 開著，staging `c3b75db` 的 Jenkins status 仍在 18:51Z 轉 success。
+- Jenkins `192.168.60.9:9602` 需 basic auth，沒人持久化；Leo 在 chat 給過一次帳密，**沒存任何地方**，要用再問。GitHub commit status 是可觀察的代理。`WildcardSCMHeadFilterTrait` 的 includes 還留著 `feature/leo/VP-17656`（陳舊，無害）。
+
+### 改 producer 時，測試要照 consumer 的讀法寫（VP-18342 #429 帶進的 HL7 regression）
+- #429 把 v1 client 的 camelCase 清單（`contactType` / `streetAddress`）餵進 `PatientWithDetails`，但讀端（`getPatientInfoFromGrpc` / `updateContactIfChanged`）讀 snake_case（`contact_type` / `street_address` / `is_primary_address` / `contact_description`）。staging 上每一張回診病人的 HL7 order 都丟了電話/email/地址並誤發 `UpdatePatientInfo`；prod 沒中只因為 #430 被 hold 著。
+- 為什麼漏：測試寫成 `toMatchObject({patientContact: found.patientContactList})`——釘的是**我自己的輸出形狀**，不是讀端的讀法。修法 #431 加了兩個穿過 `parser.getPatientInfoFromGrpc` 的端到端測試。**規則：改 producer 的輸出時，斷言要建立在 consumer 實際讀的欄位上，或直接跑 consumer。**
+
+### protobuf 解碼漂移：用服務自己的 runtime 重現，不要信 grpcurl（VP-18342）
+- Go 的 grpcurl 對漂移的 proto**容忍**（吐垃圾、不 throw），會誤導成「可以解」；emr-v2 的 Node 堆疊才重現出 `index out of range: 3603 + 10 > 3603` / `invalid wire type 7 at offset 1071`。更糟的是 12 個最新 prod 病人中 4 個**不 throw 但解出壞資料**（first name 是時間戳片段）——靜默腐蝕比 throw 更危險。
+- 一週內三次 wire-type/tag 漂移（samples ×2、Address）全來自沒有 consumer 清單的 vendored copy。機制候選：core repo 的 CI 列出下游 vendored copy，shared tag 改型別/位置就 fail。
+- Datadog 對這個服務的 raw log 抓取會**靜默截斷**（病人 dump 約 76 KB）；用 `analyze_datadog_logs` 加 `length(message) < N` 過濾，DDSQL 沒有 `substr/left`。
+
+### vendored proto 同步配方（VP-18344，Leo：「v1 proto call v1 rpc, v2 proto call v2 rpc」）
+- 從**記錄下來的上游 commit** byte-identical 整目錄同步（不是挑欄位），然後 **load 每一個 runtime entry file**：byte-copy 既有檔案會漏掉**新的 transitive import**（`lis_main.proto → notification/role/RBAC/international_provider_credential.proto`），loader check 抓到、diff 抓不到。
+- 同步後跑 old→new 的 same-tag 掃描（scratchpad `protocmp.py`；naive 版會漏掉單行 message，要 brace-correct），列出型別/位置變更並逐一判定「有沒有人在用」。
+- **核心事實**：core-v2 server 同時在 `coresamples_service.*` 與 `lis.*` 兩個 package 註冊 service（連 3 個 v2-only RPC 也回應 `lis.*`）；v1 truth = `LIS-backend-coreSamples/protos`。core-v2 曾在 `address.proto` tag 9 插入 `standardized_full_addr` 把 9..14 全部位移（VP-18343，core team 當天 #1214 修回）。
+- **Lockstep 是跟 producer 的 PROD rollout，不是 staging 的**：emr-v2 staging 的 v2 呼叫也打 prod core-v2（`GRPC_V2_*_HOST=10.224.0.10:32100`），所以 emr-v2 staging 的 proto-v2 只能在 prod core-v2 換版後才翻。
+- v1 與 v2 的 not-found 語意不同：v1 gRPC `NOT_FOUND "Active patient X not found"`，v2 回**空 message**（09-23 VP-18348 後 v2 也改 NOT_FOUND）。現有 v1 `GrpcClientService.getPatient()` 會在空欄位時**塞 mock 人口資料**（NAICHANG1 LU / 34 UNION SQUARE），只能給 result path 用，下單路徑要用 `getPatientById()`。
+- worktree 一定要自己 `npm ci` + `prisma generate` + `prisma:generate:test`——symlink 的 `node_modules` 帶著別的 branch 的 Prisma client，會產生 25 個假的 "suite failed to run"。
+
+### 會動的錯誤預設值比沒有預設值更糟（VP-18345 #180 / grpc.options.ts / INCIDENT-20260908）
+- setting-consumer #179 給 gRPC client 寫了 **prod 叢集內 DNS 當 fallback**；`SHIPPING_RPC` / `TEST_RESULT_RPC` 在 8 顆 pod（prod+staging）全部未設，fallback 就是生效值。staging 的服務位址其實是 `192.168.60.6:31865` / `:30600`（staging trans v1 到 09-23 還在用；我先前寫「已死」是過度一般化）。後果：在 staging 開 shadow 不會失敗，會**安靜地讀 prod 資料**做無意義比對。#180 修法：拿掉預設值，`resolveMode(mode, address)` 在位址為空時一律回 `proxy`——啟用直連變成**兩個刻意動作**（位址 + 模式）。在 pod 內載入部署中的 `dist/setting-consumer/proxy-grpc-mode.js` 實跑：`resolveMode("shadow","")` → `proxy`，這才是缺陷關閉的證據。
+- **地雷仍在**：`grpc.options.ts:25,37` 的預設值寫死 PROD 位址，任何環境只設 `SETTING_GRPC_MODE=grpc` 不設另外兩個 URL 就會直接打 prod 的 shipping / test-result。**三個 key 必須成組設定**。要不要改成「無預設、缺少就啟動失敗」待 Leo 定。
+- 同族：INCIDENT-20260908 的 code default 是已死的 node IP `10.224.0.199`，on-prem prod 與 staging 的 ConfigMap 漏了 `GRPC_V2_SALES_HOST` / `GRPC_V2_SETTING_HOST`，從 09-08 起靜默落到那個死 IP（PR #433 改指 internal LB `10.224.1.113:80`，並用 `v2Endpoint(hostVar, portVar)` 把 host/port 配對，避免 LB host 配 NodePort port）。`Jenkinsfile:147,150` 是 export **live AKS ConfigMap** 再 apply 到 on-prem——repo 的 yaml 不被任何 pipeline 套用。
+- 死節點的判別：ICMP 有回、**所有** TCP port 立刻 RST = 節點不存在，不是服務掛。「改指到現在有 pod 的另一個 node IP」是再埋一次同一顆雷。
+
+### setting-consumer 的 main push 同時觸發 prod 與 staging 兩個 workflow（09-23 實測）
+- 09-23 21:06Z 有人（PR #181）推 main，`setting-consumer-staging` 與 `setting-consumer` 兩個 workflow 同時跑，四個 deployment（prod/staging × cloud/local）全部換成該 image。**「staging 先、prod 後」的節奏會被 main 的 auto-deploy 繞過**——能保護的是「部署零行為變更、行為靠 env 開」這個設計，不是節奏。
+- 雙軌事實：`main → setting-consumer.yml`（prod）、`stage_test → setting-consumer-staging.yml`（staging）各自 `push:` 觸發；同一個修正在兩邊是不同 commit，`origin/stage_test..origin/main` 為空時 stage_test→main 的 merge 不會弄丟 main 任何東西。**release PR 會夾帶別人在 stage_test 上躺了很久的變更**（#178 帶了 Fan 的 VP-18182/18183 293 行、13 天）——review release PR 時要把「兩半的風險輪廓」分開講給 Leo。
+- staging trans v1 的 `lis-trans-config-st` 到 09-23 仍指死的 `192.168.60.6:31865/30600`（`trans.grpc.options.ts:82` 無 fallback，ConfigMap 是唯一來源），已改成 `lis-shipping-service-staging-grpc.shipping.svc.cluster.local:63142` / `lis-test-connect-staging-grpc-service.results.svc.cluster.local:6889`；`tnp_rpc` 仍是死的，未動。**24h 內 48 筆同樣的錯早於部署 8.5 小時 → 既有狀態**，這是「部署後的錯誤先跟部署前基線比」的又一例。
+
+### ConfigMap 翻 key 的判準與備份物件（VP-18324 step 2）
+- `envFrom: configMapRef` → 改 ConfigMap 不影響執行中的 pod，一定要 `rollout restart`。**`kubectl rollout status` 回報 "successfully rolled out" 時舊 pod 還在、還帶舊 env**；判準是「只剩新 replicaset」+ 逐顆 `exec` 讀 env。
+- **`kubectl get cm -o yaml` 的 dump 是錯的備份物件**：四份 CM 都含真機密（Kafka connection string、redis 密碼、OAuth2 client id），dump 絕不可進任何 repo；而且只動一個 key 沒人會為了退一個 key 還原 135 個。正確備份 = 那個 key 的前後值 + 指令（前值是 URL 不是機密）。回滾要在 staging **實際演練**過再寫進 runbook（`runbooks/vp18324-proxy-pdf-route-cutover.md`）。
+- 比對兩條路由產出的 PDF 要比**長度**不能比 hash：PDF trailer `/ID [<...> <...>]` 每次算繪重產，同一條路由連打兩次 sha 也不同。「除了 per-render `/ID` 外相同」才是正確說法。
+- `/trans` 比 `/proxy/old-report` 快約 3 倍（3.0 s vs 8.8 s，少一跳 proxy）。
+
+### 儀器筆記（本輪新增）
+- Datadog `@url` 含 query string，直接 `GROUP BY "@url"` 會炸成上萬列被 truncate；要 `split_part("@url", '?', 1)` 才是逐路由計數。
+- trans v1 的 caller-log 走 `LisLoggingService` 進 Datadog，**不進 pod stdout**；`kubectl logs | grep` 統計 `getKitStatus` 得到 0 是無效數字（Datadog 實際 24h 9 筆）。同理 `ProxyCallerLogInterceptor` 的四個欄位在 stdout 一個都沒有，拿 stdout 的 label 計數當佐證是錯的。反過來 request log（`@url:*downloadTestOrderPDF*`）**在** stdout，Datadog 掛掉時可以直接數 pod 日誌（要有對照組：同一條 grep 抓得到 `/trans` 那欄）。
+- 09-23 Datadog MCP 連續回 "Was there a typo in the url or port?" / "Unable to connect" 約 15 分鐘後自行恢復；不要盲目重試，改從來源證。
+- `#813` 的 prod deploy **失敗**在它自己沒更新到的另一支 spec（`old-report-caller-log.spec.ts:83` 釘舊 label）；該 spec 在 PR head 上就已紅、`gh pr checks` merge 前就是 fail——「只跑了改到的那一支 spec」。斷言在 rxjs subscribe callback 內一炸 `done()` 不會被呼叫，jest 只報 5000ms timeout 掩蓋真因。YFvibrant 的 `176503a` 修掉。
+- 一次性 launchd job 的驗證是問 launchd 自己（`launchctl print gui/$(id -u)/<label>` 看 Month/Day/Hour、`runs = 0`、`last exit code = (never exited)`），並在 runner export 的 PATH 下 `env -i` 逐一解析工具——launchd 的最小 PATH 最常見死法是 `claude: command not found`。
+
+### emr-v2 DDL 與 prod 連線的三個坑（VP-18194）
+- prod `@@lock_wait_timeout` = 31,536,000 s（一年，MySQL 預設）→ DDL 撞到任何開著的交易的 MDL 就永久排隊，之後所有 query 排在後面。**每次 DDL 先 `SET SESSION lock_wait_timeout = 5`**。
+- `ALGORITHM=INSTANT` 只允許 `LOCK=DEFAULT`；為了滿足 linter MM014 加上 `LOCK=NONE` 會讓兩條 ALTER 在 prod 直接失敗（MM029）。**為了通過檢查器而做的修改，要再跑一次檢查器。**
+- prod Azure MySQL `--require_secure_transport=ON`：mysql2 要用 `new URL(DATABASE_URL)` 拆出來的 config 物件加 `ssl`，直接丟 URL 字串會把 ssl 選項吃掉（staging 不在意）。
+- 「DDL 先於 deploy」的行為驗證：在 pod 內跑**部署中的 Prisma client** select 新欄位（32/32、findUnique 目標列），沒有 "Unknown column" 才算。驗證設定生效時，把**部署中的決策函式**（`dist/.../report-pdf-settings.js`）載進 pod、餵它部署中 client 讀出的那一列，而不是自己重算一次同樣的邏輯。
+
+### 選上游端點時比的是壞輸入的失敗形狀（VP-18194，factory PR #87）
+- 兩條取得單報告 PDF 的路徑 happy path 幾乎一樣：`GET /result/getSelectedReportsZip?barcode=&sections=MY2.cbrf`（一次拿全部，200 / 1.32 MB / 4.2 s）vs `GET /pdf/bookmarkPagePdfDownload?barcode=&type=HM2&startPageNumber=1`（一次一份，200 / 413 KB / 4.1 s）。決定性差異在壞輸入：zip 那條參數打錯回 **200 + 合法 `%PDF-` + 4 KB 空殼**（`HM2.bespoke` → 4,135 B），單項那條回 **500**（`type=ZZZZ`、`type=GUT5` 不在此 accession 都 500）。PRO/CON 辯論雙方都只辯 happy path。
+- `%PDF-` magic check 不夠，要有最小大小 floor 當 backstop（`REPORT_PDF_MIN_BYTES` 預設 20,000）。`sections=` 的 flag 文法（`{SHORT}.{s,c,b,r,f}`）住在 va-portal `CustomReportDialog.vue:521-542`，emr-v2 不該複製。`report-pdf-engine /pdf?url=` **完全無 auth**，LIS-Report 用 `PDF_REPORT_UNIVERSAL_TOKEN_PROD` 打它，emr-v2 沒有那個 token；emr-v2 自己的 `VIBRANT_API_TOKEN` 打 LIS-Report 的兩條端點都被接受。
+
+### 共用文件的修改一律 read-modify-write 帶版本（Confluence，VP-18320 公告頁）
+- Atlassian MCP **沒有** Confluence create/update 工具；用 `.env` 的 `JIRA_EMAIL/JIRA_API_TOKEN` 直打 `/wiki/api/v2/pages`（POST 建；PUT 改要帶 `version.number+1`；space id 查 `/wiki/api/v2/spaces?keys=LIS`）。
+- 我建頁後 5 分鐘 Leo 在 UI 改了 13 格日期（v2、v3）但漏了正文兩處；我改時先 GET 當前版本、在那份 body 上字串取代再 PUT，所以他的編輯被保留。**用手上舊的一份直接覆蓋，同一個帳號的編輯在 version history 裡分不出是人是 agent，被蓋掉也看不出來。**
+
+### Jira / MCP 權限事實（本輪確認）
+- `mcp__vibrant__create_jira_issue` 對 VP 回 **403**（service account 無 create 權限）→ 建票用 `mcp__claude_ai_Atlassian__createJiraIssue`（Leo 帳號）。VP Bug create screen 必填 Detection Method / Environment / Portal Affected System-Page / Impact / Due date。
+- vibrant MCP 的 Jira 帳號**看不到 LBS 專案**（`get_jira_issue` 404、`search_jira_issues` 空）；LBS 票一律走 Atlassian MCP。LBS（JSM）專案裡作者**不能編輯自己的 comment**（`addCommentToJiraIssue` 帶 `commentId` 回無權限）→ 第一次就要貼對；`contentFormat: "markdown"` 用真 markdown，Jira-wiki 標記（`h.`、`{{}}`、`{quote}`）不會轉換、會原字渲染。
+- `mcp__vibrant__mysql_query`（lisportalprod）沒有 `lis_emr`；prod `lis_emr` 只在 lisportalprod2（`lisportal_mysql_query`，read-only）；寫入走 emr-v2 `.env` `DATABASE_URL` 的 Prisma runner。
+
+### pre-push DI smoke 的環境洩漏已修（factory PR #90，09-14 與 09-22 各踩一次）
+- smoke 文件寫「子行程拿到空環境（`env -i`）」，實測 LIS-transformer 的受測 code 拿到 **126 個變數**：app 的 `dotenv.config()` 讀 `<cwd>/.env`（123 key 含 `DATABASE_URL`、真實 JWT 金鑰），加上 Prisma client 依 schema 旁 `.env` 的**絕對路徑**載入——在沒有 `.env` 的 worktree 裡實證它去讀了主 clone 的 `.env`。判決跟目錄走不跟 commit 走，而**通過的那一邊才是危險的那一邊**（每次 push 帶正式憑證開機）。
+- 修法：preload 在 `DI_SMOKE_CONTAIN=1`（預設）拒絕 gate 自有檔案以外所有 `.env*` 讀取；`nest-di-smoke-init.js` 依 key 名 + 值形狀產生 `~/.config/nest-di-smoke/<repo>.env`（host 一律 127.0.0.1、不抄值）。**佈建即武裝**：未佈建的 repo 仍 uncontained 重跑並放行；已佈建 4 個（transformer / transformer-v2 / emr-v2 / setting-consumer）。fail-open 取捨（其餘 10 個 gated repo）待 Leo 定。重現時 symlink `dist` 回主 clone 會讓 `__dirname` 再把主 clone 的 `.env` 吃進來假性通過——要在 worktree 內真 build。

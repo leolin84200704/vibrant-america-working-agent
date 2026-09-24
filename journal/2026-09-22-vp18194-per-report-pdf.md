@@ -2,7 +2,8 @@
 date: 2026-09-22
 slug: vp18194-per-report-pdf
 related: [VP-18194, PH-907, SIIR-291, QH-7066, VP-18138, VP-17344, VP-17493, VP-17715, LIS-7716]
-distilled: false
+distilled: true
+distilled_on: 2026-09-24
 ---
 
 # VP-18194 — per-report PDFs to EMR-integrated practices

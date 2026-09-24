@@ -29,7 +29,9 @@ links:
 - LBS-1773
 - LBS-1784
 - LBS-1785
+- LBS-1799
 - LIS-7716
+- NEXTECH-onboarding
 - PH-847
 - QH-1660
 - QH-2257
@@ -39,6 +41,7 @@ links:
 - QH-4352
 - QH-4608
 - QH-5840
+- QUARANTINE-ADMIN-API-GAP-20260924
 - RESULTCHECK-20260819-RCODE-2608186060
 - VP-14787
 - VP-15279
@@ -111,6 +114,7 @@ links:
 - VP-18086
 - VP-18138
 - VP-18185
+- VP-18194
 - VP-18243
 - VP-18270
 - VP-18288
@@ -121,7 +125,7 @@ tags:
 summary: 'Deleted all 3 VEJO integrations (vendors 17/18/43) from prod lis_emr: 41
   rows across 7 tables, transaction with count guards, full backup at ~/src/credential/vejo-deletion-backup-20260804.json.
   Zero activity ever (0 hl7, 0 results, 0 samples). Reverse-audit clean.'
-score: 0.2612
+score: 0.2446
 ---
 
 # VEJO integration deletion — 2026-08-04

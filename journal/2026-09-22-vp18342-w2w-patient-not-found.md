@@ -1,3 +1,11 @@
+---
+date: 2026-09-22
+slug: vp18342-w2w-patient-not-found
+related: [VP-18342, VP-18343, VP-18344, VP-18355, VP-17283, VP-18064, VP-17437]
+distilled: true
+distilled_on: 2026-09-24
+---
+
 # 2026-09-22 — VP-18342 / VP-18343 / VP-18344: Ways2Wellness "patient_not_found" on the sandbox Partner API
 
 ## What Leo asked

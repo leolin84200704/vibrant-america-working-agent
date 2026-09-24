@@ -3,20 +3,151 @@ id: NEXTECH-onboarding
 type: stm
 category: emr_integration
 status: active
-score: 0.00
+score: 1.475
 base_weight: 1.0
 created: 2026-09-22
 updated: 2026-09-24
-links: []
+links:
+- BETA-E2E-20260729
+- BIOINSIGHTS-SFTP-KEY
+- BIOINSIGHTS-onboarding
+- FHIR-ONDEMAND-RESULT
+- HL7-NPI-PRACTICE-MATCH-20260820
+- HL7FAIL-20260722-MDHQ
+- HL7FAIL-20260729-PLESSEN
+- HL7FAIL-20260730-TURNPAUGH
+- HL7FAIL-20260903-EVERSPAN
+- INCIDENT-20260808-critical-result-tnp
+- INCIDENT-20260817-onprem-stale-deploy
+- INCIDENT-2604156666
+- LBS-1541
+- LBS-1656
+- LBS-1762
+- LBS-1773
+- LBS-1784
+- LBS-1785
+- LBS-1799
+- LIS-7716
+- PH-847
+- QH-1660
+- QH-2257
+- QH-2577
+- QH-3752
+- QH-4350
+- QH-4352
+- QH-4608
+- QH-5840
+- QUARANTINE-ADMIN-API-GAP-20260924
+- RESULTCHECK-20260819-RCODE-2608186060
+- VEJO-DELETION-20260804
+- VP-14787
+- VP-15279
+- VP-15952
+- VP-16014
+- VP-16166
+- VP-16175
+- VP-16186
+- VP-16193
+- VP-16251
+- VP-16271
+- VP-16280
+- VP-16329
+- VP-16685
+- VP-16734
+- VP-16765
+- VP-16766
+- VP-16832
+- VP-16881
+- VP-16885
+- VP-16934
+- VP-16987
+- VP-17076
+- VP-17117
+- VP-17120
+- VP-17136
+- VP-17283
+- VP-17286
+- VP-17344
+- VP-17411
+- VP-17460
+- VP-17466
+- VP-17474
+- VP-17475
+- VP-17493
+- VP-17497
+- VP-17499
+- VP-17503
+- VP-17517
+- VP-17524
+- VP-17537
+- VP-17538
+- VP-17539
+- VP-17544
+- VP-17584
+- VP-17589
+- VP-17591
+- VP-17628
+- VP-17631
+- VP-17685
+- VP-17686
+- VP-17691
+- VP-17715
+- VP-17734
+- VP-17748
+- VP-17752
+- VP-17760
+- VP-17810
+- VP-17812
+- VP-17827
+- VP-17914
+- VP-18030
+- VP-18034
+- VP-18055
+- VP-18066
+- VP-18080
+- VP-18085
+- VP-18086
+- VP-18138
+- VP-18185
+- VP-18194
+- VP-18243
+- VP-18270
+- VP-18288
+- emr-integration
+- fhir-api
 relations:
   unblocked_by: []
   blocks: []
   sibling:
   - BIOINSIGHTS-onboarding
-unblock_when: "End-to-end test order from Nextech; test = a .hl7 lands in /965721.Vibrant/Export/, gets a sample_id in hl7_file_input under customer 28981, and the result PDF+HL7 land in /965721.Vibrant/Import/. First provider is LIVE since 2026-09-24, so a file arriving now WILL place an order."
-tags: [vp-18336, qh-7179, nextech, atca, sftp, vendor-onboarding, alzheimers-treatment-centers, ehr-integrations, george-moricz, customer-28981]
-summary: "New EMR vendor Nextech (bi-directional, for Alzheimer's Treatment Centers of America) — vendor-hosted password SFTP (GoAnywhere) interface02.nextechapp.com:22. 2026-09-22 connectivity fully verified from local (auth, ls, put/get/remove in Import, mkdir+rename archive flow in Export) and AKS prod pod egress OK. Prod INSERTed: ehr_vendors id=47 NEXTECH (is_public=0), sftp_folder_mapping id=288 /965721.Vibrant/Export/ -> /NEXTECH/Prod/Order/ pipeline_location=cloud, ehr_vendor_sftp_templates id=33. FIRST ehr_integrations row added 2026-09-24 (id cmufvrntc0000dq0x51sbd986, customer 28981 George Moricz MD NPI 1215931902, clinic 20834, FULL_INTEGRATION, LIVE) — order routing for that NPI now resolves to 28981 and results push to /965721.Vibrant/Import/. Still no sample HL7 seen from Nextech. VP-18336 Done 2026-09-22 (vendor build-out); QA twin QH-7179 still To Do."
+unblock_when: End-to-end test order from Nextech; test = a .hl7 lands in /965721.Vibrant/Export/,
+  gets a sample_id in hl7_file_input under customer 28981, and the result PDF+HL7
+  land in /965721.Vibrant/Import/. First provider is LIVE since 2026-09-24, so a file
+  arriving now WILL place an order.
+tags:
+- vp-18336
+- qh-7179
+- nextech
+- atca
+- sftp
+- vendor-onboarding
+- alzheimers-treatment-centers
+- ehr-integrations
+- george-moricz
+- customer-28981
+summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Centers
+  of America) — vendor-hosted password SFTP (GoAnywhere) interface02.nextechapp.com:22.
+  2026-09-22 connectivity fully verified from local (auth, ls, put/get/remove in Import,
+  mkdir+rename archive flow in Export) and AKS prod pod egress OK. Prod INSERTed:
+  ehr_vendors id=47 NEXTECH (is_public=0), sftp_folder_mapping id=288 /965721.Vibrant/Export/
+  -> /NEXTECH/Prod/Order/ pipeline_location=cloud, ehr_vendor_sftp_templates id=33.
+  FIRST ehr_integrations row added 2026-09-24 (id cmufvrntc0000dq0x51sbd986, customer
+  28981 George Moricz MD NPI 1215931902, clinic 20834, FULL_INTEGRATION, LIVE) — order
+  routing for that NPI now resolves to 28981 and results push to /965721.Vibrant/Import/.
+  Still no sample HL7 seen from Nextech. VP-18336 Done 2026-09-22 (vendor build-out);
+  QA twin QH-7179 still To Do.'
 ---
+
 # NEXTECH-onboarding - Work Loop Record
 
 ## Ticket Analysis

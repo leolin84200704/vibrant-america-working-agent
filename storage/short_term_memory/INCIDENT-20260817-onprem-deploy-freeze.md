@@ -29,11 +29,16 @@ summary: VP-17559 moved the Event Hub SAS to Key Vault (2026-07-30); the on-prem
   Vault remains the destination, blocked on an Azure admin.
 links:
 - INCIDENT-20260518
+- INCIDENT-20260601-sftp-hang
 - INCIDENT-20260817-onprem-stale-deploy
+- INCIDENT-20260908-grpc-dead-node-ip
 - INCIDENT-20260910-emr-v2-di-crashloop
 - QH-1130
 - QH-1159
 - QH-1591
+- QH-1775
+- QH-211
+- QH-2259
 - QH-862
 - QH-918
 - QH-919
@@ -68,12 +73,14 @@ links:
 - VP-17825
 - VP-17870
 - VP-18048
+- VP-18303
+- VP-18342
 - VP-9299
 - business-model
 - failures
 - repo-catalog
 - repos
-score: 0.206
+score: 0.2101
 ---
 
 # INCIDENT 2026-08-17 — on-prem emr-v2 deploy freeze

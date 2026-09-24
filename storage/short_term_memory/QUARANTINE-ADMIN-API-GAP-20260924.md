@@ -3,16 +3,128 @@ id: QUARANTINE-ADMIN-API-GAP-20260924
 type: stm
 category: emr_integration
 status: active
-score: 0.00
+score: 1.4625
 base_weight: 1.0
 created: 2026-09-24
 updated: 2026-09-24
-links: []
+links:
+- BETA-E2E-20260729
+- BIOINSIGHTS-SFTP-KEY
+- BIOINSIGHTS-onboarding
+- FHIR-ONDEMAND-RESULT
+- HL7-NPI-PRACTICE-MATCH-20260820
+- HL7FAIL-20260722-MDHQ
+- HL7FAIL-20260729-PLESSEN
+- HL7FAIL-20260730-TURNPAUGH
+- HL7FAIL-20260903-EVERSPAN
+- INCIDENT-20260808-critical-result-tnp
+- INCIDENT-20260817-onprem-stale-deploy
+- INCIDENT-2604156666
+- LBS-1541
+- LBS-1656
+- LBS-1762
+- LBS-1773
+- LBS-1784
+- LBS-1785
+- LBS-1799
+- LIS-7716
+- NEXTECH-onboarding
+- PH-847
+- QH-1660
+- QH-2257
+- QH-2577
+- QH-3752
+- QH-4350
+- QH-4352
+- QH-4608
+- QH-5840
+- RESULTCHECK-20260819-RCODE-2608186060
+- VEJO-DELETION-20260804
+- VP-14787
+- VP-15279
+- VP-15952
+- VP-16014
+- VP-16166
+- VP-16175
+- VP-16186
+- VP-16193
+- VP-16251
+- VP-16271
+- VP-16280
+- VP-16329
+- VP-16685
+- VP-16734
+- VP-16765
+- VP-16766
+- VP-16832
+- VP-16881
+- VP-16885
+- VP-16934
+- VP-16987
+- VP-17076
+- VP-17117
+- VP-17120
+- VP-17136
+- VP-17283
+- VP-17286
+- VP-17344
+- VP-17411
+- VP-17460
+- VP-17466
+- VP-17474
+- VP-17475
+- VP-17493
+- VP-17497
+- VP-17499
+- VP-17503
+- VP-17517
+- VP-17524
+- VP-17537
+- VP-17538
+- VP-17539
+- VP-17544
+- VP-17584
+- VP-17589
+- VP-17591
+- VP-17628
+- VP-17631
+- VP-17685
+- VP-17686
+- VP-17691
+- VP-17715
+- VP-17734
+- VP-17748
+- VP-17752
+- VP-17760
+- VP-17810
+- VP-17812
+- VP-17827
+- VP-17914
+- VP-18030
+- VP-18034
+- VP-18055
+- VP-18066
+- VP-18080
+- VP-18085
+- VP-18086
+- VP-18138
+- VP-18185
+- VP-18194
+- VP-18243
+- VP-18270
+- VP-18288
+- emr-integration
+- fhir-api
 relations:
   unblocked_by: []
-  blocks: [VP-16167, VP-16173]
-  sibling: [VP-16166, VP-17827, HL7-NPI-PRACTICE-MATCH-20260820]
-unblock_when: ""
+  blocks:
+  - VP-16167
+  - VP-16173
+  sibling:
+  - VP-16166
+  - VP-17827
+  - HL7-NPI-PRACTICE-MATCH-20260820
+unblock_when: ''
 tags:
 - vp-16167
 - vp-16173
@@ -22,7 +134,9 @@ tags:
 - practice-integrations
 - unimod-admin
 - ticket-hygiene
-summary: "VP-16167 / VP-16173 (FE) 要接的 BE endpoint 盤點：quarantine 只有寫入沒有讀取/resolve API 且沒有任何 open BE 票（VP-16629 的 AC 寫 quarantine 卻在表存在前三個月就結案）；practice 不需要新 data model（= clinic_id），但 prod 0 筆 UNKNOWN_PROVIDER，真正缺口是 Step 4 practice 比對太窄。"
+summary: VP-16167 / VP-16173 (FE) 要接的 BE endpoint 盤點：quarantine 只有寫入沒有讀取/resolve API
+  且沒有任何 open BE 票（VP-16629 的 AC 寫 quarantine 卻在表存在前三個月就結案）；practice 不需要新 data model（=
+  clinic_id），但 prod 0 筆 UNKNOWN_PROVIDER，真正缺口是 Step 4 practice 比對太窄。
 ---
 
 # QUARANTINE-ADMIN-API-GAP-20260924 — VP-16167 / VP-16173 的 BE endpoint 盤點

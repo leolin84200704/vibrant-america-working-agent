@@ -6,7 +6,7 @@ status: active
 score: 0.1126
 base_weight: 0.7
 created: 2026-04-22
-updated: 2026-09-18
+updated: 2026-09-24
 links:
 - rules
 tags:
@@ -99,3 +99,14 @@ summary: Ticket keyword to repo/module routing table
 - **"/proxy/grpc/* 或 /proxy/old-report/* 退役 / 誰還在打 proxy / cloud-local-proxy 拆除"** → LIS-transformer `ProxyController` + `ProxyCallerLogInterceptor`（`@operation:proxyGrpcCaller`），分類與每條端點的家在 Confluence 2697166874，票 VP-18320（due 2026-10-09）。退役證據看 15 天 caller composition，不看零窗口。
 - **"BioInsights / devcom 的 order 沒進來 / customer_not_found=Balandan"** → hl7 7126 / quarantine 13：placeholder NPI 1234567，正確 NPI 1730269200；重送必須換檔名。下一關 emr_code_not_found（catalog 待 Zhenhe）。
 - **"診所新 provider 的 EMR order 沒下 / customer_not_found 但 practice 其他人正常"** → quarantine 11/12 樣態（NPI 在 ehr_integrations 與 core customer 皆 0 筆）→ add-provider playbook（`emr-order-customer-resolution` skill），需人決定；quarantine 會到期。
+
+## 2026-09-24 新增路由（dream；VP-18194 / VP-18342 / VP-18344 / VP-18355 / NEXTECH / QUARANTINE / LBS-1799 / TRANS-OPT）
+- **per-report PDF / split PDF / `split_result_pdf_by_report` / `deliver_combined_result_pdf` / `REPORT_PDF` / bookmarkPagePdfDownload / Maristany / PH-907 / SIIR-291** → `emr-integration.md`「per-report PDF 交付」+ STM `VP-18194`（canary 待證據）。
+- **Nextech / ATCA / Alzheimer's Treatment Centers / George Moricz / vendor 47 / 965721** → STM `NEXTECH-onboarding`（`unblock_when` = 第一個 .hl7 落地）；QA twin QH-7179。
+- **quarantine UI / quarantine API / VP-16167 / VP-16173 / UNKNOWN_PROVIDER / matchPractice / practice integrations sub-tab** → STM `QUARANTINE-ADMIN-API-GAP-20260924` + `emr-integration.md`「Quarantine admin API 缺口」；動工前先開 BE 票（Leo 未拍板）。
+- **Partner API 422 patient_not_found / Ways2Wellness / W2W / sandbox 50687 / proto drift / wire type / index out of range** → STM `VP-18342`；vendored proto 同步配方 → STM `VP-18344` + `patterns.md`「vendored proto 同步配方」。
+- **Jenkins multibranch / staging 不 build / "This project is currently disabled" / release PR** → `patterns.md`「emr-v2 的 Jenkins multibranch」（VP-18355 已修為 All branches）。
+- **setting-consumer gRPC 直連 / `SETTING_GRPC_MODE` / shadow / `SHIPPING_RPC` / `TEST_RESULT_RPC` / VP-18345** → STM `TRANS-OPTIMIZATION-20260911` + `patterns.md`「會動的錯誤預設值」；prod 仍 proxy mode、無 open 票。
+- **old-report 路由退役 / VP-18320 / VP-18346 / 公告 / 09-30 移除 / `com.lis.proxy-old-report-removal`** → STM `TRANS-OPTIMIZATION-20260911`、`DailyJob/proxy_old_report_removal/README.md`、runbook `vp18324-proxy-pdf-route-cutover.md`。
+- **Clinical Consult 六個月 / six-month window / manual consult booking / LBS-1799 / SIIR-312** → `emr-integration.md`「Clinical Consult 六個月窗是 FE-only」+ STM `LBS-1799`（LBS 票走 Atlassian MCP）。
+- **coresamples-v2 dead IP / 10.224.0.199 / internal LB 10.224.1.113 / `v2Endpoint`** → STM `INCIDENT-20260908-grpc-dead-node-ip`（PR #433 已進 staging，#434 待 Leo）。

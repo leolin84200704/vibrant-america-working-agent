@@ -3,16 +3,17 @@ id: repos
 type: ltm
 category: technical
 status: active
-score: 1.1806
+score: 1.214
 base_weight: 0.9
 created: 2026-04-22
-updated: 2026-09-11
+updated: 2026-09-24
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
 - INCIDENT-20260601-sftp-hang
 - INCIDENT-20260604
 - INCIDENT-20260817-onprem-deploy-freeze
+- INCIDENT-20260908-grpc-dead-node-ip
 - INCIDENT-20260910-emr-v2-di-crashloop
 - LBS-1487
 - LBS-1547
@@ -92,6 +93,8 @@ links:
 - VP-18048
 - VP-18050
 - VP-18303
+- VP-18342
+- VP-18344
 - VP-9299
 - business-model
 - business-model-deep
@@ -307,3 +310,8 @@ sudo prompt 用 `echo <pw> | sudo -S <cmd>`。Heredoc 內含 `[^...]` 之類 exp
 - **LIS-transformer**（v1）：ns `default`，Service `lis-trans-service:3146`，deploy Actions `lis-transformer-deploy-prod`（main）/ `-staging`（stage_test）；**LIS-transformer-v2**：ns `transv2`，Actions `frontend-service-graphql`（main）/ `-st`。兩邊 `ci-tests.yml`（tsc + jest，`needs: [test]` 擋 buildImage）只在 `pull_request` 到 `main`/`stage_test` 觸發 → stacked PR 在 retarget 前無 CI。
 - v1 proxy 家族現況（2026-09-18）：`/proxy/grpc/*` 六條（getTestStatus / getQuestionaireBySampleId / listTnpCode 待退，getKitStatus / getPatientTestsResult 有未識別 caller，sendSkinPlacePatientOrders 是 billing 的整併終點）；`/proxy/old-report/*` 11 條只有 `downloadTestOrderPDF` 活著（下游 lis-order，非報告伺服器），與 `trans-reports.controller.ts` 的 `/trans/*` 共用 `OldReportProxyService`。報告家族終點是 `LIS-Report/base-report-server`，`/trans/*` 只是 holding position。
 - transv2 `TRANS_PROXY_GRPC_MODE=grpc`（09-16 22:03Z 起）、v1 `TRANS_TIMELINE_KIT_MODE=shadow`（inprocess 被 Leo 否決）。v1 gRPC service_config 自 #792 起真的生效（default 60 s、三個寫入 240 s，retryPolicy 已刪）。
+
+## 【更新 2026-09-24】部署鏈的三個新事實（VP-18355 / VP-18345 / INCIDENT-20260908）
+- **lis-backend-emr-v2 Jenkins multibranch 已改 "All branches"**（VP-18355，Leo 09-23 在 UI 改）：release PR 開著時 staging 仍會 build（09-24 #433/#434 首次實證）。之前的 workaround（關 release PR 讓 Jenkins 重掃）不再需要。
+- **LIS-setting-consumer**：`main` push 同時觸發 `setting-consumer.yml`（prod）與 `setting-consumer-staging.yml`（staging）；`stage_test` 只觸發 staging。四個 deployment = prod/staging × cloud/`-local`，各吃自己的 ConfigMap（`lis-setting-consumer-config` / `-st-config` / `-local-config` / `-local-st-config`，ns `setting`，`envFrom` → 改 CM 必 restart）。gRPC 直連受 `SETTING_GRPC_MODE` + `SHIPPING_RPC` + `TEST_RESULT_RPC` 三 key **成組**控制（`grpc.options.ts` 預設值寫死 prod 位址）；09-24 現況 staging `-st` = grpc、其餘 = proxy。
+- **emr-v2 gRPC 位址來源**：AKS `lis-emr-v2-config-prod`（ns emr-v2）是 source of truth，`Jenkinsfile:147,150` export 後 apply 到 on-prem；repo yaml 不被套用。v2 預設在 PR #433 改為 internal LB `10.224.1.113:80`（`v2Endpoint()` 配對 host/port）；v1 cloud 預設 `10.224.0.10`（lis-core-grpc :30276 / lis-test-connect :30600 **沒有** internal LB）。
