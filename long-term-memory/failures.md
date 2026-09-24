@@ -7,7 +7,7 @@ score: 1.4624
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-09-21
+updated: 2026-09-24
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -19,7 +19,9 @@ links:
 - INCIDENT-20260910-emr-v2-di-crashloop
 - INCIDENT-2604156666
 - LBS-1541
+- LBS-1799
 - LIS-7690
+- NEXTECH-onboarding
 - PH-847
 - PO-222
 - PO-256
@@ -130,20 +132,20 @@ tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 102 entries across STM
+summary: Auto-aggregated failure index from 106 entries across STM
 ---
 
 # Failure Index
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-09-21 — total 102 entries
+> Last updated: 2026-09-24 — total 106 entries
 
 ## Themes
 
-- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 27 entries
+- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 29 entries
+- [Other / uncategorized](#other) — 17 entries
 - [Build / TypeScript / Tooling](#build-tooling) — 16 entries
-- [Other / uncategorized](#other) — 15 entries
 - [Deploy / commit / push coordination](#deploy-coordination) — 12 entries
 - [DB / migration / backfill](#db-migration) — 9 entries
 - [Scope / requirement / PM communication](#scope-communication) — 5 entries
@@ -170,6 +172,16 @@ summary: Auto-aggregated failure index from 102 entries across STM
 - Used `app=lis-emr-v2-deployment-prod` (deployment name) as label selector — actual label is `app=lis-emr-v2-prod` (`-deployment-` not in label).
 - Tick 1 returned `FAIL pod_not_found`. Fixed by checking `--show-labels` and re-running.
 - Lesson: always confirm label keys with `kubectl get pod ... --show-labels` before selecting; deployment-name ≠ pod-label.
+
+### **[[LBS-1799]]**
+
+- `mcp__vibrant__get_jira_issue` / `search_jira_issues` return 404 / empty for the **LBS** project (LBS-1785, a ticket we previously worked, also 404). The `vibrant` MCP Jira account cannot see LBS; the claude.ai Atlassian connector can. Use the Atlassian MCP for LBS tickets.
+- `clinicians/scheduling-options` uses the LEGACY clinician_id (3, 4, 14, 19, 20, 21, 22, 23, 24), not the customer_id — guessing 5..12 returns 404. Get the ids from `clinicians/first-available`.
+- Postmark `recipient=` filter returned `TotalCount: null` for one address; `tag=calendar_prod` + reading the newest rows is the reliable query (already a known note in patterns.md).
+
+### **[[NEXTECH-onboarding]]**
+
+- `mcp__vibrant__mysql_query` (lisportalprod) has no `lis_emr` DB — prod lis_emr is only on lisportalprod2 (`lisportal_mysql_query`, read-only). Writes go through emr-v2 `.env` DATABASE_URL (lis_emr account) via Prisma runner.
 
 ### **[[VP-16166]]** — [2026-08-26 14:2x PDT] 用錯檔名 → 錯的根因寫進了 Jira 票
 
@@ -554,6 +566,102 @@ Picked `lock.release()` from redlock@5 docs while installing redlock@4. The two 
 
 ---
 
+## Other / uncategorized <a id='other'></a>
+
+### **[[INCIDENT-20260528]]** — `2026-05-28` — 把 hang pod log 燒掉了
+
+Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`、**舊 pod (`6cc4674b87-ccgbf`) 的 log 隨 pod GC 永久消失**。/var/log/pods 對應目錄 mtime 還在但 log file 已清。所以「哪個 folder 是 5/27 真正 hang 元凶」**現場證據燒掉了**。後來 21:45 tick log 出來的 id=260 反而是 transient = 不是同一個 hang。
+
+預防：destructive ops (rollout restart / pod delete) 前必須 `kubectl logs <pod> > /tmp/preserve.log` + `kubectl describe pod <pod> > /tmp/preserve_describe.txt`。已寫進 user memory feedback。
+
+### **[[LBS-1541]]**
+
+(none yet)
+
+### **[[PH-847]]** — `2026-09-11` — Dream closeout audit — PASS (PM-owned ticket)
+
+- PH-847 Done 09-10 13:13 PDT; assignee Xiaoye (PM). Implementation shipped under VP-18080 (order half, Leo) and VP-18066 (envelope), both audited PASS on 2026-09-03. Nothing further owed by this STM.
+
+### **[[PO-256]]**
+
+- az CLI MFA expired — could not inspect RBAC Container App directly; bounded diagnosis at the coresamples→container-app hop via error strings and timing.
+
+### **[[VP-16766]]** — `2026-05-27` — **Minor TS slip**：`_apply` 腳本初版用 `${ehr.created_at = now}`（賦值表達式）想偷塞欄位，TS2339 編譯失敗。改成直接 `${now}`。教訓：raw SQL 的 template binding 不要塞賦值/副作用，值先算好再代入。
+
+
+
+### **[[VP-16934]]** — `2026-06-09` — #157 部署後 staging dry-run 驗證通過
+
+- endpoint no-auth → 401（route live + guard）。
+- 簽 JWT(staging JWT_SECRET, HS256, payload 需 userId + 未過期；JwtStrategy 不檢 issuer) 打 dry-run（`scripts/_vp16934-staging-test.js`）：
+  - 假 provider → `201 {rejected, customer_not_found}`（auth/dryrun/富化都跑）。
+  - 缺 testCodes → `400`。
+  - **真客戶 5794 → `201 {rejected, unrecognized_test_codes:[VACP1001]}`** = customer 解析成功 + 代碼分類有跑（VACP1001 是假 code 才被擋）。
+- **結論：order intake 在 staging dry-run 全程跑通**（auth/gating/validation/customer 查詢/代碼分類）。差「完整成功單(sampleId:-1)」需對 staging 客戶有效的真 test code。
+- staging order_intake 留了 2 筆 VP16934-TEST-* rejected 測試列（無害，可清）。
+
+### **[[VP-17120]]** — `2026-07-02 23:05` — ROOT CAUSE UPGRADED during replay (filed VP-17318, branch bugfix/leo/VP-17318 pushed)
+
+- emr-v2 generateSampleID NEVER worked: proto field is `sampleId` (camelCase in proto) but client reads `response.sample_id` with keepCase:true → undefined → `|| '0'` → always 0 since the VP-16463 port. Pre-5/28 nonzero patientPayLater ids were written by Java EMR-Backend.
+- sendOrder with sampleId=0 self-assigns a correct id (70/74 zero-id orders succeeded). The stuck rows are occasional sendOrder failures on that path.
+- coresamples v2 GenerateSampleID sequence is ~311k STALE: live probes returned ids 2277991-2278000, ALL existing patient samples in lis_core_v7.sample. A field-name-only fix would inject colliding ids → order path must NOT consume this RPC until their sequence is repaired (needs a coresamples-team ticket).
+- Fix on branch: finalizer skips pre-generation (sends 0 explicitly), client reads correct field + rejects invalid, [RETRY-EXHAUSTED] loud log, decrement floored. 21/21 targeted tests pass, build clean.
+
+### **[[VP-17283]]**
+
+(none yet)
+
+### **[[VP-17714]]**
+
+（none yet）
+
+### **[[VP-17748]]**
+
+(none yet)
+
+### **[[VP-17765]]**
+
+(none this run)
+
+### **[[VP-17827]]**
+
+None this session.
+
+### **[[VP-18030]]**
+
+- 2026-08-31: `echo ===` and a commit -m containing backtick-quoted `to`
+  both got mangled by zsh (=== → "== not found"; `to` command-substituted to
+  empty inside double quotes). One stray non-English word also slipped into
+  a commit message body. Fixed by amend before push. Rules: heredoc
+  (`git commit -F - <<'MSG'`) for any commit message with punctuation;
+  grep -P '[^\x00-\x7F]' the message and changed files before commit.
+
+### **[[VP-18342]]**
+
+- ~40 minutes spent searching for "ways2wellness" in logs/DB/Jira before Leo pasted the
+  actual error: the partner's own clinic has no integration, and the sandbox tenant is
+  customer 50687 — the customer name never appears in any log line. Ask for the raw error
+  text / requestId first when a partner reports an API error.
+- vibrant MCP `create_jira_issue` -> 403 on POST /issue; `list_sentry_projects` -> NoneType error.
+
+### **[[VP-18344]]**
+
+(none yet)
+
+### **[[VP-16521]]** — `2026-05-28 17:52` — **
+
+- **症狀**：merge in-progress 時 `git stash push` → MERGE_HEAD 消失，stash pop 報 `event.service.ts: needs merge`
+- **修法**：`git merge origin/stage_test --no-commit --no-ff` 重觸發 merge state，再 `git checkout stash@{0} -- src/calendar/models/event/event.service.ts` 把 stash 內的 resolved 版本拉回，最後 `git stash drop`
+- **教訓**：merge in-progress 時禁用 `git stash`；要保存 in-flight diff 改用 `git diff > /tmp/wip.patch` + 該 file 個別 checkout
+- **更好做法**：根本不該為了 "比較 pre-merge lint baseline" 中斷 merge state — 直接看 origin/feature 上的 ESLint baseline 即可，或先 commit 中間態再分析
+
+### **[[VP-17217]]** — **
+
+- 首次 build TS2322：provider 陣列 union 型別 → 加 `Provider[]` 顯式型別修正。
+- spec 原以 class token 注入 → 改 inbound token 才能解析。
+
+---
+
 ## Build / TypeScript / Tooling <a id='build-tooling'></a>
 
 ### **[[INCIDENT-20260518]]** — [2026-05-18 後續] 看到 c0852d0 部署後 Leo 仍見舊行為，沒立刻意識到 image age
@@ -732,90 +840,6 @@ Production NestFactory crash at startup: `TypeError: redlock_1.default is not a 
 **Recovery:** Reverted both `src/proto/` and `dist/proto/` edits, then applied the changes to `src/proto-v2/customer.proto` only (no `dist/proto-v2/` exists, so single file).
 
 **Detection trigger:** Reading `src/config/grpc.config.ts` for endpoint info — saw `getProtoV2Path` and `package: 'coresamples_service'` for the v2 customer client.
-
----
-
-## Other / uncategorized <a id='other'></a>
-
-### **[[INCIDENT-20260528]]** — `2026-05-28` — 把 hang pod log 燒掉了
-
-Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`、**舊 pod (`6cc4674b87-ccgbf`) 的 log 隨 pod GC 永久消失**。/var/log/pods 對應目錄 mtime 還在但 log file 已清。所以「哪個 folder 是 5/27 真正 hang 元凶」**現場證據燒掉了**。後來 21:45 tick log 出來的 id=260 反而是 transient = 不是同一個 hang。
-
-預防：destructive ops (rollout restart / pod delete) 前必須 `kubectl logs <pod> > /tmp/preserve.log` + `kubectl describe pod <pod> > /tmp/preserve_describe.txt`。已寫進 user memory feedback。
-
-### **[[LBS-1541]]**
-
-(none yet)
-
-### **[[PH-847]]** — `2026-09-11` — Dream closeout audit — PASS (PM-owned ticket)
-
-- PH-847 Done 09-10 13:13 PDT; assignee Xiaoye (PM). Implementation shipped under VP-18080 (order half, Leo) and VP-18066 (envelope), both audited PASS on 2026-09-03. Nothing further owed by this STM.
-
-### **[[PO-256]]**
-
-- az CLI MFA expired — could not inspect RBAC Container App directly; bounded diagnosis at the coresamples→container-app hop via error strings and timing.
-
-### **[[VP-16766]]** — `2026-05-27` — **Minor TS slip**：`_apply` 腳本初版用 `${ehr.created_at = now}`（賦值表達式）想偷塞欄位，TS2339 編譯失敗。改成直接 `${now}`。教訓：raw SQL 的 template binding 不要塞賦值/副作用，值先算好再代入。
-
-
-
-### **[[VP-16934]]** — `2026-06-09` — #157 部署後 staging dry-run 驗證通過
-
-- endpoint no-auth → 401（route live + guard）。
-- 簽 JWT(staging JWT_SECRET, HS256, payload 需 userId + 未過期；JwtStrategy 不檢 issuer) 打 dry-run（`scripts/_vp16934-staging-test.js`）：
-  - 假 provider → `201 {rejected, customer_not_found}`（auth/dryrun/富化都跑）。
-  - 缺 testCodes → `400`。
-  - **真客戶 5794 → `201 {rejected, unrecognized_test_codes:[VACP1001]}`** = customer 解析成功 + 代碼分類有跑（VACP1001 是假 code 才被擋）。
-- **結論：order intake 在 staging dry-run 全程跑通**（auth/gating/validation/customer 查詢/代碼分類）。差「完整成功單(sampleId:-1)」需對 staging 客戶有效的真 test code。
-- staging order_intake 留了 2 筆 VP16934-TEST-* rejected 測試列（無害，可清）。
-
-### **[[VP-17120]]** — `2026-07-02 23:05` — ROOT CAUSE UPGRADED during replay (filed VP-17318, branch bugfix/leo/VP-17318 pushed)
-
-- emr-v2 generateSampleID NEVER worked: proto field is `sampleId` (camelCase in proto) but client reads `response.sample_id` with keepCase:true → undefined → `|| '0'` → always 0 since the VP-16463 port. Pre-5/28 nonzero patientPayLater ids were written by Java EMR-Backend.
-- sendOrder with sampleId=0 self-assigns a correct id (70/74 zero-id orders succeeded). The stuck rows are occasional sendOrder failures on that path.
-- coresamples v2 GenerateSampleID sequence is ~311k STALE: live probes returned ids 2277991-2278000, ALL existing patient samples in lis_core_v7.sample. A field-name-only fix would inject colliding ids → order path must NOT consume this RPC until their sequence is repaired (needs a coresamples-team ticket).
-- Fix on branch: finalizer skips pre-generation (sends 0 explicitly), client reads correct field + rejects invalid, [RETRY-EXHAUSTED] loud log, decrement floored. 21/21 targeted tests pass, build clean.
-
-### **[[VP-17283]]**
-
-(none yet)
-
-### **[[VP-17714]]**
-
-（none yet）
-
-### **[[VP-17748]]**
-
-(none yet)
-
-### **[[VP-17765]]**
-
-(none this run)
-
-### **[[VP-17827]]**
-
-None this session.
-
-### **[[VP-18030]]**
-
-- 2026-08-31: `echo ===` and a commit -m containing backtick-quoted `to`
-  both got mangled by zsh (=== → "== not found"; `to` command-substituted to
-  empty inside double quotes). One stray non-English word also slipped into
-  a commit message body. Fixed by amend before push. Rules: heredoc
-  (`git commit -F - <<'MSG'`) for any commit message with punctuation;
-  grep -P '[^\x00-\x7F]' the message and changed files before commit.
-
-### **[[VP-16521]]** — `2026-05-28 17:52` — **
-
-- **症狀**：merge in-progress 時 `git stash push` → MERGE_HEAD 消失，stash pop 報 `event.service.ts: needs merge`
-- **修法**：`git merge origin/stage_test --no-commit --no-ff` 重觸發 merge state，再 `git checkout stash@{0} -- src/calendar/models/event/event.service.ts` 把 stash 內的 resolved 版本拉回，最後 `git stash drop`
-- **教訓**：merge in-progress 時禁用 `git stash`；要保存 in-flight diff 改用 `git diff > /tmp/wip.patch` + 該 file 個別 checkout
-- **更好做法**：根本不該為了 "比較 pre-merge lint baseline" 中斷 merge state — 直接看 origin/feature 上的 ESLint baseline 即可，或先 commit 中間態再分析
-
-### **[[VP-17217]]** — **
-
-- 首次 build TS2322：provider 陣列 union 型別 → 加 `Provider[]` 顯式型別修正。
-- spec 原以 class token 注入 → 改 inbound token 才能解析。
 
 ---
 
