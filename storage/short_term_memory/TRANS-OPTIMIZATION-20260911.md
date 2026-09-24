@@ -17,7 +17,7 @@ tags:
 - vp-18152
 - core-v1-retirement
 created: 2026-09-11
-updated: '2026-09-23'
+updated: '2026-09-24'
 links:
 - CONFLUENCE-2684321795
 - INCIDENT-20260518
@@ -1098,3 +1098,45 @@ JIRA_EMAIL/JIRA_API_TOKEN 直打 `/wiki/api/v2/pages`（POST 建、PUT 改；PUT
 
 **日期連帶**：Jira 票面 description 仍寫 "Removal 2026-10-02 / closes 2026-10-09"，QA twin QH-7163
 也還是三條路由。兩者都要 Leo 的 token 才能改，已告知未動。
+
+### [2026-09-24] 修掉 pre-push DI smoke 的環境缺陷（Leo：「ok, 要修」）— factory PR #90 / #91
+
+**起因**：回顧這個 program 時，唯一我現在就能消除的重複錯誤是 09-14 與 09-22 各踩一次的
+「乾淨 worktree 的 DI smoke 會失敗，暫解是把 `.env` 複製進去」。09-14 那次還為它寫了 lesson
+（factory #81），八天後同一個坑、同一個手動繞法——教訓寫下來 ≠ 學會。
+
+**實測到的缺陷比原本認知的嚴重**。smoke 的文件寫「子行程拿到空環境（`env -i`），等同乾淨 CI」。
+在 LIS-transformer 量：**126 個變數，不是 3 個**。兩條 gate 沒控制過的路徑：
+1. app 自己的 `dotenv.config()` 讀 `<cwd>/.env`（123 key，含 `DATABASE_URL`、`REDIS_ADDR`、
+   正式 gRPC 位址、真實 JWT 簽章金鑰）；
+2. 產生的 Prisma client 依 schema 旁那份 `.env` 的**絕對路徑**載入——在**沒有 `.env` 的 worktree**
+   裡實證它去讀了 `/Users/hung.l/src/LIS-transformer/.env`。
+
+=> 判決跟著目錄走不跟著 commit 走；而**通過的那一邊才是危險的那一邊**（每次 push 帶正式憑證開機）。
+
+**我的重現錯了兩次，兩次都是同一個形狀**：第一次只 symlink `node_modules`+`dist`，失敗原因其實是
+`protos/` 不存在；第二次用真 worktree 但 `dist` 還是 symlink 回主 clone，於是 `__dirname` 又把
+主 clone 的 `.env` 吃進來、**假性通過**。在 worktree 內真的 build 過才重現出原始訊息
+`JwtStrategy requires a secret or key`。對照組（containment 關閉時同一個 fixture 會讀到檔案）
+是後來測試裡固定下來的。
+
+**修法**（factory PR #90，未 merge）：preload 在 `DI_SMOKE_CONTAIN=1`（預設）拒絕 gate 自有檔案以外
+所有 `.env*` 讀取；每個判決都印出拒絕了哪些；新增 `nest-di-smoke-init.js` 依 **key 名 + 值形狀**
+產生 `~/.config/nest-di-smoke/<repo>.env`（scheme/port 留、host 一律 127.0.0.1、其餘 placeholder，
+不抄任何值）。**佈建即武裝**：未佈建的 repo 仍 uncontained 重跑一次並放行（具名、可數），
+佈建過的 contained 判決即最終。
+
+**自己的洩漏檢查抓到自己**：第一版產生器把三個裸內部 IP 原樣抄出去（`192.168.*`，沒有 port 所以
+通過了「短字串保留」規則）。已加明確的 IP/hostname 規則，重掃 5 份檔案全乾淨、權限 0600。
+
+**驗證**：主 clone 與同 commit 的乾淨 worktree 現在**判決一致且都 PASS**，主 clone 那次零次碰到真實位址；
+拿掉佈建檔後原始失敗逐字重現。另外三個已 clone 的 gated repo（transformer-v2 / emr-v2 /
+setting-consumer）各自佈建後**當場看它 PASS 才留下**（setting-consumer 日誌 `ECONNREFUSED 127.0.0.1:4646`
+＝打 loopback 不是真 Redis）。`githooks.test.sh` 26/26。
+
+**同時開的 PR #91**：`framework/OPTIMIZATION.md`——這次 program 蒸餾成的 phase playbook
+（地面→找瓶頸→改法排序→零行為變更施工→部署驗證→退場 + 量測工具的坑 + 檢查表 + 反模式），
+去識別化，AGENTS.md 加一行按需路由。Leo 的目標是「下次 optimize 新 repo 能照著走」。
+
+**未決**：#90 的 fail-open 取捨要 Leo 定——14 個 gated repo 我只驗過 4 個，改成硬擋的話其餘 10 個
+會在他下次 push 時才知道會不會壞。
