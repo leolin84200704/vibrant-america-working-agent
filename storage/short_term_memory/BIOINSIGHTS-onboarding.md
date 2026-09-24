@@ -11,7 +11,7 @@ unblock_when: 'BioInsights grants account perms (test: sftp key-auth to sftp.bio
   then ls / — currently auth OK but ls/stat/put all fail); waiting on Thomas reply
   to 2026-07-21 email'
 created: 2026-07-21
-updated: 2026-09-23
+updated: 2026-09-24
 links:
 - BETA-E2E-20260729
 - BIOINSIGHTS-SFTP-KEY
@@ -30,7 +30,9 @@ links:
 - LBS-1773
 - LBS-1784
 - LBS-1785
+- LBS-1799
 - LIS-7716
+- NEXTECH-onboarding
 - PH-847
 - QH-1660
 - QH-2257
@@ -40,6 +42,7 @@ links:
 - QH-4352
 - QH-4608
 - QH-5840
+- QUARANTINE-ADMIN-API-GAP-20260924
 - RESULTCHECK-20260819-RCODE-2608186060
 - VEJO-DELETION-20260804
 - VP-14787
@@ -115,6 +118,7 @@ links:
 - VP-18086
 - VP-18138
 - VP-18185
+- VP-18194
 - VP-18243
 - VP-18270
 - VP-18288
@@ -140,7 +144,7 @@ summary: 'New EMR vendor BioInsights — first key-based (non-password) SFTP int
   unaffected; AKS pod egress to bioinsights:2022 OK. 2026-07-21 email sent to Thomas
   (perms + dir layout + sample HL7). STATUS: waiting on vendor reply.'
 jira_status: none
-score: 1.1706
+score: 1.2949
 ---
 
 # BioInsights EMR vendor onboarding (SFTP, key-based auth)
@@ -273,3 +277,25 @@ which still depends on Zhenhe.
 3. ~~ehr_vendors row~~ DONE 2026-07-23 (id=46, is_public=0 — flip at go-live). ~~sftp_folder_mapping~~ DONE (id=281, cloud). STILL PENDING: ehr_integrations per practice (needs scope from #2).
 4. Need sample HL7 files from vendor to decide transformer mapping needs.
 5. Move/secure the private key (unencrypted in ~/Downloads); consider filing a VP ticket for tracking.
+
+### [2026-09-24] Lisa Bond (BioInsights CPO) asked for a status update — Leo's rule: do not vouch for other people
+- 09-24 05:17 Lisa Bond (CPO, BioInsights) emailed Britney + Leo, cc Travis, asking where the integration
+  stands, what is holding it up and what the next steps are. Forwarded on top of Leo's 09-23 reply to Olena
+  (the 9-item field audit of V00000416.hl7) and Olena's 09-23 note that devcom is blocked on the compendium
+  from Zhenhe Zhang.
+- **Leo's instruction (verbatim): 「不幫她背書，只要回答工程的等待正確 hl7 就可以」** — the reply answers ONLY
+  the engineering state we own: the integration is in HL7 order-file testing and is waiting on one thing,
+  a corrected test file from devcom, resent under a NEW file name and a new MSH-10 (dedup by file name).
+- First draft was rejected for two things that were not ours to say:
+  - it carried "we are sending Devcom our current test catalog" — the compendium belongs to Zhenhe and has
+    no committed date, so saying it in our voice converts his open item into our promise (the same flaw was
+    already noted in the 09-23 devcom draft: "commits us to sending the current test catalog, which still
+    depends on Zhenhe");
+  - it asked Lisa to chase JAG on billing (IN1-2 = C) and to nudge devcom — real next gates, but making them
+    the customer's homework in a status reply reads as apportioning blame and expands the answer past what
+    was asked.
+- Generalized rule for external email in this workspace: state only facts our side observed (files received,
+  what parsed, what blocked, what we need back) and the one thing the project is waiting on. Another team's
+  or another company's deliverable gets mentioned only as their open item, never with our timeline attached,
+  and never with a request routed through a third party. Leo: this is Vibrant-Wellness-level knowledge, to be
+  kept — home is `leo-working-rules.md` (external communication), pending dream distillation.
