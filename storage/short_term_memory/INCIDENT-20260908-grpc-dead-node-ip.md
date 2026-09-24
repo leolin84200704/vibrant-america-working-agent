@@ -6,7 +6,7 @@ title: emr-v2 result generation outage — every GRPC_*_CLOUD_HOST / GRPC_V2_*_H
 category: technical
 status: resolved
 created: 2026-09-08
-updated: '2026-09-11'
+updated: '2026-09-24'
 tags:
 - incident
 - emr-v2
@@ -24,6 +24,7 @@ related:
 links:
 - INCIDENT-20260518
 - INCIDENT-20260910-emr-v2-di-crashloop
+- NEXTECH-onboarding
 - VP-17217
 - VP-17312
 - VP-18303
@@ -116,3 +117,21 @@ score: 0.1209
 ### [2026-09-11]
 - The 8 retry_exhausted orders (hl7 7047-7054) were replayed 09-10 00:47-01:02Z (retry_num=3 topped up, on-prem pod), 8/8 have sample_id; quarantines 3-10 RESOLVED. Ticket VP-18185 Done.
 - Still open (no ticket): stable service addresses (internal LB / DNS) + code defaults still 10.224.0.199 in grpc.config.ts / k8s yaml; Sentry alert on GENERATION_ERROR rate. Status set to resolved by dream.
+
+## Code-default follow-up finally taken: PR #433
+### [2026-09-24]
+- Triggered by Leo asking whether 10.224.0.199:32100 was down. It is: ICMP answers but **every** TCP port (22/80/443/8080/30000/32100) returns RST within ~RTT — a node that no longer exists, not a dead service. `10.224.0.10` and `10.224.0.145` both serve all three NodePorts (a real `GetPatient` gRPC call succeeds on each); `.145` is simply a node currently running a coresamples-v2 pod, so "repoint to .145" would have re-planted the same mine.
+- **Deploy mechanics matter and were previously mis-stated here**: `Jenkinsfile:147,150` exports the **live AKS ConfigMaps** and applies those dumps to on-prem (`:235,236`). The repo's `k8s/base/configmap.yaml` and `azure-...-template.yaml` are NOT applied by any pipeline — AKS live is the source of truth, on-prem is synced from it. Repo yaml is documentation; code defaults and live ConfigMaps are what run.
+- **Live gap found**: `GRPC_V2_SALES_HOST` / `GRPC_V2_SETTING_HOST` exist only in AKS ns `emr-v2` `lis-emr-v2-config-prod` (cluster DNS :8084). The staging ConfigMap and BOTH ns `default` copies (= what on-prem prod runs) omit them, so they had been falling through to the code default = the dead IP since 09-08. v2 sales/setting from on-prem prod and staging were broken; `grpcConfigV2.setting` is the VP-17628 clinic defaultProvider lookup.
+- PR #433 `bugfix/leo/grpc-cloud-host-repoint` -> base `staging` (repo convention; main and staging trees were identical). Awaiting Leo's approval as of 2026-09-24.
+  - v2 defaults -> internal LB `coresamplesv2-loadbalancer` **10.224.1.113:80** — fixes the two missing keys with no ConfigMap change.
+  - New `v2Endpoint(hostVar, portVar)` pairs host and port: the LB serves :80 but NodePort serves :32100, so a ConfigMap overriding only the host still resolves :32100. Prevents an LB-host/NodePort-port mismatch.
+  - v1 cloud defaults -> `10.224.0.10` (current live value). lis-core-grpc :30276 and lis-test-connect :30600 have **no internal LB**, so a node IP is the only option — that sub-follow-up is still open.
+  - Hardcoded IPs in comments replaced with config-variable names (those literals are exactly what went stale). `grpc-client.service.ts:883` deliberately keeps the old IP: it is a dated measurement record, not config.
+- Verified: config resolved under each deployed ConfigMap's real env leaves every currently-configured endpoint byte-identical; only the two dead-IP values move. tsc clean; `jest --findRelatedTests` 64/64 suites / 753 tests, incl. 4 new cases for each `v2Endpoint()` branch. Worktree needed its own `npm ci` + `prisma generate` + `prisma:generate:test` — a symlinked node_modules produced 25 bogus "suite failed to run" errors from another branch's Prisma client.
+
+### Still open after PR #433
+- Repointing the **live** ConfigMaps at the LB (prod change window). **Blocked on**: LB reachability from the on-prem cluster, asserted by the 09-08 notes but never re-verified from an on-prem pod.
+- Internal LBs for lis-core-grpc / lis-test-connect, so the v1 cloud defaults can stop being node IPs.
+- Sentry alert on GENERATION_ERROR / `14 UNAVAILABLE` rate — still nothing catches a 100% result-generation failure before the next morning's DailyJob.
+- `lis-prod-change-gate` Gate 7 still tells the reader to do consumer readback via `10.224.0.199:30276`, which is dead. Needs editing to `10.224.0.10:30276` (or better, whatever is current).
