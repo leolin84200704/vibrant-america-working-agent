@@ -42,7 +42,7 @@ LAST_SUCCESS_FILE="$STATE_DIR/last-success"
 # the Phase 0.5 closeout-audit window (so an aborted night's closures still get
 # audited the next time a run succeeds) and the digest's staleness report.
 LAST_SUCCESS=$(cat "$LAST_SUCCESS_FILE" 2>/dev/null || true)
-read -r CLOSEOUT_SINCE NIGHTS_SINCE_SUCCESS <<<"$(python3 - "${LAST_SUCCESS:-}" <<'PY'
+read -r CLOSEOUT_SINCE NIGHTS_SINCE_SUCCESS HOURS_SINCE_SUCCESS <<<"$(python3 - "${LAST_SUCCESS:-}" <<'PY'
 import sys
 from datetime import datetime, timedelta, timezone
 
@@ -52,11 +52,13 @@ try:
     last = datetime.fromisoformat(raw.replace('Z', '+00:00'))
 except ValueError:
     # Nothing on record (first run after this change, or state dir wiped) — keep the
-    # original 24h window rather than inventing an unbounded one.
-    print((now - timedelta(hours=24)).strftime('%Y-%m-%dT%H:%M:%SZ'), 0)
+    # original 24h window rather than inventing an unbounded one, and report the age
+    # as effectively infinite so the catch-up guard below never skips a first run.
+    print((now - timedelta(hours=24)).strftime('%Y-%m-%dT%H:%M:%SZ'), 0, 9999)
 else:
     print(last.strftime('%Y-%m-%dT%H:%M:%SZ'),
-          max(0, round((now - last).total_seconds() / 86400)))
+          max(0, round((now - last).total_seconds() / 86400)),
+          max(0, int((now - last).total_seconds() // 3600)))
 PY
 )"
 
@@ -89,6 +91,25 @@ record_outcome() {
     fi
 }
 
+# The job is scheduled several times a day, not once, because an 18:30 laptop is
+# often asleep (2026-09-25..27: three nights in a row fired into DarkWake, found no
+# DNS, and burned all three attempts on ENOTFOUND). Firing often only works if the
+# firings are idempotent, so that decision lives here rather than in the schedule:
+# if a run already succeeded inside the last DREAM_MIN_INTERVAL_HOURS, this one has
+# nothing to do. Like the lock-held SKIP below it writes no status — it has no
+# outcome of its own and must not overwrite the successful run's.
+MIN_INTERVAL_HOURS="${DREAM_MIN_INTERVAL_HOURS:-20}"
+DREAM_FORCE="${DREAM_FORCE:-0}"
+if [[ "${1:-}" == "--force" ]]; then
+    DREAM_FORCE=1
+    shift
+fi
+if [[ "$DREAM_FORCE" != "1" && "${1:-}" != "--dry" && "$HOURS_SINCE_SUCCESS" -lt "$MIN_INTERVAL_HOURS" ]]; then
+    echo "[$(date)] SKIP: last successful run was ${HOURS_SINCE_SUCCESS}h ago (< ${MIN_INTERVAL_HOURS}h) — nothing to do" \
+        | tee -a "$LOG_FILE"
+    exit 0
+fi
+
 # A dirty memory file is a signal, not an obstacle. On 2026-08-19 an uncommitted
 # regeneration of long-term-memory/failures.md — 49 links short and missing an
 # entry that existed nowhere else — sat in the working tree. The dream agent
@@ -96,27 +117,69 @@ record_outcome() {
 # its own result, and the autostash pop then restored the broken version on top of
 # it. The loss was invisible for a day and would have landed on the next add -A.
 #
-# So: refuse to start while tracked memory files carry uncommitted edits. Whoever
-# wrote them either meant to commit them or did not; both need a human, and a
-# night without distillation costs less than a night of silent overwriting.
-# Untracked files are fine — a new STM is exactly what a dream run is for.
+# That incident is about the DISTILLED tier: long-term-memory/ is the one place
+# where an uncommitted edit can be a half-finished consolidation that a human still
+# owns, and where autostash can silently undo a night's work. It stays a hard abort.
+#
+# Session notes (storage/short_term_memory/, journal/) are a different animal, and
+# the record says so: of the 18 nights aborted between 2026-08-25 and 2026-09-24,
+# 16 were a work session that simply ended without committing its own STM — one of
+# them (VP-18034) blocked six consecutive nights, another (LIS-7716) four. Nothing
+# retried, so every one of those nights needed Leo to notice and re-run by hand.
+# Refusing to distil because the agent forgot to commit its own notes protects
+# nothing; committing them does, because a commit is exactly what autostash cannot
+# lose. So: commit them, say so loudly, and get on with the night.
 DIRTY_MEMORY=$(git -C "$AGENT_ROOT" status --porcelain -- \
     long-term-memory storage/short_term_memory journal 2>/dev/null | grep -v '^??' || true)
+DIRTY_LTM=$(printf '%s\n' "$DIRTY_MEMORY" | grep 'long-term-memory/' || true)
+CURRENT_BRANCH=$(git -C "$AGENT_ROOT" rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)
+
 if [[ -n "$DIRTY_MEMORY" && "${DREAM_ALLOW_DIRTY_MEMORY:-0}" != "1" ]]; then
-    {
-        echo "[$(date)] ABORT: uncommitted changes to tracked memory files"
-        echo "$DIRTY_MEMORY"
-        echo "Inspect them (git diff), then commit or discard, and re-run."
-        echo "To run anyway: DREAM_ALLOW_DIRTY_MEMORY=1 $0"
-        if [[ -n "$LAST_SUCCESS" ]]; then
-            echo "Nights since the last successful run ($LAST_SUCCESS): $NIGHTS_SINCE_SUCCESS."
-        else
-            echo "No successful run on record."
-        fi
-    } | tee -a "$LOG_FILE"
-    record_outcome abort_dirty_memory "$DIRTY_MEMORY"
-    osascript -e 'display notification "Dream aborted — uncommitted memory changes need a decision" with title "LIS Code Agent" sound name "Basso"' >/dev/null 2>&1 || true
-    exit 1
+    # Hard abort only for the case the guard was written for: dirty distilled memory,
+    # or a checkout that is not on main (auto-committing onto someone else's branch
+    # is the 2026-09-24 lost-STM failure in reverse).
+    if [[ -n "$DIRTY_LTM" || "$CURRENT_BRANCH" != "main" ]]; then
+        {
+            echo "[$(date)] ABORT: uncommitted changes that need a human decision"
+            echo "$DIRTY_MEMORY"
+            [[ "$CURRENT_BRANCH" != "main" ]] && echo "(checkout is on branch '$CURRENT_BRANCH', not main)"
+            echo "Inspect them (git diff), then commit or discard, and re-run."
+            echo "To run anyway: DREAM_ALLOW_DIRTY_MEMORY=1 $0"
+            if [[ -n "$LAST_SUCCESS" ]]; then
+                echo "Nights since the last successful run ($LAST_SUCCESS): $NIGHTS_SINCE_SUCCESS."
+            else
+                echo "No successful run on record."
+            fi
+        } | tee -a "$LOG_FILE"
+        record_outcome abort_dirty_memory "$DIRTY_MEMORY"
+        osascript -e 'display notification "Dream aborted — uncommitted memory changes need a decision" with title "LIS Code Agent" sound name "Basso"' >/dev/null 2>&1 || true
+        exit 1
+    fi
+
+    # Session notes only, on main: commit exactly the tracked files that are dirty.
+    # Untracked files are left alone — the guard never blocked on them, and a new
+    # STM is the dream's own business to sweep up.
+    ORPHAN_NOTES=()
+    while IFS= read -r _f; do
+        [[ -n "$_f" ]] && ORPHAN_NOTES+=("$_f")
+    done < <(git -C "$AGENT_ROOT" diff HEAD --name-only -- \
+        storage/short_term_memory journal 2>/dev/null)
+    if [[ ${#ORPHAN_NOTES[@]} -gt 0 ]] && git -C "$AGENT_ROOT" commit -q \
+            -m "[dream] auto-commit session notes left uncommitted ($DATE)" \
+            -- "${ORPHAN_NOTES[@]}"; then
+        {
+            echo "[$(date)] Auto-committed session notes a work session left uncommitted:"
+            printf '  %s\n' "${ORPHAN_NOTES[@]}"
+        } | tee -a "$LOG_FILE"
+    else
+        {
+            echo "[$(date)] ABORT: could not auto-commit session notes"
+            echo "$DIRTY_MEMORY"
+        } | tee -a "$LOG_FILE"
+        record_outcome abort_dirty_memory "auto-commit failed: $DIRTY_MEMORY"
+        osascript -e 'display notification "Dream aborted — could not commit leftover session notes" with title "LIS Code Agent" sound name "Basso"' >/dev/null 2>&1 || true
+        exit 1
+    fi
 fi
 
 if [[ "${1:-}" == "--dry" ]]; then
@@ -125,7 +188,9 @@ if [[ "${1:-}" == "--dry" ]]; then
     echo "  Date: $DATE"
     echo "  Log file: $LOG_FILE"
     echo "  State dir: $STATE_DIR"
-    echo "  Last success: ${LAST_SUCCESS:-never} (nights since: $NIGHTS_SINCE_SUCCESS)"
+    echo "  Last success: ${LAST_SUCCESS:-never} (nights since: $NIGHTS_SINCE_SUCCESS, hours since: $HOURS_SINCE_SUCCESS)"
+    echo "  Catch-up skip below: ${MIN_INTERVAL_HOURS}h (override: DREAM_MIN_INTERVAL_HOURS, bypass: --force)"
+    echo "  Network wait budget: ${DREAM_NETWORK_WAIT_SECONDS:-900}s of wall clock, then defer"
     echo "  Closeout window since: $CLOSEOUT_SINCE"
     echo "  Command: claude -p \"\$(cat scripts/dream.md)\" --model $DREAM_MODEL --allowedTools Read,Write,Edit,Glob,Grep,Bash"
     exit 0
@@ -156,6 +221,14 @@ fi
 echo $$ > "$LOCK_DIR/pid"
 trap 'rm -rf "$LOCK_DIR"' EXIT
 
+# Hold the machine awake for the length of the run. Without this a run that starts
+# fine still gets sliced into seconds-long DarkWake fragments the moment the lid
+# state or idle timer says sleep — which is how the 2026-09-25..27 runs stretched a
+# 150-second network wait across seven hours. `-w $$` releases it when we exit,
+# including on the abort paths below. (On battery this cannot defeat Deep Idle; it
+# is the network gate underneath that has to handle that case.)
+caffeinate -i -m -w $$ >/dev/null 2>&1 &
+
 echo "[$(date)] Starting dream pipeline..." | tee -a "$LOG_FILE"
 echo "  Agent root: $AGENT_ROOT" | tee -a "$LOG_FILE"
 
@@ -168,14 +241,44 @@ if ! command -v claude >/dev/null 2>&1; then
     exit 1
 fi
 
-# Wait up to 60s for network (just woken from sleep may need a moment)
-for i in $(seq 1 30); do
-    if curl -sS --max-time 3 -o /dev/null https://api.anthropic.com/; then
-        echo "[$(date)] Network ready (attempt $i)" | tee -a "$LOG_FILE"
+# The old wait counted attempts, not time: 30 tries of `curl; sleep 2`. On a
+# sleeping laptop those 30 tries are spread across however many DarkWake slivers it
+# takes to accumulate 150 seconds of CPU — on 2026-09-25 that was 61 minutes — and
+# then the script went on to call claude anyway with no DNS, burning all three
+# attempts on ENOTFOUND and recording the night as failed. Both halves were wrong.
+#
+# So: bound the wait by wall clock, and if the network never arrives, DEFER. A night
+# with no network is not a failed night; it is a night that has not happened yet,
+# and the next scheduled firing will pick it up because last-success has not moved.
+# Exit 0 for the same reason — this is not an error anyone needs to act on.
+network_up() { curl -s --max-time 8 -o /dev/null https://api.anthropic.com/; }
+
+NET_WAIT_SECONDS="${DREAM_NETWORK_WAIT_SECONDS:-900}"
+NET_DEADLINE=$(( $(date +%s) + NET_WAIT_SECONDS ))
+NET_OK=0
+while true; do
+    if network_up; then
+        NET_OK=1
+        echo "[$(date)] Network ready" | tee -a "$LOG_FILE"
         break
     fi
-    sleep 2
+    [[ $(date +%s) -ge $NET_DEADLINE ]] && break
+    sleep 10
 done
+
+if [[ $NET_OK -eq 0 ]]; then
+    {
+        echo "[$(date)] DEFER: no network after ${NET_WAIT_SECONDS}s of wall clock (api.anthropic.com unreachable)"
+        echo "The next scheduled firing will retry — last-success has not moved."
+        if [[ -n "$LAST_SUCCESS" ]]; then
+            echo "Last successful run: $LAST_SUCCESS (${HOURS_SINCE_SUCCESS}h ago)."
+        else
+            echo "No successful run on record."
+        fi
+    } | tee -a "$LOG_FILE"
+    record_outcome deferred_no_network "api.anthropic.com unreachable for ${NET_WAIT_SECONDS}s"
+    exit 0
+fi
 
 # The run context is appended by the runner rather than hardcoded in dream.md so the
 # closeout window is computed, not assumed. Phase 0.5 used a fixed "last 24h": after
@@ -225,6 +328,15 @@ while [[ $ATTEMPT -le $MAX_ATTEMPTS ]]; do
 done
 
 if [[ $SUCCESS -eq 0 ]]; then
+    # Tell the two apart. If the network went away under us (the laptop went back to
+    # sleep mid-run), the attempts prove nothing about the API and the night should be
+    # retried by the next firing, not reported as a failure needing a human.
+    if ! network_up; then
+        echo "[$(date)] DEFER: lost the network mid-run — $MAX_ATTEMPTS attempts all hit it, will retry on the next firing" \
+            | tee -a "$LOG_FILE"
+        record_outcome deferred_no_network "network gone after $MAX_ATTEMPTS attempts"
+        exit 0
+    fi
     echo "[$(date)] FAILED after $MAX_ATTEMPTS attempts" | tee -a "$LOG_FILE"
     record_outcome failed_api "claude exited non-zero or reported API Error on $MAX_ATTEMPTS attempts"
     osascript -e 'display notification "Dream pipeline failed after retries" with title "LIS Code Agent" sound name "Basso"' >/dev/null 2>&1 || true
