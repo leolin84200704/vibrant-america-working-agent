@@ -7,7 +7,7 @@ score: 1.4913
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-09-24
+updated: 2026-09-28
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -119,6 +119,8 @@ links:
 - VP-18342
 - VP-18344
 - VP-18400
+- VP-18402
+- VP-18404
 - VP-18406
 - VP-9299
 - business-model
@@ -134,26 +136,26 @@ tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 106 entries across STM
+summary: Auto-aggregated failure index from 116 entries across STM
 ---
 
 # Failure Index
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-09-24 — total 106 entries
+> Last updated: 2026-09-28 — total 116 entries
 
 ## Themes
 
-- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 29 entries
-- [Other / uncategorized](#other) — 17 entries
-- [Build / TypeScript / Tooling](#build-tooling) — 16 entries
-- [Deploy / commit / push coordination](#deploy-coordination) — 12 entries
+- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 31 entries
+- [Build / TypeScript / Tooling](#build-tooling) — 20 entries
+- [Other / uncategorized](#other) — 19 entries
+- [Deploy / commit / push coordination](#deploy-coordination) — 13 entries
 - [DB / migration / backfill](#db-migration) — 9 entries
 - [Scope / requirement / PM communication](#scope-communication) — 5 entries
+- [Error handling / throw vs log](#error-handling) — 5 entries
 - [Redis / cache / pending list](#redis-cache) — 4 entries
 - [Auth / permission / role](#auth-permission) — 4 entries
-- [Error handling / throw vs log](#error-handling) — 4 entries
 - [Test / mock / spec](#test-mocking) — 2 entries
 - [gRPC / network / timeout](#grpc-network) — 2 entries
 - [GraphQL / API design](#graphql-api) — 1 entries
@@ -522,6 +524,52 @@ decode failure, see side finding). Switched to patient 3076377 (VP-17628 E2E pat
   orderable under 999997/10136). Cancelled within 30 s. Staging placements share the prod sample
   sequence — treat every 201 as real.
 
+### **[[VP-18402]]** — `2026-09-28` — Two days live: zero rejections, zero deactivations — and what that means
+
+Re-verified against ground truth (not memory) because two days had passed.
+
+- All PRs merged 2026-09-25: emr-v2 #435 -> staging and #436 (Staging -> main);
+  trans #838 -> main and #839 -> stage_test. #837 closed/deleted.
+- Code confirmed present on all four branches (origin/main + origin/staging for emr-v2,
+  origin/main + origin/stage_test for trans).
+- Pods still running the same images (emr-v2 prod `b9976cb1`, staging `644c3449`; trans pods from
+  the 09-26 00:1x restart). Both `EMR_V2_BASE_URL` entries survived — merge-patched keys were not
+  clobbered by any apply in the interim, as predicted.
+
+**Effect after ~2 days on prod:**
+| metric | value |
+|---|---|
+| `provider_not_in_clinic` rejections, ever | **0** |
+| integrations moved to REJECTED, last 3 days | **0** |
+| LIVE + ordering_enabled rows | 897 (unchanged from 09-25) |
+
+Zero rejections matches the 09-25 blast-radius analysis exactly: of the 73 stale rows only one sat
+on an active ordering path (41795@7094) and that provider had placed no orders in 90 days. So the
+gate has cost nothing — but it has also not yet PROVEN anything positive in prod.
+
+Zero deactivations means **VP-18404's success path has still never fired in production** — nobody
+removed a provider through the portal in those two days. The end-to-end success case therefore
+remains unverified in prod, not just in staging. Absence of failures is not evidence of success
+here; the trigger simply has not occurred.
+
+**Jira is behind reality** (all three tickets' code is on prod): VP-18402 Dev In Progress,
+VP-18404 **Dev To Do**, PH-917 Dev In Progress, QH-7271/QH-7275 To Do, VP-18403 (FE, Siyun Liang)
+Dev To Do. Status transitions left for Leo.
+
+Process note for me: two "MISSING" false alarms in this check were my own zsh bug — `origin/$b:src/...`
+lets zsh read `:s` as a history substitute modifier and silently rewrites the path. Always brace it:
+`origin/${b}:src/...`. Compounded by a `git fetch ... 2>/dev/null` that hid a failure. Do not swallow
+stderr in a diagnostic command.
+
+### **[[VP-18404]]** — `2026-09-28` — Closed — transitioned to Done
+
+VP-18404 Dev To Do -> **Done** (transition id 15). Code on prod and staging since 09-25;
+`EMR_V2_BASE_URL` set on both ConfigMaps 09-26 and still present.
+Known and accepted at close: the SUCCESS path (a real removeCustomerFromClinic actually
+deactivating an integration) has never fired in production — zero provider removals occurred in the
+window — so it is verified only at the unit and function level, never end-to-end. Leo chose not to
+force a trigger.
+
 ### **[[LIS-7690]]** — `2026-08-18 18:20` — **
 
 `kubectl get cm -A -o yaml | grep -i lis-emr-v2` dumps `lis-emr-v2-config{,-prod}` in full, and
@@ -565,102 +613,6 @@ Picked `lock.release()` from redlock@5 docs while installing redlock@4. The two 
 **修法**：事後 deleteMany ids 2306/2309/2312，保留 2303。21 distinct customers / 21 oc rows ✓。
 
 **Preventable**：是。pre-check 階段應該偵測 PAIRS 內重複 customer_id + 對 INSERT 邏輯 dedupe by customer。
-
----
-
-## Other / uncategorized <a id='other'></a>
-
-### **[[INCIDENT-20260528]]** — `2026-05-28` — 把 hang pod log 燒掉了
-
-Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`、**舊 pod (`6cc4674b87-ccgbf`) 的 log 隨 pod GC 永久消失**。/var/log/pods 對應目錄 mtime 還在但 log file 已清。所以「哪個 folder 是 5/27 真正 hang 元凶」**現場證據燒掉了**。後來 21:45 tick log 出來的 id=260 反而是 transient = 不是同一個 hang。
-
-預防：destructive ops (rollout restart / pod delete) 前必須 `kubectl logs <pod> > /tmp/preserve.log` + `kubectl describe pod <pod> > /tmp/preserve_describe.txt`。已寫進 user memory feedback。
-
-### **[[LBS-1541]]**
-
-(none yet)
-
-### **[[PH-847]]** — `2026-09-11` — Dream closeout audit — PASS (PM-owned ticket)
-
-- PH-847 Done 09-10 13:13 PDT; assignee Xiaoye (PM). Implementation shipped under VP-18080 (order half, Leo) and VP-18066 (envelope), both audited PASS on 2026-09-03. Nothing further owed by this STM.
-
-### **[[PO-256]]**
-
-- az CLI MFA expired — could not inspect RBAC Container App directly; bounded diagnosis at the coresamples→container-app hop via error strings and timing.
-
-### **[[VP-16766]]** — `2026-05-27` — **Minor TS slip**：`_apply` 腳本初版用 `${ehr.created_at = now}`（賦值表達式）想偷塞欄位，TS2339 編譯失敗。改成直接 `${now}`。教訓：raw SQL 的 template binding 不要塞賦值/副作用，值先算好再代入。
-
-
-
-### **[[VP-16934]]** — `2026-06-09` — #157 部署後 staging dry-run 驗證通過
-
-- endpoint no-auth → 401（route live + guard）。
-- 簽 JWT(staging JWT_SECRET, HS256, payload 需 userId + 未過期；JwtStrategy 不檢 issuer) 打 dry-run（`scripts/_vp16934-staging-test.js`）：
-  - 假 provider → `201 {rejected, customer_not_found}`（auth/dryrun/富化都跑）。
-  - 缺 testCodes → `400`。
-  - **真客戶 5794 → `201 {rejected, unrecognized_test_codes:[VACP1001]}`** = customer 解析成功 + 代碼分類有跑（VACP1001 是假 code 才被擋）。
-- **結論：order intake 在 staging dry-run 全程跑通**（auth/gating/validation/customer 查詢/代碼分類）。差「完整成功單(sampleId:-1)」需對 staging 客戶有效的真 test code。
-- staging order_intake 留了 2 筆 VP16934-TEST-* rejected 測試列（無害，可清）。
-
-### **[[VP-17120]]** — `2026-07-02 23:05` — ROOT CAUSE UPGRADED during replay (filed VP-17318, branch bugfix/leo/VP-17318 pushed)
-
-- emr-v2 generateSampleID NEVER worked: proto field is `sampleId` (camelCase in proto) but client reads `response.sample_id` with keepCase:true → undefined → `|| '0'` → always 0 since the VP-16463 port. Pre-5/28 nonzero patientPayLater ids were written by Java EMR-Backend.
-- sendOrder with sampleId=0 self-assigns a correct id (70/74 zero-id orders succeeded). The stuck rows are occasional sendOrder failures on that path.
-- coresamples v2 GenerateSampleID sequence is ~311k STALE: live probes returned ids 2277991-2278000, ALL existing patient samples in lis_core_v7.sample. A field-name-only fix would inject colliding ids → order path must NOT consume this RPC until their sequence is repaired (needs a coresamples-team ticket).
-- Fix on branch: finalizer skips pre-generation (sends 0 explicitly), client reads correct field + rejects invalid, [RETRY-EXHAUSTED] loud log, decrement floored. 21/21 targeted tests pass, build clean.
-
-### **[[VP-17283]]**
-
-(none yet)
-
-### **[[VP-17714]]**
-
-（none yet）
-
-### **[[VP-17748]]**
-
-(none yet)
-
-### **[[VP-17765]]**
-
-(none this run)
-
-### **[[VP-17827]]**
-
-None this session.
-
-### **[[VP-18030]]**
-
-- 2026-08-31: `echo ===` and a commit -m containing backtick-quoted `to`
-  both got mangled by zsh (=== → "== not found"; `to` command-substituted to
-  empty inside double quotes). One stray non-English word also slipped into
-  a commit message body. Fixed by amend before push. Rules: heredoc
-  (`git commit -F - <<'MSG'`) for any commit message with punctuation;
-  grep -P '[^\x00-\x7F]' the message and changed files before commit.
-
-### **[[VP-18342]]**
-
-- ~40 minutes spent searching for "ways2wellness" in logs/DB/Jira before Leo pasted the
-  actual error: the partner's own clinic has no integration, and the sandbox tenant is
-  customer 50687 — the customer name never appears in any log line. Ask for the raw error
-  text / requestId first when a partner reports an API error.
-- vibrant MCP `create_jira_issue` -> 403 on POST /issue; `list_sentry_projects` -> NoneType error.
-
-### **[[VP-18344]]**
-
-(none yet)
-
-### **[[VP-16521]]** — `2026-05-28 17:52` — **
-
-- **症狀**：merge in-progress 時 `git stash push` → MERGE_HEAD 消失，stash pop 報 `event.service.ts: needs merge`
-- **修法**：`git merge origin/stage_test --no-commit --no-ff` 重觸發 merge state，再 `git checkout stash@{0} -- src/calendar/models/event/event.service.ts` 把 stash 內的 resolved 版本拉回，最後 `git stash drop`
-- **教訓**：merge in-progress 時禁用 `git stash`；要保存 in-flight diff 改用 `git diff > /tmp/wip.patch` + 該 file 個別 checkout
-- **更好做法**：根本不該為了 "比較 pre-merge lint baseline" 中斷 merge state — 直接看 origin/feature 上的 ESLint baseline 即可，或先 commit 中間態再分析
-
-### **[[VP-17217]]** — **
-
-- 首次 build TS2322：provider 陣列 union 型別 → 加 `Provider[]` 顯式型別修正。
-- spec 原以 class token 注入 → 改 inbound token 才能解析。
 
 ---
 
@@ -798,6 +750,183 @@ See the lesson extracted to `long-term-memory/patterns.md`.
   My Confluence page 2485977089 (Order Intake API) still shows PascalCase
   eligibility list — needs manual edit (MCP has no page-update tool).
 
+### **[[VP-18402]]** — `2026-09-26 00:10` — Functional verification on STAGING against the real service + real DB
+
+Leo: "那就用 image 測試" — version confirmed by pod image tag, then exercise the real compiled
+service (`dist/...`) inside the staging pod against the live DB. This skips only the HTTP/auth layer,
+which was separately proven (route Mapped in the log; probe returns 401 = guard active).
+
+**Half 1 — deactivateForClinicMember, target `9080@13505` (chosen because it has TWO LIVE rows,
+which is exactly the findMany-not-findFirst case LBS-1785 motivated):**
+
+| test | result |
+|---|---|
+| deactivate 9080@13505 | `{deactivated:2, integrationIds:[cmj99ovhj…, cmjxaq5ik…]}` — BOTH rows, not just the first |
+| same pair again (idempotency + no-op) | `{deactivated:0}`, zero writes |
+| customer 99999999 (never integrated) | `{deactivated:0}` — Leo's "seamless, no error" question, confirmed live |
+| real customer, wrong clinic (9081@999999) | `{deactivated:0}` |
+
+100% verification, not spot-checked:
+- both target rows `REJECTED`, `last_modified_by=vp18402-test`
+- one `ehr_integration_status_history` row each: `from_status=LIVE, to_status=REJECTED`, correct
+  `changed_by` and `reason` — the row the OLD disconnect path never wrote
+- one `ehr_integration_notes` row each
+- clinic 13505 went 23 LIVE -> 21 LIVE + 2 REJECTED (the arithmetic closes)
+- **table-wide reverse audit**: `updated_at` in the last 10 min across the WHOLE table returns
+  exactly 2 rows, both targets; history and notes written in that window are exactly 2 each. No
+  stray writes, no missed rows.
+
+**Half 2 — checkProviderClinicMembership, real gRPC against real core:**
+
+| case | result |
+|---|---|
+| 9082 @ 13505 (still a member) | `in_clinic` |
+| 9081 / 9080 @ 13505 (removed) | `not_in_clinic` |
+| 5794 @ 7094 (still a member) | `in_clinic` |
+| 41795 @ 7094 (removed) | `not_in_clinic` — the one prod row on an active ordering path |
+| **-1 @ 13505 (CLINIC_LEVEL_MARKER)** | **`check_unavailable`** — fails OPEN, confirming what was previously only reasoning |
+| clinic 99999999 (nonexistent) | `check_unavailable` — empty roster is not read as "everyone was removed" |
+
+**disconnectIntegration history fix** (target `cmj99ovl1…`, history count 0 before): now writes
+`LIVE -> REJECTED` history + note, returns `status: DISCONNECTED`, and both guards still hold —
+non-LIVE row raises BadRequestException, unknown id raises NotFoundException.
+
+**Staging data changed by this session — 3 rows, all genuinely stale (provider already out of clinic
+13505), so deactivating them is a data correction rather than damage. Reversible by setting status
+back to LIVE and deleting the history/note rows if wanted:**
+- `cmj99ovhj00070xj1be523zpk` 9080@13505 LIVE -> REJECTED
+- `cmjxaq5ik00bp0xfqbtmfq2f9` 9080@13505 LIVE -> REJECTED
+- `cmj99ovl100090xj17o95kf4a` 9081@13505 LIVE -> REJECTED
+
+Staging now 39 LIVE / 6 REJECTED / 1 APPROVED. Five stale-LIVE rows deliberately LEFT untouched
+(9526/10680/12437/14738 @ 124546, and 9081's second row) so the gate still has live subjects and
+nothing was changed beyond what the tests needed.
+
+STILL UNTESTED: trans -> emr-v2 end to end. Blocked on `EMR_V2_BASE_URL`, still unset in both
+`lis-trans-config-st` and `lis-trans-config`. Until it is set, VP-18404's half is inert in both
+environments (it logs "not set" and leaves the integration LIVE).
+
+### **[[VP-18404]]** — `2026-09-25 16:15` — PR opened, and two real bugs found on the way
+
+PR Vibrant-America/LIS-transformer#837 -> `stage_test`, head `adf2cca`.
+
+**Bug 2 (DI, caught by the pre-push smoke gate).** NestJS providers are PER-MODULE. Adding a
+constructor dep to `UtilityService` broke every module that lists it in its own `providers` array and
+was not updated — `schedule.module` and `trans.module`. It fails at BOOT, not at compile time, so
+tsc and every unit test were green. Fixed in all four modules (utility, setting, schedule, trans) and
+pinned by `emr-integration-deactivate.di.spec.ts`, which reads MODULE_METADATA/PARAMTYPES rather than
+booting the real graph. **Mutation-checked**: removing one registration makes it go red.
+
+**Bug 3 (a broken existing spec that my earlier regression could not see).** `@azure/event-hubs` is
+in package.json but was NOT installed in the local node_modules, which had been silently stopping 7
+suites under `src/utility` from running. My earlier "before/after suite sets are identical" claim was
+true but WORTHLESS as evidence — both sides were equally blind. After installing it (lockfile
+version, `--no-save`, manifests untouched) the suites ran and `utility.service.spec.ts` failed:
+it enumerates UtilityService's deps in a `Test.createTestingModule` and needed the new provider
+stubbed. That failure was mine. Final: 26 suites / 268 assertions green.
+
+**Lesson worth carrying:** a before/after regression comparison proves nothing about suites that
+cannot RUN in either state. Count the suites that executed, not just the ones that changed status —
+"same failures before and after" and "same failures because both are blind" look identical.
+
+### **[[VP-18404]]** — `2026-09-25 17:45` — PR base was wrong — branch cut from main, targeted at stage_test
+
+Leo: "PR 838 改了約20000行，這是對的嗎？而且還有conflict"
+
+Diagnosis: **LIS-transformer's `main` and `stage_test` are two long-lived, BIDIRECTIONALLY divergent
+lines** — main ahead by 165 commits, stage_test ahead by 105. I cut the branch from `origin/main`
+and opened the PR against `stage_test`, so GitHub rendered the whole 165-commit delta: 137 files,
++18580/-2252, CONFLICTING. My actual change was 5 files / +372.
+
+The repo's real convention (seen in #833/#834 and #835/#836): **one change, two branches, two PRs** —
+`{name}` cut from main -> PR to `main`, and `{name}-stage` cut from stage_test -> PR to `stage_test`.
+I had made one branch and pointed it at the wrong base.
+
+Fix: `gh pr edit 838 --base main` (head unchanged, so the one-PR-one-head rule holds) -> immediately
+5 files / +372 / MERGEABLE. Then cut `feature/leo/VP-18404-call-stage` from `origin/stage_test`,
+cherry-picked `50da97f` (auto-merged clean), and opened **#839 -> stage_test**, also 5 files / +372 /
+MERGEABLE. The two are cross-linked in their descriptions.
+
+Cherry-pick was VERIFIED rather than assumed, given 270 commits of divergence: both method
+signatures identical on stage_test, insertion points the same, tsc clean on the touched files, and
+**6 suites / 7 assertions fail identically on CLEAN stage_test** — proved by running the same set in
+a detached worktree at `origin/stage_test` (18 suites, same 6 failing, 214 passing) against mine
+(20 suites, same 6 failing, 229 passing). This time the baseline suites actually executed, so the
+comparison carries evidence — unlike the earlier `@azure/event-hubs` case where both sides were blind.
+
+emr-v2 #435 was NOT affected: there `main` is only 1 merge commit ahead of `staging` and nothing is
+ahead the other way, so a main-cut branch targeting `staging` renders correctly (14 files,
++1004/-25, MERGEABLE). That repo uses a relay flow (feature -> staging -> "Staging" PR -> main),
+not the dual-track one.
+
+**Rule for this instance: before opening a PR, check `git rev-list --count base..head` BOTH ways.
+A base and a head that have diverged in both directions means the PR diff is not your change.**
+Cheaper still: cut the branch from the branch you intend to target.
+
+### **[[VP-18404]]** — `2026-09-26 00:20` — EMR_V2_BASE_URL set on BOTH environments (Leo authorised), walked through lis-prod-change-gate
+
+**Gate 1 four-part analysis (written before touching anything, read from live state not memory):**
+- 目的: without the var, `deactivateEmrIntegration` returns at its first branch and every removal
+  only logs "not set" — the PH-917 hole is fully open on the trans side.
+- 改前: `lis-trans-config` 162 keys / `lis-trans-config-st` 165 keys, neither had `EMR_V2_*`.
+  Deployments consume it via `envFrom.configMapRef`, so a ConfigMap edit does NOT hot-reload —
+  a rollout restart is mandatory.
+- 改後為何有效: emr-v2 has the endpoint deployed on both envs with the route confirmed registered;
+  value carries the `/api/v1` global prefix so it cannot 404.
+- 改什麼: `kubectl patch` one key (merge patch, touches nothing else) + rollout restart, staging
+  first and verified before prod.
+
+**IMPORTANT finding — Gate 4 does NOT apply here, and the repo file is a trap.**
+`LIS-transformer/lis-trans-k8env.yml` IS a ConfigMap named `lis-trans-config`, but it holds only
+**5 keys** while the live ConfigMap has 162. The `last-applied-configuration` annotation holds
+133 (prod) / 140 (staging) keys and contains keys absent from that file (`AUDIT_RPC`, …), so the
+repo file is NOT the apply source — it is stale/partial. Editing it would not take effect, and
+`kubectl apply -f` of it would be destructive-looking. The live ConfigMap is hybrid-managed:
+live 162 vs last-applied 133 means ~29 keys were added outside any apply source. A merge patch is
+therefore the correct instrument, and `EMR_V2_BASE_URL` survives a future apply of the 133-key
+source because 3-way merge only deletes keys present in last-applied.
+**Open question for Leo: where IS the real 133/140-key apply source?** It is not in this repo.
+
+**Applied:**
+| env | ConfigMap | value | keys |
+|---|---|---|---|
+| staging | `lis-trans-config-st` | `http://lis-emr-v2-service-staging.emr-v2.svc.cluster.local:3000/api/v1` | 165 -> 166 |
+| prod | `lis-trans-config` | `http://lis-emr-v2-service.emr-v2.svc.cluster.local:3000/api/v1` | 162 -> 163 |
+
+Reverse audit on BOTH: full-yaml diff before/after is IDENTICAL apart from the added key — zero
+collateral change. Backups taken before touching either.
+
+**Rollback (if ever needed):**
+```
+kubectl patch cm lis-trans-config -n default --type json -p '[{"op":"remove","path":"/data/EMR_V2_BASE_URL"}]'
+kubectl rollout restart deploy/lis-trans-deployment -n default
+```
+(same shape for `-st` / `lis-trans-deployment-st`)
+
+**Verification — 100%, not spot-checked:**
+- staging: 1 pod rolled, env present, its own env used to build the URL -> 401 (guard live; a wrong
+  path would be 404).
+- prod: 3 pods rolled cleanly (rolling, no downtime, restartCount 0 on all three). **Every one of
+  the three** reports the env and returns 401 on the consumer readback — not one sampled pod.
+- Function-level live test from inside the staging pod against the real compiled
+  `/dist/src/trans/emr-integration-deactivate.js`:
+  - request genuinely goes out: `deactivate call FAILED ... 401` in 57 ms
+  - returns `undefined` (void) — does not throw, does not hang: the contract the call sites depend on
+  - bad clinic id refused without sending
+  The failure log says "integration may still be LIVE", which is exactly the visibility AC 2 wanted.
+
+**Observation worth flagging, not attributed:** every restarted trans pod logs ONE
+`[ioredis] Unhandled error event: connect ETIMEDOUT` about 30 s after start, then nothing for the
+next 15 min; staging and prod behave identically and restartCount stays 0. `REDIS_ADDR` is the
+on-prem `192.168.10.212`. Looks like a pre-existing startup-timing artefact rather than something
+the restart introduced — but the pre-restart pods' logs were already GC'd, so there is no direct
+before/after comparison. Stated as "likely", not "confirmed".
+
+REMAINING: the last mile — an actual `removeCustomerFromClinic` with a real admin JWT, which is the
+only path that exercises a SUCCESSFUL deactivation through trans. Needs a token and removes a real
+provider (core side-effects: RBAC strip, role rows, patient reassignment), so it needs Leo's
+go-ahead on a specific target rather than being done unilaterally.
+
 ### **[[LIS-7690]]** — `2026-08-18 17:25` — **
 
 `.git/hooks/pre-push` runs `npx prisma generate`; a fresh worktree has no `node_modules`, so npx
@@ -842,6 +971,119 @@ Production NestFactory crash at startup: `TypeError: redlock_1.default is not a 
 **Recovery:** Reverted both `src/proto/` and `dist/proto/` edits, then applied the changes to `src/proto-v2/customer.proto` only (no `dist/proto-v2/` exists, so single file).
 
 **Detection trigger:** Reading `src/config/grpc.config.ts` for endpoint info — saw `getProtoV2Path` and `package: 'coresamples_service'` for the v2 customer client.
+
+---
+
+## Other / uncategorized <a id='other'></a>
+
+### **[[INCIDENT-20260528]]** — `2026-05-28` — 把 hang pod log 燒掉了
+
+Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`、**舊 pod (`6cc4674b87-ccgbf`) 的 log 隨 pod GC 永久消失**。/var/log/pods 對應目錄 mtime 還在但 log file 已清。所以「哪個 folder 是 5/27 真正 hang 元凶」**現場證據燒掉了**。後來 21:45 tick log 出來的 id=260 反而是 transient = 不是同一個 hang。
+
+預防：destructive ops (rollout restart / pod delete) 前必須 `kubectl logs <pod> > /tmp/preserve.log` + `kubectl describe pod <pod> > /tmp/preserve_describe.txt`。已寫進 user memory feedback。
+
+### **[[LBS-1541]]**
+
+(none yet)
+
+### **[[PH-847]]** — `2026-09-11` — Dream closeout audit — PASS (PM-owned ticket)
+
+- PH-847 Done 09-10 13:13 PDT; assignee Xiaoye (PM). Implementation shipped under VP-18080 (order half, Leo) and VP-18066 (envelope), both audited PASS on 2026-09-03. Nothing further owed by this STM.
+
+### **[[PO-256]]**
+
+- az CLI MFA expired — could not inspect RBAC Container App directly; bounded diagnosis at the coresamples→container-app hop via error strings and timing.
+
+### **[[VP-16766]]** — `2026-05-27` — **Minor TS slip**：`_apply` 腳本初版用 `${ehr.created_at = now}`（賦值表達式）想偷塞欄位，TS2339 編譯失敗。改成直接 `${now}`。教訓：raw SQL 的 template binding 不要塞賦值/副作用，值先算好再代入。
+
+
+
+### **[[VP-16934]]** — `2026-06-09` — #157 部署後 staging dry-run 驗證通過
+
+- endpoint no-auth → 401（route live + guard）。
+- 簽 JWT(staging JWT_SECRET, HS256, payload 需 userId + 未過期；JwtStrategy 不檢 issuer) 打 dry-run（`scripts/_vp16934-staging-test.js`）：
+  - 假 provider → `201 {rejected, customer_not_found}`（auth/dryrun/富化都跑）。
+  - 缺 testCodes → `400`。
+  - **真客戶 5794 → `201 {rejected, unrecognized_test_codes:[VACP1001]}`** = customer 解析成功 + 代碼分類有跑（VACP1001 是假 code 才被擋）。
+- **結論：order intake 在 staging dry-run 全程跑通**（auth/gating/validation/customer 查詢/代碼分類）。差「完整成功單(sampleId:-1)」需對 staging 客戶有效的真 test code。
+- staging order_intake 留了 2 筆 VP16934-TEST-* rejected 測試列（無害，可清）。
+
+### **[[VP-17120]]** — `2026-07-02 23:05` — ROOT CAUSE UPGRADED during replay (filed VP-17318, branch bugfix/leo/VP-17318 pushed)
+
+- emr-v2 generateSampleID NEVER worked: proto field is `sampleId` (camelCase in proto) but client reads `response.sample_id` with keepCase:true → undefined → `|| '0'` → always 0 since the VP-16463 port. Pre-5/28 nonzero patientPayLater ids were written by Java EMR-Backend.
+- sendOrder with sampleId=0 self-assigns a correct id (70/74 zero-id orders succeeded). The stuck rows are occasional sendOrder failures on that path.
+- coresamples v2 GenerateSampleID sequence is ~311k STALE: live probes returned ids 2277991-2278000, ALL existing patient samples in lis_core_v7.sample. A field-name-only fix would inject colliding ids → order path must NOT consume this RPC until their sequence is repaired (needs a coresamples-team ticket).
+- Fix on branch: finalizer skips pre-generation (sends 0 explicitly), client reads correct field + rejects invalid, [RETRY-EXHAUSTED] loud log, decrement floored. 21/21 targeted tests pass, build clean.
+
+### **[[VP-17283]]**
+
+(none yet)
+
+### **[[VP-17714]]**
+
+（none yet）
+
+### **[[VP-17748]]**
+
+(none yet)
+
+### **[[VP-17765]]**
+
+(none this run)
+
+### **[[VP-17827]]**
+
+None this session.
+
+### **[[VP-18030]]**
+
+- 2026-08-31: `echo ===` and a commit -m containing backtick-quoted `to`
+  both got mangled by zsh (=== → "== not found"; `to` command-substituted to
+  empty inside double quotes). One stray non-English word also slipped into
+  a commit message body. Fixed by amend before push. Rules: heredoc
+  (`git commit -F - <<'MSG'`) for any commit message with punctuation;
+  grep -P '[^\x00-\x7F]' the message and changed files before commit.
+
+### **[[VP-18342]]**
+
+- ~40 minutes spent searching for "ways2wellness" in logs/DB/Jira before Leo pasted the
+  actual error: the partner's own clinic has no integration, and the sandbox tenant is
+  customer 50687 — the customer name never appears in any log line. Ask for the raw error
+  text / requestId first when a partner reports an API error.
+- vibrant MCP `create_jira_issue` -> 403 on POST /issue; `list_sentry_projects` -> NoneType error.
+
+### **[[VP-18344]]**
+
+(none yet)
+
+### **[[VP-18402]]** — `2026-09-25 16:15` — PR opened
+
+PR Vibrant-America/lis-backend-emr-v2#435 -> `staging`, head `ddba71a`. Added before opening (so the
+head stays fixed per the one-PR-one-head rule): two explicit no-op tests for Leo's question — a
+provider with only non-LIVE rows, and a customer with no integration at all — asserting the OUTCOME
+(nothing written, no transaction opened) rather than just the `where` clause, so they hold if the
+query is rewritten. Suite now 12 tests; full run 85 suites / 1222 assertions.
+
+### **[[VP-18402]]** — `2026-09-28` — Closed — transitioned to Done
+
+Leo: "沒關係不需要做，把已經做完的轉done(不要轉別人的ticket)". Remaining items (end-to-end success
+path, kill switch, finding the real ConfigMap apply source) explicitly dropped.
+VP-18402 Dev In Progress -> **Done** (transition id 15).
+NOT transitioned, on the "don't touch other people's tickets" instruction: VP-18403 (FE, Siyun
+Liang), PH-917 (Xiaoye Li), QH-7271 (QA, unassigned). QH-7275 is assigned to me but is a QA Task
+and QA has not run — moving it would falsely signal it was tested, so it was left in To Do.
+
+### **[[VP-16521]]** — `2026-05-28 17:52` — **
+
+- **症狀**：merge in-progress 時 `git stash push` → MERGE_HEAD 消失，stash pop 報 `event.service.ts: needs merge`
+- **修法**：`git merge origin/stage_test --no-commit --no-ff` 重觸發 merge state，再 `git checkout stash@{0} -- src/calendar/models/event/event.service.ts` 把 stash 內的 resolved 版本拉回，最後 `git stash drop`
+- **教訓**：merge in-progress 時禁用 `git stash`；要保存 in-flight diff 改用 `git diff > /tmp/wip.patch` + 該 file 個別 checkout
+- **更好做法**：根本不該為了 "比較 pre-merge lint baseline" 中斷 merge state — 直接看 origin/feature 上的 ESLint baseline 即可，或先 commit 中間態再分析
+
+### **[[VP-17217]]** — **
+
+- 首次 build TS2322：provider 陣列 union 型別 → 加 `Provider[]` 顯式型別修正。
+- spec 原以 class token 注入 → 改 inbound token 才能解析。
 
 ---
 
@@ -1019,6 +1261,73 @@ billing（見上一節）。這是本次驗證的範圍上限，已在 PR #316 �
   whole env/configmaps). Staging-only long-lived token; flag to Leo.
 - PROD DEPLOY PENDING: staging→main promotion PR (Leo). No prod E2E yet.
 
+### **[[VP-18402]]** — `2026-09-25 16:55` — Deployed; live verification + the PROD baseline that was previously unobtainable
+
+All four components live: emr-v2 staging (`644c3449`) and prod (`b9976cb1`, via PR #436 staging->main),
+trans staging and prod (GH Actions both green).
+
+**Live runtime verification (identical on staging AND prod pods, from the logs of the running
+service — not mocks):**
+- Route order holds: `Mapped {.../deactivate-clinic-member, PATCH}` is registered BEFORE
+  `Mapped {.../:id, PATCH}`. The code comment's claim is now confirmed at runtime.
+- `v2 clinic gRPC client created: 10.224.1.113:80` and `6/6 gRPC v2 clients initialized successfully`
+  (was 5/5). No DI error, `Nest application successfully started`.
+
+**Trap found: HTTP status cannot distinguish old from new.** Probing
+`PATCH .../deactivate-clinic-member` on the OLD image returns 401, not 404 — the old `@Patch(":id")`
+catches the literal path as an id and the guard fires first. Deployment state must be read from the
+pod image tag, never from a probe's status code.
+
+**Also found: emr-v2 has global prefix `api/v1`.** `EMR_V2_BASE_URL` must therefore end in `/api/v1`
+or every call 404s. Verified from inside a trans pod on BOTH environments:
+`GET .../api/v1/...requests` -> 401 (reachable, correct), same path without the prefix -> 404.
+Cluster-internal is HTTP (`ENABLE_HTTPS` unset). Values needed:
+- staging `lis-trans-config-st`: `http://lis-emr-v2-service-staging.emr-v2.svc.cluster.local:3000/api/v1`
+- prod `lis-trans-config`: `http://lis-emr-v2-service.emr-v2.svc.cluster.local:3000/api/v1`
+
+**PROD BASELINE (the number that was unobtainable earlier — local DB is still ETIMEDOUT and the
+vibrant MCP is still down; obtained by running node inside the emr-v2 prod pod, which has both the
+prisma client and the gRPC clients):**
+
+| | count |
+|---|---|
+| LIVE integrations (clinic_id set, excluding the 37 clinic-level `customer_id=-1` rows) | 1013 |
+| of which `ordering_enabled=1` | 897 |
+| provider still in the clinic | 938 |
+| **provider NO LONGER in the clinic (what half 2 will reject)** | **73** |
+| unknown / empty roster | 2 |
+| gRPC errors over 592 clinic queries | **0** |
+
+All 73 are FULL_INTEGRATION and all are `ordering_enabled=1`. Staging is far worse proportionally:
+8 stale of 41 (20%), and three of them (9526/10680/12437 @ clinic 124546) are exactly the LBS-1784
+providers that were set REJECTED in prod by hand but never in staging — the gate independently
+rediscovers the same population a manual ticket had to chase.
+
+**Blast-radius assessment — the gate rejects nothing that is actually in use:**
+- The 73 stale rows sit on only 4 distinct `sftp_ordering_path`s.
+- Only ONE of those paths has had inbound HL7 in 90 days: `/revolution-health/orders/` (46 files,
+  last 2026-09-24).
+- Only ONE stale row is on it: customer 41795 @ clinic 7094 (Revolution Health & Wellness, NPI
+  1558730242, created by `migration_script_emr_result` 2025-08-13). Core says clinic 7094's members
+  are 5794 / 50118 / 503603 — 41795 is genuinely gone, exactly the PH-917 shape.
+- Resolving the 12 most recent samples from that folder through core: **9 -> customer 5794, 3 ->
+  customer 50118, ZERO -> 41795.** Both active orderers are still clinic members, so the gate does
+  not touch live traffic.
+- Last 7 days in that directory: 0 unresolved/failed files.
+
+`customer_id = -1` (CLINIC_LEVEL_MARKER, VP-18055) reads as "not in clinic" to a naive scan but is
+NOT a runtime risk: those rows never enter `resolveOrderingIntegration` (it filters by the NPI's
+customer ids), and even if reached, `checkProviderClinicMembership` returns `check_unavailable` for
+`customerId <= 0` and fails open. Excluded from the counts above.
+
+**Self-criticism: the gate shipped with no feature flag.** It became active on prod the moment the
+pod rolled, with no way to disable it short of a revert. It happens to reject zero live traffic, but
+that was established AFTER deploy, not before — the safety here is luck, not design. A behaviour
+gate on the order hot path should ship behind an env-var kill switch.
+
+STILL UNTESTED: the endpoint actually executing (needs a JWT), and trans -> emr-v2 end to end
+(needs `EMR_V2_BASE_URL`, still unset in both ConfigMaps).
+
 ### **[[VP-15460]]** — `2026-04-28` — **
 
 Agent committed migration SQL to repo and assumed release pipeline would `prisma migrate deploy` it. Leo had to remind: "你 sftp_folder_mapping 的改動還沒真的上傳到 database". Then `prisma migrate deploy` failed with P3005 (DB never baselined for prisma migrations) → fell back to `prisma db execute --file <sql>` (raw SQL apply). Then "192.168.60.11:3306 也要 apply" — second DB. Lesson: this repo has two MySQL instances + Prisma is not the migration source-of-truth in prod.
@@ -1165,6 +1474,90 @@ ConfigMap 快照，但那兩個檔只存在主 repo 工作目錄 → 在 worktre
 
 ---
 
+## Error handling / throw vs log <a id='error-handling'></a>
+
+### **[[VP-16987]]** — `2026-06-16 18:40` — — pipeline 設計脆弱點 (連帶發現)
+
+1. per-customer `catch` 只 `logger.error(msg, error.message)` 且 error.message 對 Prisma 錯誤為空 → 失敗幾乎不可見、無告警。
+2. 失敗時不寫任何 record（連 failure record 都沒）→ 監控無從得知 0 交付。
+3. upload 成功但 record 失敗 → 狀態不一致。
+4. 自動產的 xlsx 內容 (per-accession csvReport, 7.4MB) 與手動精簡版 (139KB) 差異大 → 正式內容規格需與 PM 對齊。
+
+### **[[VP-17524]]**
+
+None that cost rework. Two near-misses worth naming:
+- Ran `npx jest` instead of `npm test` on a fresh worktree and got 5 red suites that looked like a
+  regression. They were the missing `.prisma/test-client` — the `pretest` hook builds it. Nearly
+  reported a false failure.
+- Broad `grep -r --include="*.java"` failed silently under zsh (`no matches found`) because the
+  glob was unquoted. An unquoted `--include` pattern in zsh aborts the command instead of passing
+  it through; an empty result would have read as "the legacy code has no such mapping".
+
+### **[[VP-17544]]** — `2026-08-03` — 誤用 `rg -r` 汙染了好幾輪探索結論
+
+`rg -rn 'pattern' path` 中 **`-r` 是 `--replace`**，`-rn` 被解析成 `-r n` → 把每個匹配
+內容替換成字面 `n` 再輸出。所以我看到 "eligibility" 變成 "lnility"/"liy"/"n"，
+**我還誤判成終端顯示層在吃字元**（甚至聯想到 memory 裡的 WezTerm hyperlink_rule 事件）。
+同一輪還用了 `--include='*.go'`（那是 grep 的語法，rg 要 `-g`）配上 `2>/dev/null`，
+把 rg 的 unknown-flag 錯誤吞掉 → **假的「0 hits」**，讓我一度以為 order-management
+沒有任何 DOB/Gender 處理。
+**教訓 (a)**：短選項簇不要跟需要參數的 flag 混寫（`-rn` ≠ `-n -r`）。
+**教訓 (b)**：`2>/dev/null` 會把「工具用錯」偽裝成「查無資料」。搜尋若回 0 命中，
+先確認命令本身有沒有報錯，再下結論。
+**教訓 (c)**：輸出看起來被亂改時，先懷疑自己的命令，再懷疑環境。我上次（Jira link 事件）
+的正確答案是「顯示層」，這次同樣的直覺是錯的 —— 前一次的結論不是這一次的先驗。
+
+### **[[VP-18303]]**
+
+- Ran `git checkout origin/main -- .` inside the main `lis-backend-emr-v2` checkout, which was on
+  `feature/leo/VP-18085-menu-section`. Overwrote the worktree with origin/main content while HEAD
+  stayed on the feature branch. Restored with `git reset HEAD -- . && git checkout -- .` (the tree
+  had been clean, so nothing was lost). Lesson: to read another ref, make a worktree — never
+  `checkout <ref> -- .` in a checkout that is on a different branch.
+- Nearly claimed that Cerbo silently drops oversized files, on the grounds that the 24.1MB
+  2607136250 push of 2026-07-28 never reached the archive. Checked first: same-filename overwrites
+  before the next pickup explain the gap just as well. Not evidence. Reported as a risk, not a fact.
+
+### **[[VP-18404]]** — `2026-09-25 17:00` — Leo rejected the design as over-built; rewritten, and a bad commit caught
+
+Leo: "LIS-transformer 有需要改這麼多嗎？不是很簡單的 url endpoint 讓 trans call 就好了嗎"
+
+He was right, and specifically so. I had made it an `@Injectable` service purely for stylistic
+consistency with `charge-balance.service.ts`. That single choice was the entire source of the bulk:
+4 module registrations, a DI spec, an edit to `utility.service.spec.ts`, and the pre-push DI gate
+failure. **None of it was required by the ticket — I generated the cost and then spent effort
+defending against it.**
+
+Rewritten as a module-level exported function: `src/trans/emr-integration-deactivate.ts`,
+`deactivateEmrIntegration(customerId, clinicId, authorization, requestId): Promise<void>`.
+- **8 files / +105 in existing files -> 2 files / +21.** Zero module changes, zero existing-spec
+  changes, the whole class of DI bug gone by construction.
+- Reporting moved INSIDE the function (it was a 4-value return type the callers had to branch on).
+  The callers are now 1 statement each.
+- Whole body in one try/catch, so it genuinely never throws and the call sites need no error
+  handling — pinned by a test that makes axios throw synchronously. The earlier "caller must not
+  depend on the never-throws contract" lesson gets satisfied by making the contract structurally
+  true instead of by adding defensive code at every call site.
+
+**Separately: I pushed generated files into PR #837.** `npm install --no-save @azure/event-hubs`
+re-ran the prisma postinstall, which regenerated the VERSION-CONTROLLED `prisma2/generated/client2/`
+tree; I then amended with `git add -A` without re-reading status, sweeping in 12 files including
+three 100MB+ query-engine binaries. Not caught by any gate — the pre-push hooks check build and DI,
+not diff contents. Found only because Leo's question made me re-read `git diff --stat`.
+
+Hard rule taken from this: **in a repo with generated artifacts under version control, never
+`git add -A`.** Stage by name, and read the full `git status` immediately before committing —
+especially after ANY install/build step. Worth checking whether LIS-transformer should gitignore
+`prisma2/generated/` outright; emr-v2 does not have this problem because its client generates into
+node_modules.
+
+PR #837 closed (polluted head + wrong design), branch deleted locally and on origin.
+**Replacement: PR Vibrant-America/LIS-transformer#838 -> `stage_test`, branch
+`feature/leo/VP-18404-call`, head `50da97f`**, cut fresh from origin/main, staged by filename.
+Tests 22 suites / 255 assertions green.
+
+---
+
 ## Redis / cache / pending list <a id='redis-cache'></a>
 
 ### **[[INCIDENT-20260518]]** — `2026-05-18 14:00` — 第一輪 root cause 推錯：Redis emptyDir wipe
@@ -1244,52 +1637,6 @@ expect -re {[Pp]assword:} { send -- "$env(ONPREM_PW)\r" }
 `kubectl` is at `/usr/local/bin/kubectl` on appserver04 (control-plane node, k8s v1.22.3, 6 nodes
 `appserver01-06` = `192.168.60.2-7`). The password is NOT recorded here — ask Leo, or read it from
 `~/src/credential/` if he chooses to store it there.
-
----
-
-## Error handling / throw vs log <a id='error-handling'></a>
-
-### **[[VP-16987]]** — `2026-06-16 18:40` — — pipeline 設計脆弱點 (連帶發現)
-
-1. per-customer `catch` 只 `logger.error(msg, error.message)` 且 error.message 對 Prisma 錯誤為空 → 失敗幾乎不可見、無告警。
-2. 失敗時不寫任何 record（連 failure record 都沒）→ 監控無從得知 0 交付。
-3. upload 成功但 record 失敗 → 狀態不一致。
-4. 自動產的 xlsx 內容 (per-accession csvReport, 7.4MB) 與手動精簡版 (139KB) 差異大 → 正式內容規格需與 PM 對齊。
-
-### **[[VP-17524]]**
-
-None that cost rework. Two near-misses worth naming:
-- Ran `npx jest` instead of `npm test` on a fresh worktree and got 5 red suites that looked like a
-  regression. They were the missing `.prisma/test-client` — the `pretest` hook builds it. Nearly
-  reported a false failure.
-- Broad `grep -r --include="*.java"` failed silently under zsh (`no matches found`) because the
-  glob was unquoted. An unquoted `--include` pattern in zsh aborts the command instead of passing
-  it through; an empty result would have read as "the legacy code has no such mapping".
-
-### **[[VP-17544]]** — `2026-08-03` — 誤用 `rg -r` 汙染了好幾輪探索結論
-
-`rg -rn 'pattern' path` 中 **`-r` 是 `--replace`**，`-rn` 被解析成 `-r n` → 把每個匹配
-內容替換成字面 `n` 再輸出。所以我看到 "eligibility" 變成 "lnility"/"liy"/"n"，
-**我還誤判成終端顯示層在吃字元**（甚至聯想到 memory 裡的 WezTerm hyperlink_rule 事件）。
-同一輪還用了 `--include='*.go'`（那是 grep 的語法，rg 要 `-g`）配上 `2>/dev/null`，
-把 rg 的 unknown-flag 錯誤吞掉 → **假的「0 hits」**，讓我一度以為 order-management
-沒有任何 DOB/Gender 處理。
-**教訓 (a)**：短選項簇不要跟需要參數的 flag 混寫（`-rn` ≠ `-n -r`）。
-**教訓 (b)**：`2>/dev/null` 會把「工具用錯」偽裝成「查無資料」。搜尋若回 0 命中，
-先確認命令本身有沒有報錯，再下結論。
-**教訓 (c)**：輸出看起來被亂改時，先懷疑自己的命令，再懷疑環境。我上次（Jira link 事件）
-的正確答案是「顯示層」，這次同樣的直覺是錯的 —— 前一次的結論不是這一次的先驗。
-
-### **[[VP-18303]]**
-
-- Ran `git checkout origin/main -- .` inside the main `lis-backend-emr-v2` checkout, which was on
-  `feature/leo/VP-18085-menu-section`. Overwrote the worktree with origin/main content while HEAD
-  stayed on the feature branch. Restored with `git reset HEAD -- . && git checkout -- .` (the tree
-  had been clean, so nothing was lost). Lesson: to read another ref, make a worktree — never
-  `checkout <ref> -- .` in a checkout that is on a different branch.
-- Nearly claimed that Cerbo silently drops oversized files, on the grounds that the 24.1MB
-  2607136250 push of 2026-07-28 never reached the archive. Checked first: same-filename overwrites
-  before the next pickup explain the gap just as well. Not evidence. Reported as a risk, not a fact.
 
 ---
 
