@@ -452,3 +452,25 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 - **QUARANTINE 分析的打回**：我報「要等 VP-16164 / VP-16168 解凍」，Leo 當場反駁；答案在我自己 08-25 寫的 `quarantine.service.ts:285-306` 註解裡。**能力問題問 code，不問 Jira；打開的檔案要讀完關鍵函式；查到的數字（0 筆 UNKNOWN_PROVIDER）要用來反問不是只用來佐證。**「先記下來」= 分析進 STM，不動工。
 - **夥伴回報 API 錯誤先要 raw error / requestId**——W2W 的名字不在任何 log 裡，40 分鐘白搜。
 - **教訓寫下來 ≠ 學會**：DI smoke 的 `.env` 洩漏 09-14 寫了 lesson（factory #81）、09-22 同一個坑同一個手動繞法；Leo「ok, 要修」→ 改成機制（factory #90）。回顧 program 時優先找「現在就能消除的重複錯誤」。
+
+## Leo 09-25 ~ 09-28 的決定與打回（VP-18402 / VP-18404 / VP-18034 / VP-18032 / VP-18372 / BIOINSIGHTS / VP-18386）
+- **VP-18402 Step 4 的五答（原話）**：「1. 不拆 2. 不送(只要remove 就移除, 後續收到訊息就看是不是當下還是live) 3. 不 backfill 4. ok, 5 不管FE」。追問「有確保如果customer本來就沒有integrate 會seamlessly不處理也不報錯嗎？」→ 要的是**結果層**的 no-op 測試（沒寫入、沒開交易），不是 `where` 子句的斷言。
+- **「LIS-transformer 有需要改這麼多嗎？不是很簡單的 url endpoint 讓 trans call 就好了嗎」**：為了跟鄰居檔案風格一致而做成 `@Injectable` service，是我自己製造的膨脹。一個對外呼叫 = 一個純函式。**「PR 838 改了約20000行，這是對的嗎？而且還有conflict」**：兩個問題一輪之隔，同一個失敗模式——**交出去之前沒有重看自己的產物**（diff、status、PR 頁）。
+- **「那就用 image 測試」**：用 pod image tag 確認版本，然後在 staging pod 裡對真 DB 跑編譯後的 service（`dist/...`），只跳過 HTTP/auth 層（那層另外用 route Mapped log + 401 證明）。這是 Leo 對「端點要 JWT 才能打」的標準答案。
+- **「沒關係不需要做，把已經做完的轉done(不要轉別人的ticket)」**：成功路徑沒在 prod 觸發、沒 kill switch、ConfigMap 真實來源沒找到——三件都明講後由 Leo 決定放掉。**別人的票不動**包含 FE 票、PH 票、無人指派的 QH；**指派給我但 QA 沒跑的 QH 也不動**（轉了等於謊報已測）。lesson PR 也不自行開，改成提給 Leo 決定。
+- **「他不做不負責也不講。我們自己做」（VP-18031 → 平台記錄進 emr-v2）+「記住他的性格」**：對 Rui 的相依，預設他碰到我們契約的票會**無交付、無通知地 Done**；他的票 Done 當天就去 code 驗交付，並預先規劃吸收。（09-25 已看到徵兆：due date 滑 6 次、零 comment、GitHub / Confluence 全無痕跡，當時還在問「他到底交了什麼」。）
+- **Leo 明講就覆寫「只起草不發」**：「paste it on the ticket」→ 全文 doc 貼成 VP-18032 comment 189458；「寫在這邊」→ Confluence 頁 2710732802 建在他的個人空間（parentId 用他的 API-doc folder id 2032697346，`getConfluencePageDescendants` 對 folder 404 但 `createConfluencePage` 接受）。
+- **對外溝通的口吻（Leo：「請你記住我的口吻」「請記得我的 tone」「這是最高指導原則」）**——三個場景同一套：
+  - **PM Slack / Jira**（VP-18372 原文）：「我查了一下，這批其實有重新push／8/31 amended 完 17:35 有重發 report_finished，這個我們本來就有聽，17:35:46 push 的／@Xiaoye Li 你能問問看他們有沒有收到這一份嗎？／如果有但是他們以為是重複的不理會那改的方向會不一樣」。規則：一則一重點、分行不分段；只發查到的事實 + 時間戳；**不 assume**、推論不發；把分岔講出來但不選邊；技術細節留著等追問。
+  - **PM 進度 comment**（VP-18034 原文）：「platformId, kid, RS256 public key PEM, charging account id 我還是沒有拿到／VP-18032 / VP-18034 這兩張 ticket 都已經完成了，只缺連到實際資料的部分。但現在還是完全測試不了的階段」。規則：一口氣 2–3 句、無標題無清單；**開頭是缺的輸入的裸清單**（欄位名）；自己的票說 DONE 並精確限定範圍；結尾是直白後果、不承諾下一步；tag 兩位 PM（Chris Wu、Xiaoye Li），**不點名欠東西的工程師與他們的票**；欄位名 / ticket id 英文 inline，其餘中文，無粗體無 code 格式。
+  - **vendor email**（devcom Olena、BioInsights Lisa Bond）：**只回答被問的那一題**——問 A 只答 A，B/C/D 再對再有用也不放第一則；連證據鏈都不附，只留結論 + 一個可執行建議（「Component 9 does not change. We only read component 1… suggest putting NPI in Component 1」）。**不幫別人背書**：別人的交付（Zhenhe 的 compendium）只當他們的 open item 提，不掛我們的時程；不把「請去催 JAG / devcom」變成客戶的功課。給 Leo 的內部回報不受此限，證據與 file:line 照給。
+- **VP-18386「先done」**：票已被 reporter 設 Inactive 時，補 Root Cause 欄位、不再 transition；是否改成 Done 由 Leo 說。
+
+## 「Done 了但世界還沒扣板機」變成常態 + 自傷三連 + 別人的 Done 不算數（cross-ticket review 2026-09-28；證據 LBS-1799 / VP-18194 / VP-18342 / VP-18344 / VP-18402 / VP-18404 / VP-18034 / VP-18400 / VP-18386）
+上一次 cross-review 是 09-18；09-22 ~ 09-28 共 9 張結案（含 VP-18032 併在 VP-18034 STM）。三個橫向模式：
+
+1. **「armed, not fired」是這一輪結案的預設形態，而且是 Leo 明示接受的。** VP-18402/18404 成功路徑 prod 從未觸發（三天零 provider 移除）；VP-18034/18032 Leo 自己寫「都已經完成了，只缺連到實際資料的部分」，第一次真實收款當晚就在 accounting 斷掉；VP-18194 canary 至今 0 筆 `REPORT_PDF`；VP-18386 提醒收件人修正沒人做、consult 已過；VP-18400 可觀測性缺口沒補、票 Inactive。09-03 那條「Done 有三種語意」講的是稽核時分清；這一輪的新事實是**語意 (b)「我們的層驗過、板機在世界手上」已是常態且被授權**。要改的不是結案時機，是**結案時必須留下一張「尚未觸發」清單**：每項寫「板機是什麼事件、誰持有、第一次觸發時哪個 observable 會變」（例：`provider_not_in_clinic` 第一筆、`platforms` prod 第一列、`REPORT_PDF` 第一列）。dream 夜夜對這張清單 re-probe，第一次觸發就在 digest 報告——這一夜起把它放進 dream log 的 Notes。
+2. **自傷三連的共同根：交出去之前沒有重看自己的產物。** VP-18404 三次（over-engineer、`git add -A` 掃進 generated 檔、PR base 選錯 → 20000 行）、VP-18342（測試釘 producer 形狀而非 consumer 讀法 → HL7 regression）、VP-18194（為過 linter 加 `LOCK=NONE` 卻沒重跑 linter → 兩條 ALTER 會在 prod 炸）。五個案例沒有一個需要我缺少的領域知識；全部在 `git diff --stat` / `git status` / PR 頁 / 再跑一次檢查器就會被自己抓到。Leo 的介入句型一致：「有需要改這麼多嗎」「這是對的嗎」——**同一個問題在一輪之內問兩次，就是模式不是巧合**。可機制化的兩條（generated 目錄 pre-commit 拒絕、開 PR 前 rev-list 雙向）已進 factory inbox；不可機制化的部分是紀律：**handoff 前把產物當別人的來讀一遍**。
+3. **別人的 Done 是 claim，不是交付，而且要在當天驗。** VP-18031（Rui）Done 零交付、Leo 裁「我們自己做」；VP-18089 Done 09-11 卻在 09-28 露出第三個缺口（accounting enum）；VP-18194 的 Cerbo 確認結構性驗不到；VP-18372 的 ticket 前提（「只推一次」）被 prod 數據推翻。這與 08-26 那條「Jira 狀態與部署狀態是兩條時間線」是同一族，新的具體化是：**任何我們的契約依賴的票轉 Done，當天去 code / DB / ConfigMap 找那個交付物**；找不到就當它沒發生、改計畫吸收，而不是等下一次被觸發時才發現。
+
+做對的部分也記一筆：VP-18402 的技術判斷（findMany、路由順序、三態 fail-open、獨立 terminal class）在 prod 全部成立；in-pod 基線 + 100% 寫入驗證 + 全表反向稽核 + blast-radius 事前分析被三天數據證實；LBS-1799 的「comment 到票裡再 Done」守住；VP-18372 在設計任何東西之前先把前提對 prod 量一次——那一次量測讓 PM 的整個需求改向。

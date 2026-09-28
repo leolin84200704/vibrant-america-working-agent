@@ -1,11 +1,12 @@
 # Journal Index (Episodic Memory — L3a)
 
 > Auto-maintained by the dream pipeline. One line per entry, newest first.
-> Last updated: 2026-09-24. Two 09-22 entries distilled by the 09-24 run (vp18194-per-report-pdf → emr-integration/patterns/leo-working-rules; vp18342-w2w-patient-not-found → patterns/emr-integration/leo-working-rules;
-> the latter had no frontmatter, added tonight). Archived 3 distilled >30d entries (2026-08-20, 2026-08-24, 2026-08-25) → archive/journal/.
+> Last updated: 2026-09-28. One 09-28 entry distilled by the 09-28 run (vp18402-04-deactivate-on-removal → patterns/emr-integration/leo-working-rules/repos + 3 factory inbox proposals).
+> Archived 3 distilled >30d entries (2026-08-26, 2026-08-27, 2026-08-28) → archive/journal/. Previous: 09-24 run distilled the two 09-22 entries.
 
 | Date | Slug | Related | Distilled |
 |------|------|---------|-----------|
+| 2026-09-28 | vp18402-04-deactivate-on-removal | VP-18402, VP-18404, PH-917, SIIR-293, VP-18403, QH-7271, QH-7275, LBS-1784, LBS-1785, LIS-7716, VP-17120, VP-18055, VP-18216 | true |
 | 2026-09-22 | vp18342-w2w-patient-not-found | VP-18342, VP-18343, VP-18344, VP-18355, VP-17283, VP-18064, VP-17437 | true |
 | 2026-09-22 | vp18194-per-report-pdf | VP-18194, PH-907, SIIR-291, QH-7066, VP-18138, VP-17344, VP-17493, VP-17715, LIS-7716 | true |
 | 2026-09-14 | trans-opt-phase1-2-execution | TRANS-OPTIMIZATION-20260911, VP-18276, VP-17348, VP-18152 | true |
@@ -19,9 +20,9 @@
 | 2026-09-02 | vp18048-internal-notes | VP-18048, VP-18049, VP-17359, PH-822, QH-6934 | true |
 | 2026-09-01 | vp18030-list-mode | VP-18030, VP-17975, PH-889, VP-17760, PH-855, VP-17517, QH-6924, HL7-NPI-PRACTICE-MATCH-20260820 | true |
 | 2026-08-31 | vp18050-batched-claim-status | VP-18050, VP-18051, VP-17868, PH-898, PH-899, SIIR-279, VP-16410 | true |
-| 2026-08-28 | vp17760-get-orders | VP-17760, VP-17517, VP-17531, VP-17497, VP-17499, PH-855, VP-17975, VP-17318 | true |
-| 2026-08-27 | vp17753-55-bug-to-task-and-handoff | VP-17753, VP-17754, VP-17755, VP-9299 | true |
-| 2026-08-26 | lis-7716-report-option | LIS-7716, VP-17408, VP-16980, VP-16734 | true |
+| ~~2026-08-28~~ | ~~vp17760-get-orders~~ | VP-17760, VP-17517, VP-17531, VP-17497, VP-17499, PH-855, VP-17975, VP-17318 | archived 2026-09-28 → `archive/journal/` |
+| ~~2026-08-27~~ | ~~vp17753-55-bug-to-task-and-handoff~~ | VP-17753, VP-17754, VP-17755, VP-9299 | archived 2026-09-28 → `archive/journal/` |
+| ~~2026-08-26~~ | ~~lis-7716-report-option~~ | LIS-7716, VP-17408, VP-16980, VP-16734 | archived 2026-09-28 → `archive/journal/` |
 | ~~2026-08-18~~ | ~~vp9299-status-list-v2~~ | VP-9299, VP-17753, VP-17754, VP-17755, VP-16859, PH-850 | archived 2026-09-18 → `archive/journal/` |
 | ~~2026-08-18~~ | ~~factory-update-throughput-cost~~ | framework-sync, ENFORCEMENT-LADDER.md, WORK-LOOP.md | archived 2026-09-18 → `archive/journal/` |
 | ~~2026-08-16~~ | ~~remaining-memory-stores-migration~~ | native-auto-memory-retirement, RETRIEVAL.md, ENGINEERING-LESSONS.md | archived 2026-09-18 → `archive/journal/` |

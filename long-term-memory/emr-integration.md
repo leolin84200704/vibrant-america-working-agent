@@ -3,7 +3,7 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 1.683
+score: 1.7201
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-09-24
@@ -129,6 +129,9 @@ links:
 - VP-18243
 - VP-18270
 - VP-18288
+- VP-18372
+- VP-18402
+- VP-18404
 - fhir-api
 tags:
 - emr
@@ -2045,3 +2048,42 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 - NPI 已修、customer 解到 JAG；掛在 `emr_code_not_found`：OBR-4 `VAREQUISTION279` / `VATEST2270` 存在但 `isOrderable=false / priceVa=-1`，且名稱不符（279 實為 Gut Zoomer 4.0、2270 是 Copper Serum）→ devcom 拿到的是過期目錄。正確 orderable：`VAREQUISTION463`（Gut Zoomer 5.0）/ `VATEST70`（Vitamin D, 25-OH）。**不要為了讓測試過而翻 279/2270 的 isOrderable。**
 - 會腐蝕資料（vendor 必修）：email 放在 **PID-19** 會被寫進 **SSN**（我們讀 PID-20.1 當 email、PID-19 當 SSN，`patient-detail-parser.service.ts:142/151`）；ORC-12 / OBR-16 XCN 多一個空 component（`NPI^^Balandan^Paola` → 姓空、名=Balandan，這就是 7126 `customer_not_found=Balandan` 的來源）；OBR-7 比 MSH-7 早 7 天會**原字**成為 collection time（`parser.service.ts:259` 無條件覆寫）。
 - 送了但沒人讀：fasting 在 OBR-26（我們讀 OBR-19，且 `fastStatus` 等只進 DTO 無下游）；PID-3 UUID 被忽略（external id 讀 PID-2，身分是 customer+first+last+gender+dob）；DG1 跨 OBR 攤平；MSH-5/6 `IN OFFICE`/`LC` 不讀。IN1-2 `C` → `CUSTOMER_PAY`（practice 付費）——JAG 的付款方式仍未確認，是下一個 gate。重送要**新檔名**（file name 去重）。回信草稿 `drafts/BIOINSIGHTS-devcom-reply-20260923-draft.md`，未發。
+
+## 【蒸餾 2026-09-28】provider 移出 clinic 即停用 integration、平台付款記錄落地 emr-v2、amendment 重送的真相、consult 收件人與資格窗（VP-18402 / VP-18404 / VP-18032 / VP-18034 / VP-18372 / VP-18386 / VP-18400 / VP-18406）
+
+### provider 移出 clinic → 停用其 EMR integration（VP-18402 + VP-18404，PH-917 / SIIR-293，prod 09-25 起）
+- **根因一句話**：`resolveOrderingIntegration` 只看 `status='LIVE' AND ordering_enabled=true`（typeRank → `updated_at` DESC），**完全不看 provider↔clinic 關係**，所以移出 clinic 的 provider 那列 LIVE 照樣接單。result push 同樣 9 個點過濾 `status='LIVE'`（`result-generation.service.ts` ×7、`sftp.service.ts:126`、`result-attachment.service.ts:251`）→ 停用會連帶停掉在途報告。Leo 裁決：**「只要 remove 就移除，後續收到訊息就看是不是當下還是 live」**，不例外、不 backfill、不拆票、FE（VP-18403）不管。
+- **Half 1 新端點** `PATCH /integration-management/auto-integrate/requests/deactivate-clinic-member`（body customerId / clinicId / reason；JWT pass-through，`last_modified_by` 是真人）：`findMany` 該 (customer, clinic) 的**所有** LIVE 列（LBS-1785 的 7 秒雙胞胎就是理由；staging 實測一堆 pair 各 2 列，`findFirst` 只停一半），每列 status→REJECTED + `ehr_integration_status_history` + `ehr_integration_notes` **同一個 `$transaction`**；0 列 = 200 no-op、不開交易（Leo 問的「本來沒 integrate 會不會報錯」）。順手讓舊的 `:id/disconnect` 也寫 history 列（以前沒寫，跟 LBS-1784/1785 手動程序不一致）。re-add 不會靜默復活：`create()` 永遠 INSERT 新列。
+- **Half 2 order 熱路徑 gate**：`parser.service.ts` 在 `customerInfo` 解出後（與 VP-17544 demographics gate 同位置）呼叫 `checkProviderClinicMembership` → 三態 `in_clinic / not_in_clinic / check_unavailable`；gRPC 失敗、空名單、`customerId <= 0`（clinic-level `-1` 列）都是 `check_unavailable` = **fail-open**（fail-closed 會因一次 deadline 停掉全實驗室收單）。RPC 用 `ListClinicCustomerDetailsByClinicID`（VP-18216 thick 版；`GetCustomerClinicNames` 只回名字，名字不是身分）；emr-v2 因此第一次接 clinic client（第 6 個 v2 client，`GRPC_V2_CLINIC_HOST/PORT`，同一台 coresamples-v2）。不加本地 cache——core 自己在移除時清 clinic cache。
+- **新 terminal failure class `provider_not_in_clinic`**（值 `"<customer_id>/<clinic_id>"`，無 PHI）：不能沿用 `customer_not_found`，它 VP-17120 後是 retryable，會燒完 retry 進 quarantine + Slack alert，而且長得跟「這 provider 缺 integration」一模一樣，等於引導值班的人把 integration 加回去、重開 PH-917 要關的洞。
+- **prod 基線（09-25，in-pod）**：1013 列 LIVE（排除 37 列 clinic-level `-1`）→ 938 仍在 clinic、**73 已不在**（全 FULL、全 ordering_enabled=1）、2 未知；staging 更糟 8/41，其中三列正是 LBS-1784 在 prod 手動 REJECTED 卻沒動 staging 的那三個 provider。**73 列只落在 4 條 `sftp_ordering_path`，90 天內只有 `/revolution-health/orders/` 有進件，其上唯一 stale 列 41795@7094 近 90 天零 order**——所以 gate 上線不會擋到任何真實流量（事後三天 0 次拒絕證實）。**沒有 kill switch**，pod 一 roll 就生效，零影響是部署後才量出來的，是運氣不是設計。
+- **trans 側（VP-18404）**：`removeCustomerFromClinic` 不是一個函式，是兩個呼叫點——`utility.service.deleteCustomerProfile`（`@Delete /removeCustomerFromClinic`，真正的 admin 移除）與 `setting.practiceInfo.service.removeInvitation`（僅 `Account Pending`）；transv2 不呼叫（只有 audit log 的字串 `removeCustomerfromClinic`，小寫 f）。這是 **trans → emr-v2 的第一條相依**。core `RemoveCustomerFromClinic`（Go :1532）**customer 不在該 clinic 也回 200**（刻意對齊 v1）→ 「core 回 200」不能當「真的移除了」的證據，no-op removal 也會打 deactivate（emr-v2 回 noop，無害）。gate 在 core 200 之後；awaited + 自己的 try/catch（不 fire-and-forget）。需要 `EMR_V2_BASE_URL`（兩環境 09-26 merge-patch，見 patterns）。
+- **狀態（09-28）**：emr-v2 #435 → staging 644c344、#436 → main b9976cb；trans #838 → main bc1b3ea、#839 → stage_test 9b0a49c；全部 Jenkins/Actions success、pod 影像對上。**prod 效應：`provider_not_in_clinic` 0 次、REJECTED 0 列、成功路徑從未觸發（三天內沒有任何 provider 移除）**。Leo 結案：「沒關係不需要做，把已經做完的轉 done（不要轉別人的 ticket）」→ VP-18402/18404 Done；VP-18403（FE）/ PH-917 / QH-7271 未動；QH-7275 雖指派給我但 QA 沒跑，留 To Do。
+- staging 留下的資料變更（可回復）：`cmj99ovhj…`、`cmjxaq5ik…`（9080@13505）、`cmj99ovl1…`（9081@13505）LIVE→REJECTED，都是真的 stale；另五列 stale 刻意留著當 gate 的活體。
+
+### 平台付款（chargeIndicator T）的平台記錄落地 emr-v2（VP-18032 / VP-18034，Done 09-28）
+- **VP-18031（Rui）什麼都沒交付**：AI 回答「OAuth 不用改」（對）→ 他 09-24 直接 Done、零 comment、沒人回答「記錄住哪」。Leo 裁決「他不做不負責也不講。我們自己做」→ 平台記錄進 emr-v2。
+- **Schema（lis_emr，prod 與 dev 09-28 以 `prisma db execute` 手動套用並用 information_schema 驗證；prod 非 Prisma-managed）**：`platforms`（id varchar64 = platformId = iss = sub、name、active、`charging_account_id` INT NULL、timestamps）+ `platform_public_keys`（platform_id、kid、public_key_pem TEXT、created_at、revoked_at；UNIQUE(platform_id,kid)；FK CASCADE）。migration `20260928_add_platform_record_vp18032`。`PrismaPlatformKeyDirectory` 實作 PR-A 的 `PlatformKeyDirectory` seam；`EnvPlatformKeyDirectory` + `PLATFORM_PUBLIC_KEYS` 已刪（staging ConfigMap 09-28 拿掉；prod 從未有）。register / rotate / revoke 都是 SQL（`docs/platform-record.md`；Confluence **2710732802**；VP-18032 comment 189458）。
+- verifier 新增 `directory_unavailable` → 503 `PAYMENT_AUTHORIZATION_UNAVAILABLE`（DB 掛掉以前是 unhandled 500）。其他 reason：`unknown_platform`(400) / `unknown_kid`(401) / `inactive_platform`(400) / `unchargeable_platform`。**`charging_account_id` NULL 時：整數 platformId 回退用自己（PR-B `verify()` :182），非整數才 `unchargeable_platform`**（doc 第一版寫錯，#439 修）。革除 kid 是即時的（SQL 後下一個 request 就 401，不用重啟）。
+- **platformId = charging account id，一個號碼兩邊用**。staging 矩陣 19/19（DB-backed 9001，兩個 kid，含 revoke / inactive / NULL fallback）；prod 探測 `unknown_platform`（DB 讀成功、0 列）→ **T 在 prod 仍等同關閉**，直到有真平台 key 進 prod。
+- **Get Healthy 是第一個真平台**（Juergen 給 2048-bit RSA public key，PEM 裡是字面 `\n` 要 unescape，沒給 kid）：**staging** 註冊 platform 1001 / kid `gethealthy-2026-09`（verifier 允許只有一把 key 時 JWT 不帶 kid）；prod 未動，等他們確認 prod key + Fangyuan 開 prod 平台帳。只有他們有 private key → 收款腿只能由他們的請求驗。
+- **第一次 staging 真實 T 收款（09-28 22:18Z，platform 9001）的斷點在 accounting**：emr-v2 驗過 → charging 取平台錢包 → **Stax sandbox 真的扣了 $5.50** → charging POST accounting `/payment` `account_type:"platform"` → accounting 500 ×3（`ent: validator failed for field "Payment.account_type"`）→ order-management `/payment/validate` 400 → place-order 400 → emr-v2 500、`order_intake` id 880 `failed`。**VP-18089 只把 `platform` enum 加進 charging 的 customer_info / transaction，沒加進 accounting service（`bkkeeping` ns，Go/ent，repo 我們看不到）——第三個 VP-18089 缺口**，Fangyuan / accounting 的活。副作用：一筆無帳、無 order 的孤兒 sandbox 扣款（不是我們 void）。emr-v2 端行為正確：拒單、不留半狀態。
+- Leo 給 PM 的 comment（原文）定義了這兩張票的 Done 語意：「platformId, kid, RS256 public key PEM, charging account id 我還是沒有拿到／VP-18032 / VP-18034 這兩張 ticket 都已經完成了，只缺連到實際資料的部分。但現在還是完全測試不了的階段」。
+
+### EMR push「只推一次」的前提是假的；真缺口是 HL7 從不標更正（VP-18372，Dev Blocked）
+- 8/31 DHT amendment 這一類（result 重新 approve）**會重發 `report_finished`**（帶 customer/clinic），emr-v2 既有 whole-order path 已經吃到：29 個 barcode 都在 amendment 後重推到 JAG 的**兩條** LIVE integration（BIOINSIGHTS 17:35:46 自動 cloud path、POWER2PRACTICE 09-01 00:03 批次形狀 = 手動 `GenerateBatchResultsHl7`），全 TRANSMITTED，內容帶修正值（`products_finished` 早 7 分鐘落地，generation 走 gRPC 現讀）。→ scope item 2（一次性重推 29 筆）已經做過兩次。
+- **真正的缺口**：`sample-test-result.service.ts:429` `status:'F'` 寫死；`hl7-encoder.service.ts` OBR-25（:372、PDF OBR :666）與 OBX-11（:599/:442）全部 `F`；ORC-5 的 `'C'` 只是 panel 序號 artifact；MSH-10 每次新 timestamp（不是重複 control ID）。重推的修正報告對接收端**與全新 final 完全不可分**；接收端若用 (filler order, result status) 去重或拒絕覆寫 Final，就會靜默留舊值——比「沒重送」更符合 JAG 的抱怨。HL7 v2 慣例是 OBR-25 / OBX-11 = `C`。
+- 事件形狀：`amended_sample_finished`（lis-result）存在但 customer null / clinic 0，比 `report_finished` 早 ~5 分鐘，對這一類是**多餘的**（訂了只會多推一次）；`personalized_report_cache_cleared`（lis-report）sample_id 0、只有 accession + 報告長名，是**只改報告內容那一類唯一的訊號**（VP-18194 量過那類不發 `report_finished`），解析 seam 已有（`getSampleIdByBarcode` + `resolveSampleClient`）。BullMQ `add()` 有 `delay` → 3-5 s 等待是一個選項。whole-order path **沒有 dedup shield**（每個事件都 enqueue），只有 VP-17344 partial path 有。
+- 跨票張力：Leo 的「以前的不管了，只做未來的」vs scope item 2 是 backfill——實務上 moot，但要 Leo 一句話。
+
+### Clinical Consult 確認信寄錯人：收件人來自**登入的那個帳號**（VP-18386，Inactive）
+- FE `ScheduleAMeetingDialog.vue` 送 `customer_id = $store.state.userInfo.customer_id`（登入者），transv2 `createEventByPatient` 的 seeker calendar 就是那個 customer 的 patient-role 日曆；`resolveConsultRecipients` = `event.contact_email`（FE 從不送）?? `calendar_owner_email`。表單上打的 email 只序列化進 `notes` 的 `[Email: ...]`（同 VP-17759）。Dr. Miret 的登入替 Dr. Walden 預約 → 寄到 drmiret@。**這是同形狀的第三張**（VP-17759 / VP-17765 / VP-18386）；VP-17766 BE 半邊有 `contact_email`、FE 從未接；PH-908 是 PM 側追蹤。
+- Postmark 證據鏈：`GET /messages/outbound/{id}/details` + MessageEvents（Delivered / Opened / LinkClicked）；prod token 在 `noti/lis-notification-config` ConfigMap；lisportalprod2 的 `lis_notification_center.submitedinfo` **不是** cloud noti DB，別拿它當 calendar mail 的證據。
+- 該票由 reporter 27 分鐘內設 Inactive；我補 Root Cause 欄位。**未結：event 13863 的提醒收件人修正（1 列 `v2_event.contact_email`）沒人做，consult 已於 09-28 21:00Z 發生。**
+
+### Schedule Consult 六個月資格窗要搬到後端（VP-18406，Dev To Do，Step 4 待 Leo）
+- 與 LBS-1799 同一個 SIIR-312 intake。FE 有**三個**入口不是兩個：`SearchOrderList.vue:81`（共用 helper）、`PatientTest.vue` 與 `OrderHistoryTableRow.vue` 都經 `PatientTestAction.vue:152`——**它不用共用 helper，inline 重寫了一次規則**。資料來源是 `/trans/findPatient`（v1 `trans-patient-search.controller.ts:210`，與 `/findPatientWithCharge` 共用 `handleFindPatient`）。三個日期都已在 `InitialPatientPageHome` payload（`samples[]`，見 patterns）→ **零額外 upstream call**，純計算。
+- 目標欄位：`consultationEligible` + `consultationIneligibleReason`，以「報告釋出 / 採檢（或收件）/ service date」三者**最晚者**起算，多樣本取最近採檢，order 層一次算、蓋每列。
+
+### integration-management 對 customer 20048 的一次 500（VP-18400，Inactive，不可重現）
+- MEDHERO clinic 37571，兩列 LIVE ElationEMR FULL（09-25 18:18Z 剛 approve，同一人同秒也 approve 了 24367 的 RESULT_ONLY），enum / NULL 全部在 schema 範圍內，notes 0 列 → 資料排除。25/25 ×200，7 種 token 形狀全 200。ETag 證明真的有 non-HttpException 逃逸，但服務留不下任何痕跡（見 patterns「emr-v2 的 500 目前留不下任何痕跡」）。

@@ -110,3 +110,13 @@ summary: Ticket keyword to repo/module routing table
 - **old-report 路由退役 / VP-18320 / VP-18346 / 公告 / 09-30 移除 / `com.lis.proxy-old-report-removal`** → STM `TRANS-OPTIMIZATION-20260911`、`DailyJob/proxy_old_report_removal/README.md`、runbook `vp18324-proxy-pdf-route-cutover.md`。
 - **Clinical Consult 六個月 / six-month window / manual consult booking / LBS-1799 / SIIR-312** → `emr-integration.md`「Clinical Consult 六個月窗是 FE-only」+ STM `LBS-1799`（LBS 票走 Atlassian MCP）。
 - **coresamples-v2 dead IP / 10.224.0.199 / internal LB 10.224.1.113 / `v2Endpoint`** → STM `INCIDENT-20260908-grpc-dead-node-ip`（PR #433 已進 staging，#434 待 Leo）。
+
+## 2026-09-28 新增路由（dream；VP-18402 / VP-18404 / VP-18032 / VP-18034 / VP-18372 / VP-18386 / VP-18400 / VP-18406）
+- **"provider 移出 clinic 後還能下單 / integration 沒停 / deactivate-clinic-member / provider_not_in_clinic / PH-917 / SIIR-293 / removeCustomerFromClinic"** → `emr-integration.md`「provider 移出 clinic → 停用其 EMR integration」+ STM `VP-18402`（emr-v2 兩半）/ `VP-18404`（trans 呼叫端、`EMR_V2_BASE_URL`）。成功路徑 prod 尚未觸發；QA twin QH-7271 / QH-7275 To Do；FE VP-18403（Siyun）。
+- **"chargeIndicator T / platform pays / platforms 表 / platform_public_keys / kid / RS256 / Get Healthy / platform 1001 / unknown_platform / PLATFORM_PUBLIC_KEYS"** → `emr-integration.md`「平台付款的平台記錄落地 emr-v2」+ STM `VP-18034`（VP-18032 併在同一檔）；操作 SQL 在 emr-v2 `docs/platform-record.md` / Confluence 2710732802。收款腿卡 accounting `account_type` enum（VP-18089 第三缺口，Fangyuan）。
+- **"EMR push 沒重推 / amended 報告 EMR 還是舊的 / repush after amendment / OBR-25 / 修正報告標記 / JAG 30248"** → STM `VP-18372`（Dev Blocked；前提為假、真缺口是 HL7 從不標 C）+ `emr-integration.md`「EMR push『只推一次』的前提是假的」。
+- **"consult 確認信寄錯人 / 提醒寄給別的醫生 / contact_email / calendar_owner_email / carolinafnc"** → `emr-integration.md`「Clinical Consult 確認信寄錯人」+ STM `VP-18386`（同形狀第三張：VP-17759 / VP-17765；PH-908）。
+- **"integration-management 500 / auto-integrate/requests 500 / emr-v2 沒 log 沒 Sentry / request id"** → STM `VP-18400` + `patterns.md`「emr-v2 的 500 目前留不下任何痕跡」（修法：global exception filter + captureException + x-request-id，未做）。
+- **"Schedule Consult 六個月 / consultationEligible / 資格搬後端 / VP-18406 / VP-18407 / PH-925"** → STM `VP-18406`（Step 4 待 Leo；零額外 upstream call）+ `patterns.md`「trans v1 InitialPatientPageHome 的資料形狀」；FE 三個入口 + inline 重寫見 `emr-integration.md`。
+- **"LIS-transformer PR 幾萬行 / conflict / stage_test 跟 main 分岔 / prisma2/generated 進 PR"** → `patterns.md`「LIS-transformer 的 PR 慣例：一個改動、兩條分支、兩個 PR」+「版控中的 generated 檔」。
+- **"trans 要打 emr-v2 / EMR_V2_BASE_URL / lis-trans-config 的來源"** → `patterns.md`「`lis-trans-k8env.yml` 不是 apply 來源」+ `repos.md` 2026-09-28。

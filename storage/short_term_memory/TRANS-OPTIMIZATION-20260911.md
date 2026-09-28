@@ -77,13 +77,15 @@ links:
 - VP-18303
 - VP-18342
 - VP-18344
+- VP-18400
+- VP-18406
 - VP-9299
 - business-model
 - business-model-deep
 - failures
 - repo-catalog
 - repos
-score: 0.81
+score: 0.7286
 ---
 
 # Summary

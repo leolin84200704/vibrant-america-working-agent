@@ -2,7 +2,8 @@
 date: 2026-09-28
 slug: vp18402-04-deactivate-on-removal
 related: [VP-18402, VP-18404, PH-917, SIIR-293, VP-18403, QH-7271, QH-7275, LBS-1784, LBS-1785, LIS-7716, VP-17120, VP-18055, VP-18216]
-distilled: false
+distilled: true
+distilled_on: 2026-09-28
 ---
 
 # VP-18402 / VP-18404 — 移除 provider 時停用其 EMR integration

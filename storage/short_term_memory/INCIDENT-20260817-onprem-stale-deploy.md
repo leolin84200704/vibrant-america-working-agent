@@ -114,6 +114,9 @@ links:
 - VP-18243
 - VP-18270
 - VP-18288
+- VP-18372
+- VP-18402
+- VP-18404
 - emr-integration
 - fhir-api
 tags:
@@ -130,7 +133,7 @@ summary: 'Leo''s manual result publish for samples 2602947/2602948 (cust 4953 MD
   13.15 days = started 2026-08-04 18:28Z, so its baked Prisma client predates the
   2026-08-14 enum. Every main merge since 2026-08-04 11:14 PDT is absent from on-prem,
   which still OWNS 536 of 1036 LIVE result-enabled integrations.'
-score: 0.3998
+score: 0.3588
 ---
 
 # INCIDENT-20260817 — emr-v2 on-prem prod deploy drift (13 days)

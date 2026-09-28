@@ -3,7 +3,7 @@ id: repos
 type: ltm
 category: technical
 status: active
-score: 1.214
+score: 1.2363
 base_weight: 0.9
 created: 2026-04-22
 updated: 2026-09-24
@@ -95,6 +95,8 @@ links:
 - VP-18303
 - VP-18342
 - VP-18344
+- VP-18400
+- VP-18406
 - VP-9299
 - business-model
 - business-model-deep
@@ -315,3 +317,8 @@ sudo prompt 用 `echo <pw> | sudo -S <cmd>`。Heredoc 內含 `[^...]` 之類 exp
 - **lis-backend-emr-v2 Jenkins multibranch 已改 "All branches"**（VP-18355，Leo 09-23 在 UI 改）：release PR 開著時 staging 仍會 build（09-24 #433/#434 首次實證）。之前的 workaround（關 release PR 讓 Jenkins 重掃）不再需要。
 - **LIS-setting-consumer**：`main` push 同時觸發 `setting-consumer.yml`（prod）與 `setting-consumer-staging.yml`（staging）；`stage_test` 只觸發 staging。四個 deployment = prod/staging × cloud/`-local`，各吃自己的 ConfigMap（`lis-setting-consumer-config` / `-st-config` / `-local-config` / `-local-st-config`，ns `setting`，`envFrom` → 改 CM 必 restart）。gRPC 直連受 `SETTING_GRPC_MODE` + `SHIPPING_RPC` + `TEST_RESULT_RPC` 三 key **成組**控制（`grpc.options.ts` 預設值寫死 prod 位址）；09-24 現況 staging `-st` = grpc、其餘 = proxy。
 - **emr-v2 gRPC 位址來源**：AKS `lis-emr-v2-config-prod`（ns emr-v2）是 source of truth，`Jenkinsfile:147,150` export 後 apply 到 on-prem；repo yaml 不被套用。v2 預設在 PR #433 改為 internal LB `10.224.1.113:80`（`v2Endpoint()` 配對 host/port）；v1 cloud 預設 `10.224.0.10`（lis-core-grpc :30276 / lis-test-connect :30600 **沒有** internal LB）。
+
+## 【更新 2026-09-28】trans ↔ emr-v2 第一條相依、雙軌 PR、generated 檔、平台記錄表（VP-18402 / VP-18404 / VP-18032）
+- **LIS-transformer（v1）**：`main` / `stage_test` 雙向分岔（09-25：165 / 105），PR 慣例 = 同一改動兩條分支兩個 PR（`{name}` → main、`{name}-stage` → stage_test）；`prisma2/generated/client2/` **在版控中**且 `npm install` 會重生 → 絕不 `git add -A`；ConfigMap `lis-trans-config`（162 key）/ `-st`（165）的真正 apply 來源不在 repo（`lis-trans-k8env.yml` 只有 5 key），加 key 用 merge patch + rollout restart；deploy Actions `lis-transformer-deploy-prod`（main）/ `-staging`（stage_test）成功即上線。本機沒裝 `@azure/event-hubs` 時 `src/utility` 7 個 suite 不會跑。**自 VP-18404 起 trans 會呼叫 emr-v2**（`src/trans/emr-integration-deactivate.ts`，`EMR_V2_BASE_URL` 含 `/api/v1`）。
+- **lis-backend-emr-v2**：gRPC v2 client 現在 **6 個**（customer / patient / sample / sales / setting / **clinic**，`GRPC_V2_CLINIC_HOST/PORT`）；新表 `platforms` + `platform_public_keys`（prod 09-28 手動套用，0 列）；`PLATFORM_PUBLIC_KEYS` env 已退役；新端點 `PATCH .../deactivate-clinic-member`（宣告在 `:id` 之前）；hl7 新 terminal failure class `provider_not_in_clinic`。Jenkins 狀態看 commit status `continuous-integration/jenkins/branch`；prod pod 09-28 在 8c99cde（#438），staging 9fec7d0（#439）。
+- **可觀測性**：emr-v2 無 exception filter log、無 SentryGlobalFilter、無 request id（VP-18400）；trans pod 啟動 30 s 後固定一則 ioredis ETIMEDOUT（疑似既有）。

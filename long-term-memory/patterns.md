@@ -2797,3 +2797,55 @@ Atlassian MCP 斷線時的 fallback：`~/src/credential/atlassian-api-token.md`�
 ### pre-push DI smoke 的環境洩漏已修（factory PR #90，09-14 與 09-22 各踩一次）
 - smoke 文件寫「子行程拿到空環境（`env -i`）」，實測 LIS-transformer 的受測 code 拿到 **126 個變數**：app 的 `dotenv.config()` 讀 `<cwd>/.env`（123 key 含 `DATABASE_URL`、真實 JWT 金鑰），加上 Prisma client 依 schema 旁 `.env` 的**絕對路徑**載入——在沒有 `.env` 的 worktree 裡實證它去讀了主 clone 的 `.env`。判決跟目錄走不跟 commit 走，而**通過的那一邊才是危險的那一邊**（每次 push 帶正式憑證開機）。
 - 修法：preload 在 `DI_SMOKE_CONTAIN=1`（預設）拒絕 gate 自有檔案以外所有 `.env*` 讀取；`nest-di-smoke-init.js` 依 key 名 + 值形狀產生 `~/.config/nest-di-smoke/<repo>.env`（host 一律 127.0.0.1、不抄值）。**佈建即武裝**：未佈建的 repo 仍 uncontained 重跑並放行；已佈建 4 個（transformer / transformer-v2 / emr-v2 / setting-consumer）。fail-open 取捨（其餘 10 個 gated repo）待 Leo 定。重現時 symlink `dist` 回主 clone 會讓 `__dirname` 再把主 clone 的 `.env` 吃進來假性通過——要在 worktree 內真 build。
+
+## 【蒸餾 2026-09-28】LIS-transformer 雙軌 PR 與 generated 檔、Nest per-module DI、路由順序與影像判讀、ConfigMap 真相來源、in-pod 基線與 harness、emr-v2 可觀測性缺口（VP-18402 / VP-18404 / VP-18032 / VP-18034 / VP-18400 / VP-18406）
+
+### LIS-transformer 的 PR 慣例：一個改動、兩條分支、兩個 PR（VP-18404 #837→#838/#839）
+- `main` 與 `stage_test` 是**雙向分岔**的長壽分支（09-25 量：main 領先 165、stage_test 領先 105）。從 main 切的分支拿去 target `stage_test`，GitHub 會把兩條線的全部差異渲染出來（#838 一度 137 檔 / +18580 / CONFLICTING，實際改動 5 檔 / +372）。
+- 既有慣例（#833/#834、#835/#836）：`{name}` 從 main 切 → PR to `main`；`{name}-stage` 從 stage_test 切、cherry-pick 同一個 commit → PR to `stage_test`；兩個 PR 互相連結。cherry-pick 跨 270 commits 要驗：兩邊方法簽名一致、插入點相同、touched 檔 tsc 乾淨、在 `origin/stage_test` 的 detached worktree 上跑同一組 suite 比對失敗集合。
+- **開 PR 前 `git rev-list --count base..head` 兩個方向都看**；更省事的是直接從要 target 的分支切。修法：`gh pr edit N --base main`（head 不變，「一個 PR 一個 head」仍成立）。
+- emr-v2 不是雙軌：`main` 只領先 `staging` 一個 merge commit，走 relay（feature → staging → "Staging" PR → main），main 切的分支 target staging 渲染正確。
+
+### LIS-transformer 有版控中的 generated 檔：`prisma2/generated/client2/`
+- 任何 `npm install`（含 `--no-save` 裝單一套件）都會跑 prisma postinstall 重新產生那棵樹（12 檔、含三個 100MB+ query-engine binary）。接著 `git add -A` 就把它們推進 PR（#837 就是這樣）。pre-push hook 只查 build 與 DI，**不看 diff 內容**，沒有任何 gate 會擋。
+- 硬規則：**這個 repo 絕不 `git add -A`**，按檔名 stage，且任何 install/build 之後、commit 之前把 `git status` 整份讀完。emr-v2 沒這問題（client 產到 node_modules）。值得評估把 `prisma2/generated/` 改 gitignore。
+
+### worktree 借主 checkout 的 node_modules：codegen 產物會漂
+- `@prisma/client` 是從**該 branch 的 schema 產生**的；主 checkout 停在舊 branch 時，worktree symlink 它的 node_modules 會出現 5 個像是自己造成的幻影 type error。解：給 worktree 自己的 `.prisma` / `@prisma` 實體目錄，對 worktree 的 schema 跑 `prisma generate`。共用 node_modules 在「有東西是從 per-branch 檔案產生」的那一刻就會出事。
+
+### before/after 回歸比對對「兩邊都跑不起來的 suite」沒有證據力（VP-18404）
+- `@azure/event-hubs` 在 package.json 但本機沒裝 → `src/utility` 下 7 個 suite 根本沒執行。「前後失敗集合一樣」為真但無意義；裝好之後其中一個（`utility.service.spec.ts` 列舉 UtilityService 的 deps）是我弄壞的。要數**實際執行的 suite 數**（等於或更多），不只看狀態有沒有變。裝法：lockfile 版本 + `--no-save`，manifest 不動。
+
+### NestJS 兩個結構性事實（VP-18402 / VP-18404）
+- **provider 是 per-module 的**：給 `UtilityService` 加一個 constructor dep，每個在自己 `providers` 陣列列了它的 module（schedule / trans / setting / utility）都會在 **boot** 時炸，tsc 與單元測試全綠。pre-push 的 DI smoke 抓得到；`emr-integration-deactivate.di.spec.ts` 那種讀 MODULE_METADATA / PARAMTYPES 的 spec 也抓得到（做過 mutation check）。更好的解：**一個對外呼叫不需要 `@Injectable`**——module-level 純函式 8 檔 +105 → 2 檔 +21，整類 DI bug 從結構上消失。
+- **路由照宣告順序比對**：`@Patch("deactivate-clinic-member")` 必須宣告在 `@Patch(":id")` 之前，否則字面路徑被 `:id` 吃掉。prod pod 啟動 log 的 `Mapped {...}` 順序可證。**推論：HTTP 狀態碼分不出新舊版本**——舊 image 打新路徑一樣回 401（`:id` 接走 + guard 先跑），部署狀態要讀 pod image tag，不能讀探測回應碼。
+- 「保證不 throw」的契約寧可**結構上為真**（整個 body 一個 try/catch，測試用 axios 同步 throw 釘住）而不是在每個呼叫點防禦。第一版把 await 放在外層 try 裡，deactivate 一 reject 就讓 core 已經套用的 removal 回 500——`mockRejectedValue` 的測試先寫先抓到。
+
+### emr-v2 的 global prefix 與叢集內位址
+- emr-v2 有 global prefix **`api/v1`**；`EMR_V2_BASE_URL` 不帶它就全部 404。叢集內 HTTP（`ENABLE_HTTPS` 未設）：prod `http://lis-emr-v2-service.emr-v2.svc.cluster.local:3000/api/v1`、staging `http://lis-emr-v2-service-staging.emr-v2.svc.cluster.local:3000/api/v1`。從 trans pod 內驗：帶 prefix 回 401（可達、guard 活著），不帶回 404。
+
+### `lis-trans-k8env.yml` 不是 apply 來源；merge-patch 是正確工具（VP-18404）
+- repo 檔是一個名叫 `lis-trans-config` 的 ConfigMap，但只有 **5 個 key**；live 有 162（prod）/ 165（staging），`last-applied-configuration` 有 133 / 140 且含 repo 檔沒有的 key（`AUDIT_RPC`…）→ 真正的 apply 來源不在這個 repo，**至今沒找到**。`kubectl apply -f` 那個檔會是破壞性的。
+- 加一個 key 用 `kubectl patch cm ... --type merge`；3-way merge 只刪 last-applied 有的 key，所以 patch 進去的 key 撐得過未來的 apply（09-28 實證兩個環境都還在）。`envFrom.configMapRef` 不會熱載，**必須 rollout restart**。回滾是 `--type json` remove 那個 path 再 restart。
+- trans pod 每次重啟後約 30 s 記一則 `[ioredis] Unhandled error event: connect ETIMEDOUT`（`REDIS_ADDR` 是 on-prem 192.168.10.212），之後 15 分鐘無事、restartCount 0，staging/prod 一致——先前的 pod log 已 GC，只能說「疑似既有」。
+
+### 本機到 DB / vibrant MCP 全掛時的 prod 基線：進 emr-v2 pod 跑 node（VP-18402）
+- emr-v2 pod 同時有 prisma client 與 6 個 gRPC v2 client；`kubectl exec` 進去跑 node 量 1013 列 LIVE / 73 列 stale / 592 次 clinic 查詢 0 錯誤，是本機 ETIMEDOUT 兩天後唯一拿到基線的方法。trans pod 沒有 mysql2，只有 `/prisma` `/prisma2` 的 client。
+- **in-pod harness 配方（VP-18032）**：`kubectl cp` 腳本 + `NODE_PATH=/app/node_modules node /tmp/x.js`；用 pod 自己的 `JWT_SECRET` 鑄 provider token、pod 的 jsonwebtoken 簽 assertion、pod 的 `DATABASE_URL` 走 mysql2 翻 DB 狀態。emr-v2 的 API 錯誤是包在 `{error:{code,message,details}}` 裡的——第一輪 14 個 case「失敗」全是 parser 沒剝這層。
+
+### zsh 與診斷指令的兩個自傷
+- `origin/$b:src/...` 裡 `:s` 被 zsh 當 history substitute modifier，路徑被悄悄改寫 → 兩次誤報「code MISSING」。永遠 `origin/${b}:src/...`。
+- 診斷指令不要 `2>/dev/null`：`git fetch` 吞掉 stderr 後拿舊 ref 去比對，自己製造假警報。
+
+### emr-v2 的 500 目前留不下任何痕跡（VP-18400）
+- Nest `BaseExceptionFilter.handleUnknownError` 的 body `{"statusCode":500,"message":"Internal server error"}`（小寫 server error）對應 weak ETag `W/"34-rlKccw1E+/fV8niQk4oFitDfPro"`——**重算 Express ETag 可以從 header 截圖反推 body**，並證明是 non-HttpException 逃逸（`InternalServerErrorException` 的 "Internal Server Error" 是不同 ETag）。CORS 三件組（反射 origin + credentials + `Expose-Headers: Content-Disposition` + `Vary: Origin`）是 emr-v2 `enableCors()` 的指紋，可證 body 來自 emr-v2 而非 Cloudflare / lisapi edge。
+- 但 Datadog 該分鐘 0 行、7 天內 0 條 `ExceptionsHandler`、Sentry 0 事件：`initSentry()` 只 `Sentry.init`，沒掛 `@sentry/nestjs` `SentryGlobalFilter` / `captureException`；沒有 request logging middleware、沒有 request id；APM 只留 diversity-sampled span。**修法（未做，票已 Inactive）**：global `AllExceptionsFilter` 記 method+url+query+userId+requestId+stack 並 `captureException`，加 `x-request-id` 回顯。
+- 自簽 HS256 JWT（prod jwtSecret 在 EMR-Backend orderApi.yaml）打公開 URL 是合法的唯讀重現手段；7 種 token 形狀 + 25 次連打全 200 = 不可重現，但 ETag 證明它真的發生過——「不可重現」不等於「沒發生」。
+
+### trans v1 `InitialPatientPageHome` 的資料形狀（VP-18406）
+- `patient.Order[]` 是**每 SAMPLE 一列**不是每 order 一列（`getPatient.service.ts:367-368` 有註解；`cleanOrderlitenew` 迭代 `samples`）。order 層的規則（最近一次採檢）要在 per-sample loop **之前**對 `o.samples[]` 算一次、蓋到該 order 每一列。
+- 陣列鍵是 **`samples`（複數）**；用 `o.sample` 探會拿到空陣列、誤判「欄位不存在」——Explore agent 就是這樣得出「需要新 upstream call」的錯誤結論。實測 payload 已含 `order_service_time`、`samples[].sample_collection_time / sample_received_time / sample_report_time`，零額外呼叫。
+- 地雷：`getPatient.service.ts:2800` `new Date(order_create_time).toISOString()` 在兩個時間欄都空時 throw，`cleanOrderlitenew` 的 try/catch 會**整張 order 靜默吞掉**；新加的日期解析不能照抄。
+
+### Dream 停擺的第二種原因：笔電睡著 / 無網路（09-25 ~ 09-27）
+- 三夜 launchd 都跑了、三次 attempt 全 `API Error: Can't reach the API server (ENOTFOUND)`，status 記 `failed_api`；跟 08-21..23 的 dirty-memory abort 是不同機制。PR #51（09-28 merged）讓 wrapper 在 `network_up` 為假時記 `deferred_no_network` 並下一次再跑、對未 commit 的 STM 不再直接 abort。本次（09-28）是修完後第一次成功跑，補了 4 夜的視窗。
