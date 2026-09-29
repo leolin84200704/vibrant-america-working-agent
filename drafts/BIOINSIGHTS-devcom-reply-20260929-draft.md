@@ -13,6 +13,7 @@ Status: DRAFT, not sent. Leo reviews.
 | Email no longer lands in SSN | `coresamplesv2.patient` 3286031 `patient_ssn=''` (was the PID-19 defect) |
 | Nothing else pending | `/outgoing/` empty apart from `archive/`; no BIOINSIGHTS row after 7196 |
 | Results not being collected | `/incoming/` holds 153 `.hl7` result files, newest 2609116512 (Sep 11) |
+| IN1-2 mapping | `parser.service.ts` L653-657 on origin/main: `chargeMethodFromIn1` reads IN1-2 CE.1 only; `'C'` -> `CUSTOMER_PAY`, everything else and a missing IN1 -> `PATIENT_PAY_LATER`. No other ChargeMethod value is reachable from HL7. L856: `PATIENT_PAY_LATER` sets `send_email=true` (the patient payment link) |
 
 Compendium handling (Leo, 2026-09-29): do NOT answer on Zhenhe's behalf. The email hands the request to
 its owner by adding him to the thread and asking him directly, in front of Olena. Still no date and no
@@ -68,10 +69,16 @@ urgent. I am listing them only so they do not surprise you later:
   - MSH-12 says 2.5 while the integration is configured as 2.3. Not enforced, no action needed.
   - OBR-11 "N" and OBR-15 "0" are not valid values for those fields. Also not read by us.
 
-One thing to confirm, because it is the next gate after the message format: IN1-2 = "C" tells us to bill
-the practice rather than the patient. That is what we applied to this order. Please confirm that billing
-the practice is what BioInsights intends for these orders; if it is not, that is a one-character change on
-your side and I will tell you which value to send.
+One thing to confirm, because it is the next gate after the message format: IN1-2 decides who pays, and we
+read only its first component. There are exactly two outcomes:
+
+  - IN1-2 = "C"                          -> the practice is billed (customerPay)
+  - anything else, or no IN1 segment     -> the patient is billed (patientPayLater), and we email the
+                                            patient a payment link
+
+You are sending "C", so order V00000417 was booked as billed to JAG Holdings Group. Please confirm that is
+what BioInsights intends. If you want the patient to pay instead, send any other value in IN1-2 — "P" is
+the conventional one — or leave the IN1 segment out entirely; both take the same path.
 
 Please also keep using the test patient for now, and let me know before you run any larger batch. Each
 file that parses creates a genuine order in production, so we want to agree on the volume first.
