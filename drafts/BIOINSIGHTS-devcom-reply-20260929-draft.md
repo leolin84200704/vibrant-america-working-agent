@@ -14,10 +14,17 @@ Status: DRAFT, not sent. Leo reviews.
 | Nothing else pending | `/outgoing/` empty apart from `archive/`; no BIOINSIGHTS row after 7196 |
 | Results not being collected | `/incoming/` holds 153 `.hl7` result files, newest 2609116512 (Sep 11) |
 
-Deliberately NOT in the email (per the 2026-09-24 rule — another party's deliverable never carries our
-timeline, and we do not route work through a third party):
-- no date, owner name, or commitment for the compendium;
-- no request that devcom chase anyone internally at Vibrant or BioInsights.
+Compendium handling (Leo, 2026-09-29): do NOT answer on Zhenhe's behalf. The email hands the request to
+its owner by adding him to the thread and asking him directly, in front of Olena. Still no date and no
+commitment in our voice — the ask, and the answer, are his.
+- ACTION FOR LEO: add Zhenhe Zhang's address to the To/Cc line. Not recorded in memory, so not filled in here.
+
+Also not in the email: no request that devcom chase anyone internally at Vibrant or BioInsights.
+
+OPTIONAL — cut if you want this to answer only what was asked (the "vendor email" rule in
+long-term-memory/leo-working-rules.md): the paragraph asking them not to run a larger batch yet, and the
+closing paragraph about the 153 uncollected result files. Both are true and both are ours to raise, but
+neither was asked in this email.
 
 Open internally, not stated to devcom:
 - whether to cancel the $570 test order against JAG (`is_canceled` NULL, no charging transaction);
@@ -69,11 +76,11 @@ your side and I will tell you which value to send.
 Please also keep using the test patient for now, and let me know before you run any larger batch. Each
 file that parses creates a genuine order in production, so we want to agree on the volume first.
 
-On the compendium: I understand this is still blocking you, and I have passed the request on internally.
-The catalogue is owned by another team at Vibrant, so I cannot give you a date for it. What I can tell you
-is that it does not block the work you have in front of you: the two codes you are using are correct and
-orderable today, so you can continue testing the message format and the order flow with them while the
-full catalogue is being prepared.
+On the compendium: I am adding Zhenhe Zhang to this thread, who owns the test compendium on our side.
+
+Zhenhe, Olena at Devcom is building the BioInsights HL7 integration and needs the current test compendium
+with CPT and LOINC codes. Could you send it to her directly, or tell her what you need from her to
+release it?
 
 Separately, one observation from our side. We have been delivering result files to /incoming/ since late
 July, and there are now 153 HL7 result files sitting there, the newest from 11 September. None of them
