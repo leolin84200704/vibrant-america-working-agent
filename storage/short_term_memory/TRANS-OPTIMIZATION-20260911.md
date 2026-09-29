@@ -1188,4 +1188,5 @@ Method notes: `kubectl patch --type=json` remove-ops for deletions, `--type=merg
 - VP-18466 staging: subagent porting #629 + #659 to `stage_test` (branch `feature/leo/VP-18466-stage`).
 - VP-18456: the gh token IS Leo's account (leolin84200704, org role member) and it has admin=false on LIS-transformer and LIS-transformer-v2 → Leo himself cannot edit the rulesets; needs an org owner. Both rulesets still `required_status_checks: []`; the job to require is `ci-tests.yml` → job `test` ("typecheck + unit tests").
 - VP-18485: correction — the ETIMEDOUT line is not redis_s; and Ray's setting-consumer #186 removed the second copy of the literal.
+- VP-18456 comment 189771 posted + moved to Dev Blocked (Leo's instruction). Jira gotcha: Dev Blocked is reachable only via Dev In Progress.
 
