@@ -1190,3 +1190,8 @@ Method notes: `kubectl patch --type=json` remove-ops for deletions, `--type=merg
 - VP-18485: correction — the ETIMEDOUT line is not redis_s; and Ray's setting-consumer #186 removed the second copy of the literal.
 - VP-18456 comment 189771 posted + moved to Dev Blocked (Leo's instruction). Jira gotcha: Dev Blocked is reachable only via Dev In Progress.
 
+
+### [2026-09-30 00:20Z] Session resumed mid-flight → VP-18466 staging half now in review
+- Cut-off left `feature/leo/VP-18466-stage` with 4 unpushed cherry-picks. Verified content-identical to #629/#637/#659/#628, tests + tsc parity with main, pushed, draft PR #661 → stage_test.
+- `lis-transv2-config-st` SHIPPING_RPC/TEST_RESULT_RPC moved to the AKS staging services (same values as lis-trans-config-st since 09-23); restarted alone; probe from the pod OK. Detail in VP-18466 STM.
+- Still pending on the clock: VP-18460 prod batch 2 ≥ 09-30 18:30Z; VP-18462 flip after a clean shadow window + proto-sync PR; VP-18320 stage_test twin after #661 deploys.
