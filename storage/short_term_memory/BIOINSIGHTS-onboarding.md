@@ -11,7 +11,7 @@ unblock_when: 'BioInsights grants account perms (test: sftp key-auth to sftp.bio
   then ls / — currently auth OK but ls/stat/put all fail); waiting on Thomas reply
   to 2026-07-21 email'
 created: 2026-07-21
-updated: 2026-09-24
+updated: 2026-09-29
 links:
 - BETA-E2E-20260729
 - BIOINSIGHTS-SFTP-KEY
@@ -273,6 +273,34 @@ Read against `lis-backend-emr-v2` origin/main f52c6dd (`parser.service.ts`, `obr
 `drafts/BIOINSIGHTS-devcom-reply-20260923-draft.md` (9 numbered items + optional paragraph about the ~150 unpicked result
 files in /incoming/). Not sent -- Leo reviews. The draft commits us to sending the current test catalog,
 which still depends on Zhenhe.
+
+### [2026-09-29] THIRD devcom file V00000417.hl7 PARSED CLEAN — first BioInsights EMR order created in prod
+Trigger: Olena (devcom) email "We sent another file for review" + renewed ask that Leo chase the compendium owner.
+L4 verified 2026-09-29 (prod DB + SFTP live):
+- `hl7_file_input` **7196 `V00000417.hl7`**, received 2026-09-25 18:30:05 UTC, `parse_finished=1`, `retry_num=5`,
+  `last_error=NULL`, pod `lis-emr-v2-deployment-prod-64c7d7f768-b6l5v`, archived to
+  `/EMR_storage/HL7Message_prod/BIOINSIGHTS/Prod/Order/archive/` and to `/outgoing/archive/` on the vendor server.
+- **Order really placed**: sample_id 2642225, accession/julien barcode **2609256344**, patient_id 3286031
+  (`coresamplesv2.patient` John/Doe, customer 30248, `patient_ssn=''` — the PID-19 SSN leak is GONE),
+  `lis_core_v7.sample` 2642225 exists (collection/received time NULL — no physical sample, as expected),
+  `lis_re.order_table` id 30139923543497260: total **570.00**, charge_method **customerPay**, clinic_id 132493,
+  source EMR, is_canceled NULL. `lis_emr.emr_sample` 6618, test_input `305,845`, control_id MSG20260925103194C33B9B.
+  `lis_charging.transactions` has NO row for payment_id ffac39bb-8d8c-4718-83cb-66565c8baae7 (no card captured).
+- Raw file (pulled from `/outgoing/archive/V00000417.hl7`): **all 9 items from the 09-23 audit are fixed** —
+  `VAREQUISTION463^Gut Zoomer 5.0^L` + `VATEST70^Vitamin D, 25-OH^L`; XCN now `1730269200^Balandan^Paola^^^^^^N`
+  (family/given land where we read them); OBR-7 empty (defaults to now, no backdating); email moved PID-19 -> **PID-20**.
+  Unchanged and still non-blocking: MSH-5/6 `IN OFFICE`/`LC`, MSH-12 2.5, OBR-11 `N`, OBR-15 `0`, FASTING in OBR-26.
+- **IN1-2 = C -> customerPay**: the practice-billing gate is now not theoretical — JAG has a live $570 test order
+  against clinic 132493. JAG's EMR-ordering payment method is STILL unconfirmed (open since 2026-07-27).
+  Decision needed from Leo: cancel/void this test order or leave it.
+- No fourth file exists: `/outgoing/` is empty apart from `archive/` (live SFTP check), and no BIOINSIGHTS row in
+  `hl7_file_input` after 7196. "Another file" in the email = V00000417 (sent 09-25). Nothing is waiting on us to fetch.
+- Quarantine: id 14 (V00000416) went **EXPIRED** 09-29 14:00 UTC on its own. Today's open quarantines 15/16/17 are
+  MDHQ `VAREQUISTION471`, unrelated.
+- `/incoming/` still holds **153 result .hl7** files (latest by name 2609116512, Sep 11) that the vendor has never
+  picked up — result consumption on their side is still not happening. Separate from the compendium.
+- **Real remaining blocker is the compendium (test catalog w/ CPT+LOINC) from Zhenhe Zhang** — devcom has asked
+  three times. Per the 09-24 rule, it stays *his* open item in any external reply; we do not attach our timeline to it.
 
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
