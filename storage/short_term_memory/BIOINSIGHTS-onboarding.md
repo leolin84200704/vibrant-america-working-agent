@@ -302,6 +302,27 @@ L4 verified 2026-09-29 (prod DB + SFTP live):
 - **Real remaining blocker is the compendium (test catalog w/ CPT+LOINC) from Zhenhe Zhang** — devcom has asked
   three times. Per the 09-24 rule, it stays *his* open item in any external reply; we do not attach our timeline to it.
 
+### [2026-09-29] Leo 定版了給 devcom 的回信 — 語氣規則（pending dream distillation -> leo-working-rules.md 外部溝通段）
+Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」。定版全文在
+`drafts/BIOINSIGHTS-devcom-reply-20260929-draft.md`（含逐項刪改對照）。抽出來的規則：
+- **不慶祝、不報里程碑**：「This is the first order that has ever come through ... ordering side is now
+  proven: file pickup, provider lookup, test mapping, patient creation and order creation all work」整段
+  被換成五個字 **"The flow looks good to go."** 不列我們內部 pipeline 的每一站，不寫 "Good news:"。
+- **不複述對方修好了什麼**：「Every point from my previous email has been applied correctly. For the record: 1-4」
+  整段刪。也不寫我們怎麼查證的（"I checked the created patient record: the email is no longer written into
+  the SSN field"）。對方知道自己改了什麼，我們的查證過程是內部回報的內容，不是對外信的內容。
+- **給他該做什麼，不給我們怎麼分支**：IN1-2 那段的兩行 mapping 表（C -> customerPay / 其他 -> patientPayLater
+  + 付款連結）被刪，只留「你送的是 C，這筆算在 JAG 頭上，請確認；要改成病患付就送別的值（P）或整段不送 IN1」。
+  事實 + 可執行的替代做法，機制不外流。
+- **不安排對方的測試節奏**：「keep using the test patient / let me know before you run any larger batch」刪掉。
+- **@ 擁有者就好，不替他說話**：compendium 只留一行 `On the compendium: @Zhenhe Zhang please offer help, thanks.`
+  不重述 devcom 要什麼、不解釋為什麼、不安慰對方說這不擋他們。
+- **不刪的界線**：agent 標成 optional 的 /incoming 153 個未取 result 檔那段，Leo **保留**。判準是歸屬——
+  連線有一半沒啟動是我們該講的事實；對方測試量怎麼抓不是。
+- 精確度只給對方用得到的：「We received it on 25 September」保留，「at 18:30 UTC」刪。
+延伸自 09-24 已記的「vendor email 只回答被問的那一題 / 不幫別人背書」，這次補的是**長度與姿態**：
+結論先給、五個字能講完就不要五行、不回顧、不解釋內部機制、不指導對方做事。
+
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
 2. Scope unclear: orders inbound only, results outbound only, or bidirectional? Which practices/clinics? (drives ehr_integrations rows — order gate is ehr_integrations LIVE+ordering per VP-16968 cutover)
