@@ -1,29 +1,41 @@
 # VP-18243 — draft reply to ChARM Support (NOT SENT)
 
-Prepared 2026-09-30. English. To be reviewed by Leo, then sent by Mingxi Li / customer service.
-Every figure below is from prod `lis_emr` as of 2026-09-30.
+Prepared 2026-09-30, revised to remove every question ChARM has already answered
+(their 2026-09-24 reply on the 37-row mapping table, and the 2026-09-28 letter).
+English. To be reviewed by Leo, then sent by Mingxi Li / customer service.
+Figures are from prod `lis_emr` as of 2026-09-30.
+
+**Deliberately NOT asked again, because ChARM already answered it:**
+- whether the 142 undelivered results reached them (2026-09-28: "never received, misplaced, or
+  delivered to the wrong place on our end")
+- whether the providers mapped to `P00029HUC092017` are members of that practice (2026-09-24: every
+  provider under that code is a registered member, and their 15-clinic list matched ours exactly)
+- the never-exercised mappings other than Melissa Jones (2026-09-24: reviewed against our 37-row table,
+  "no other discrepancies")
+- the numeric codes 126423 and 33677 (same review, not flagged)
 
 ---
 
 Hi ChARM Support team,
 
-Thank you for the detailed answers, they resolved the open questions on our side and let us close
-several gaps immediately. Below is what we have already changed, one finding from our own
-investigation that affects you, and the remaining items we still need confirmed.
+Thank you for the detailed answers. They resolved the open questions on our side and let us close
+several gaps immediately. This note is mostly to confirm what we have changed, so that our records and
+yours agree. There are only three things we still need from you, at the end.
 
-## 1. What we changed on our end
+## 1. What we have changed on our end
 
 **Wild Oak Medicine.** Confirmed, thank you. We had a second configuration for this practice that was
 sending `16289` as the receiving facility. We corrected it to `P00058WOM030323` on 2026-09-28 and
 re-sent the six results that had been affected. All six were acknowledged by your system with
-`MSA|AA`, so that practice is now fully reconciled.
+`MSA|AA`, so this practice is now fully reconciled.
 
 **The six practices with no interface.** Understood: there is no receiving-facility code for us to
-correct because no interface was ever established. We have switched off all six configurations on our
-side on 2026-09-30 and recorded your statement against each one, so no further results will be sent to
-them and none can be re-enabled until an interface exists and you have supplied the code:
+correct, because no interface was ever established. We switched off all six configurations on
+2026-09-30 and recorded your statement against each one. No further results will be sent to them, and
+none can be re-enabled until an interface exists and you have supplied the code. For your records,
+these are the results we had generated for them, none of which reached anyone:
 
-| Practice (our name for it) | value we had been sending | results generated but never delivered |
+| Practice (our name for it) | value we had been sending | results generated, never delivered |
 |---|---|---|
 | Holistique Naturopathic Medical Center | 19339 | 92 |
 | Options Naturopathic | 26445 | 29 |
@@ -33,98 +45,51 @@ them and none can be re-enabled until an interface exists and you have supplied 
 | Nature Med Integrative Medicine | 128115 | 0 |
 | **Total** | | **142** |
 
+On the strength of your confirmation that rejected messages are never received, stored or delivered
+anywhere, we are informing these practices that none of these results reached them and arranging
+delivery through another channel. No action needed from you on this point.
+
 **Dr. Geyer.** Understood, and thank you for confirming the routing logic. Her integration has been
 switched off on our side since 2026-09-11 and her results have been held since then rather than being
-delivered to Holistic Urgent Care & Primary Care. We are taking the question of whether her other two
-practices should have their own interfaces back to the practice, and will follow the lab-onboarding
-process you described if they decide to proceed.
+delivered to Holistic Urgent Care & Primary Care. Whether her other two practices should have their own
+interfaces is a decision for the practices, and we are taking it up with them directly; if they decide
+to proceed we will follow the lab-onboarding process you described.
+
+The same applies to the other individual provider accounts we have mapped to `P00029HUC092017`. You
+confirmed on 2026-09-24 that every provider under that code is a registered member of Holistic Urgent
+Care & Primary Care, so the technical mapping is not in question. What remains is whether each
+provider intends their results to be delivered to that practice, and we are resolving that with the
+practices rather than with you.
 
 **Unrecognized receiving facility.** Thank you for confirming that such messages are rejected on
-arrival and never stored, filed or delivered to any practice. That closes the misdelivery question for
-the six practices above.
+arrival and never stored, filed or delivered to any practice. That closes the misdelivery question.
 
-## 2. One finding on our side that you may want to be aware of
+## 2. What we still need from you
 
-While investigating, we found that the messages your system was answering with an empty response body
-(rather than an HL7 acknowledgement) were all being sent by us as **HL7 version 2.3**, while every
-message we send as **2.3.1** receives a proper `MSA|AA` or `MSA|AE`. We have corrected all our
-configurations to 2.3.1.
+**Q1 — HL7 version.** While investigating, we found that every message your system answered with an
+empty response body rather than an HL7 acknowledgement had been sent by us as **HL7 version 2.3**,
+while every message we send as **2.3.1** receives a proper `MSA|AA` or `MSA|AE`. We have corrected all
+our configurations to 2.3.1. Is 2.3.1 the required version for your results interface, and should we
+treat any 2.3 message we sent in the past as never accepted?
 
-Two things we would like to confirm:
+**Q2 — Empty response.** Related to the above: when your system returns an empty response body instead
+of an acknowledgement, should we always treat that as a non-delivery? We would like to raise an alert
+on it rather than assume success, which is what our system did until now.
 
-- **Q1.** Is 2.3.1 the required version for your results interface, and should we treat a 2.3 message
-  as never accepted?
-- **Q2.** When your system returns an empty response body rather than an acknowledgement, should we
-  always treat that as a non-delivery? We would like to alert on it rather than assume success.
+**Q3 — One new provider, not part of the list you reviewed on 2026-09-24.** We received an integration
+request for **Melissa Jones** on 2026-09-24, after we sent you the mapping table, so it was not
+included in your review. It was approved on our side on 2026-09-28 but we put it on hold before any
+result was sent, because it carried an automatically generated value rather than a ChARM
+receiving-facility code. Does this provider's practice have a ChARM interface with us, and if so what
+is the correct receiving-facility code? If there is no interface, we will leave the request on hold and
+treat it the same way as the six practices above.
 
-## 3. The 142 results that were never delivered
+One optional extra, only if it is easy for you to answer: for a practice that later completes
+onboarding, is there a supported way to have historical results loaded into their account, or should
+those be provided to the practice outside the interface? This affects how we hand over the 142 results
+above, but it is not blocking us.
 
-- **Q3.** Can you confirm that none of the 142 results listed in the table above were received on your
-  side in any form, so that we can state that clearly to the practices?
-- **Q4.** For practices that later complete onboarding, is there a supported way to have historical
-  results loaded into their account, or should those results be provided to them outside the
-  interface? We can produce a full list of the affected accessions and patients on request.
-
-## 4. Mappings we need you to confirm
-
-These configurations exist on our side but no result has ever been sent through them, so your system
-has never had the opportunity to accept or reject them. We would like to confirm them **before** the
-first result is sent, rather than discover a problem afterwards.
-
-**Q5. Twelve individual provider accounts we have mapped to `P00029HUC092017`
-(Holistic Urgent Care & Primary Care).** Each of these is that provider's own account in our system,
-and each is currently configured so that its results would be delivered to Holistic Urgent Care &
-Primary Care. This is the same pattern that produced the Dr. Geyer case, so we would like each one
-confirmed individually before any result is sent:
-
-| Provider / account name on our side |
-|---|
-| Erin Ellis |
-| Robyn Wright |
-| Corrine Poulin |
-| Rebecca Irwin |
-| McKenzie Siemion |
-| Nicolas Figueredo |
-| Swikar Patel |
-| Ebrahim Jatta |
-| Holistic Urgent Care & Primary Care (4 further separate accounts we hold under this name) |
-
-For each: is this provider a registered member of the Holistic Urgent Care & Primary Care practice in
-ChARM, and should their results be delivered to `P00029HUC092017`?
-
-**Q6. Six further mappings that have never been exercised.** Please confirm the practice each code
-belongs to and that the account we have mapped to it is correct:
-
-| Receiving facility | Account name on our side |
-|---|---|
-| P00037VHL082218 | The Center for Fully Functional Health (Dr. Ellen Antoine / Dr. Scott) |
-| P00021NMC1128 | Nourish (a second account, in addition to the one already delivering successfully) |
-| P00036PIM051618 | Pure Health Medicine (a second account, as above) |
-| P00058WOM030323 | Thea Rabb |
-| P00055AIM051222 | Ageless Integrated Medicine |
-
-**Q7. Melissa Jones.** We have a new integration request for this provider that was approved on our
-side on 2026-09-28. We have put it on hold before any result was sent, because it carried an
-automatically generated value rather than a ChARM receiving-facility code. Does this provider's
-practice have a ChARM interface with us, and if so what is the correct receiving-facility code? If not,
-we will leave the request on hold.
-
-**Q8. Two numeric receiving-facility values that your system accepts.** Your system returns `MSA|AA`
-for these two and echoes them back, so they appear to be valid, but they do not follow the `P00...`
-pattern of every other code. Please confirm they are intentional so that we do not "correct" them by
-mistake:
-
-| Value | Account name on our side |
-|---|---|
-| 126423 | Functional Medicine Collaborative |
-| 33677 | Aura Functional Medicine |
-
-Thank you again for the clear answers. The practices whose results your system is already
-acknowledging - Nourish, The Healing Collective, Holistic Urgent Care & Primary Care, Natural Family
-Health Clinic, Bear Creek Naturopathic, Wild Oak Medicine, Creosote Health Services, Pure Health
-Medicine, Pure Health Encinitas, Functional Medicine Collaborative and Aura Functional Medicine - need
-no action from you; we have verified those mappings from your acknowledgements and they are not part
-of the questions above.
+Thank you again for the clear answers.
 
 Best regards,
 Vibrant America
