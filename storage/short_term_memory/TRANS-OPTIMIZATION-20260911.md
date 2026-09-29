@@ -1177,3 +1177,9 @@ Method notes: `kubectl patch --type=json` remove-ops for deletions, `--type=merg
 - VP-18462: still 0 `grpc_shadow` events (expected; flip 09-30 after a clean window).
 - Lesson: "staging first" is only a rehearsal when staging is a twin. `lis-trans-config-st` points 8 of its 28 public keys at on-prem dev/prod services, and transv2 stage_test is 53 commits behind main on this path. Check the staging branch/image actually contains the code before treating a staging switch as evidence.
 
+### [2026-09-29 21:40-22:25Z] Leo merged #843/#844/#659 → deploy verification + next steps
+- #843/#844 (VP-18485) deployed 18:47Z/18:43Z; `redis_s.js` gone. **My ETIMEDOUT attribution was wrong** (line persists from the new image, another ioredis client) — corrected on the PR. Rotation still open.
+- #659 (VP-18466) deployed 21:49Z; then deleted `TRANS_PROXY_GRPC_MODE` + 3 `proxy_*` keys from prod `lis-transv2-config` (22:55Z restart, 3/3, env empty). Prod half done; staging half blocked on stage_test lacking #629.
+- VP-18462: shadow caught `Packages.kit_name`/`pickup_time` missing on the gRPC side (proto lag in setting-consumer). Proto-sync draft PR opened; NOT flipping to grpc. Datadog search key: `@call_function:grpcShadow`, not `grpc_shadow`.
+- Pod-IP attribution gotcha: compare caller IPs against pods that existed AT the call time (Datadog `pod_name` tag on the caller's own logs, or RS creation times), not against `kubectl get pods` now — three deploys today (setting-consumer 21:43Z by Ray, transv2 21:49Z/21:55Z by me) recycled every IP I was matching.
+
