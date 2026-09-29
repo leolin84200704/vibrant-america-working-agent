@@ -1183,3 +1183,9 @@ Method notes: `kubectl patch --type=json` remove-ops for deletions, `--type=merg
 - VP-18462: shadow caught `Packages.kit_name`/`pickup_time` missing on the gRPC side (proto lag in setting-consumer). Proto-sync draft PR opened; NOT flipping to grpc. Datadog search key: `@call_function:grpcShadow`, not `grpc_shadow`.
 - Pod-IP attribution gotcha: compare caller IPs against pods that existed AT the call time (Datadog `pod_name` tag on the caller's own logs, or RS creation times), not against `kubectl get pods` now — three deploys today (setting-consumer 21:43Z by Ray, transv2 21:49Z/21:55Z by me) recycled every IP I was matching.
 
+### [2026-09-30 00:10Z] Leo's answers → VP-18347 decided (CRM), stage_test port in flight, VP-18456 blocked on org admin
+- VP-18347: CRM direct (see VP-18347 STM). trans v2 PR #660 draft; billing patch in drafts/.
+- VP-18466 staging: subagent porting #629 + #659 to `stage_test` (branch `feature/leo/VP-18466-stage`).
+- VP-18456: the gh token IS Leo's account (leolin84200704, org role member) and it has admin=false on LIS-transformer and LIS-transformer-v2 → Leo himself cannot edit the rulesets; needs an org owner. Both rulesets still `required_status_checks: []`; the job to require is `ci-tests.yml` → job `test` ("typecheck + unit tests").
+- VP-18485: correction — the ETIMEDOUT line is not redis_s; and Ray's setting-consumer #186 removed the second copy of the literal.
+

@@ -1,0 +1,59 @@
+From ca2903c5d5a445ad28db34a7ecf4c18f3adc84ed Mon Sep 17 00:00:00 2001
+From: Hung Fan Lin <leolin84200704@gmail.com>
+Date: Tue, 29 Sep 2026 16:36:12 -0700
+Subject: [PATCH] [VP-18347] sendSkinCareKit: call the CRM directly instead of
+ the retired cloud-local-proxy
+
+The proxy did two things before forwarding to the CRM: set comments =
+julien_barcode and pass the caller's token without the Bearer scheme.
+Reproduce both so the CRM sees the same request, and drop the hop that
+keeps cloud-local-proxy from scaling to zero (VP-18465).
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+---
+ .../service_implements/ProZOrderServiceImpl.java  | 15 ++++++++-------
+ 1 file changed, 8 insertions(+), 7 deletions(-)
+
+diff --git a/src/main/java/com/vibrant_america/billing/service/service_implements/ProZOrderServiceImpl.java b/src/main/java/com/vibrant_america/billing/service/service_implements/ProZOrderServiceImpl.java
+index 09ebd1f0a..dca6847cc 100644
+--- a/src/main/java/com/vibrant_america/billing/service/service_implements/ProZOrderServiceImpl.java
++++ b/src/main/java/com/vibrant_america/billing/service/service_implements/ProZOrderServiceImpl.java
+@@ -112,7 +112,11 @@ public class ProZOrderServiceImpl implements ProZOrderService {
+                                 String comments, String julienBarcode, String auth,
+                                 Integer sampleId
+     ) {
+-        String url = "https://www.vibrant-america.com/lisapi/v1/lis/cloud-proxy/grpc/sendSkinPlacePatientOrders";
++        // VP-18347: call the CRM directly. The retired cloud-local-proxy did exactly two things before
++        // forwarding this body to the CRM: overwrite `comments` with `julien_barcode`, and pass the caller's
++        // token as a raw `Authorization` value (no "Bearer " scheme). Both are reproduced here, so the CRM
++        // receives the same request it received through the proxy.
++        String url = "https://www.vibrant-america.com/crmapi/placepatientorders";
+         
+ //        HttpHeaders headers = new HttpHeaders();
+ 
+@@ -127,7 +131,7 @@ public class ProZOrderServiceImpl implements ProZOrderService {
+                 .customer_country(customerCountry)
+                 .phlebotomy_supplies(phlebotomySupplies)
+                 .shipping_method(shippingMethod)
+-                .comments(comments)
++                .comments(julienBarcode) // proxy parity: the proxy replaced comments with julien_barcode
+                 .julien_barcode(julienBarcode)
+                 .build();
+ 
+@@ -135,11 +139,8 @@ public class ProZOrderServiceImpl implements ProZOrderService {
+ 
+         HttpHeaders headers = new HttpHeaders();
+         HttpEntity<SkinCareSendKit> requestEntity = new HttpEntity<>(skinCareSendKit, headers);
+-        if (auth.contains("Bearer")) {
+-            headers.add("Authorization", auth);
+-        } else {
+-            headers.add("Authorization", "Bearer " + auth);
+-        }
++        // Raw token, as the proxy forwarded it (it stripped the scheme before calling the CRM).
++        headers.add("Authorization", auth.replaceFirst("^(?i)Bearer\\s+", ""));
+ 
+         ResponseEntity response = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
+         if (response.getStatusCode().is2xxSuccessful()) {
+-- 
+2.39.2 (Apple Git-143)
+
