@@ -1165,3 +1165,9 @@ Yekai opened 8 tickets on 09-28 (VP-18456/60/61/62/64/66/80/85) under epic VP-18
 - **VP-18456** cannot be mine (admin:false on both repos).
 Method notes: `kubectl patch --type=json` remove-ops for deletions, `--type=merge` for adds, previous values always captured to the STM first; prod trans v1 got ONE rolling restart for VP-18461+VP-18460 together. Restart error bursts in Datadog (npm notice / redis_s ETIMEDOUT / dd-trace stack) are identical to the unrelated 17:07Z restart earlier — that is the baseline to compare future rollouts against. Probing upstreams from inside the pod with its own OAuth env (`probe.js`, node not curl) is the cheapest byte-level equivalence test for URL swaps.
 
+### [2026-09-29 19:20Z] Wave 2 started the same day (Leo：「繼續往下做」)
+- VP-18460: batches 2-6 probed on PROD from the prod pod — all 23 in-cluster candidates equivalent; staging switched for the 11 keys whose staging target answers identically; 12 keys stay public (www on-prem hosts). Prod batch 2 tomorrow ≥18:30Z. Probe scripts kept in `docs/plans/trans-optimization/scripts/vp18460-probes/`.
+- VP-18466: draft PR LIS-transformer-v2 #659 → main (subagent). **New finding**: transv2 `stage_test` never got #629, so staging is still http-mode and cannot be flipped; documented on the PR and in the VP-18466 STM. This also gates VP-18320's stage_test twin.
+- VP-18462: still 0 `grpc_shadow` events (expected; flip 09-30 after a clean window).
+- Lesson: "staging first" is only a rehearsal when staging is a twin. `lis-trans-config-st` points 8 of its 28 public keys at on-prem dev/prod services, and transv2 stage_test is 53 commits behind main on this path. Check the staging branch/image actually contains the code before treating a staging switch as evidence.
+
