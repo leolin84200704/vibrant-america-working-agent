@@ -1,7 +1,7 @@
 # Journal Index (Episodic Memory — L3a)
 
 > Auto-maintained by the dream pipeline. One line per entry, newest first.
-> Last updated: 2026-09-28. One 09-28 entry distilled by the 09-28 run (vp18402-04-deactivate-on-removal → patterns/emr-integration/leo-working-rules/repos + 3 factory inbox proposals).
+> Last updated: 2026-09-29. 09-29 run: no new entries (the 09-29 trans-opt wave 1-2 / VP-18243 / BIOINSIGHTS sessions wrote STM only, no journal); nothing undistilled. Previous: one 09-28 entry distilled by the 09-28 run (vp18402-04-deactivate-on-removal → patterns/emr-integration/leo-working-rules/repos + 3 factory inbox proposals).
 > Archived 3 distilled >30d entries (2026-08-26, 2026-08-27, 2026-08-28) → archive/journal/. Previous: 09-24 run distilled the two 09-22 entries.
 
 | Date | Slug | Related | Distilled |

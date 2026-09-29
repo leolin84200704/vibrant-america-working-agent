@@ -474,3 +474,8 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 3. **別人的 Done 是 claim，不是交付，而且要在當天驗。** VP-18031（Rui）Done 零交付、Leo 裁「我們自己做」；VP-18089 Done 09-11 卻在 09-28 露出第三個缺口（accounting enum）；VP-18194 的 Cerbo 確認結構性驗不到；VP-18372 的 ticket 前提（「只推一次」）被 prod 數據推翻。這與 08-26 那條「Jira 狀態與部署狀態是兩條時間線」是同一族，新的具體化是：**任何我們的契約依賴的票轉 Done，當天去 code / DB / ConfigMap 找那個交付物**；找不到就當它沒發生、改計畫吸收，而不是等下一次被觸發時才發現。
 
 做對的部分也記一筆：VP-18402 的技術判斷（findMany、路由順序、三態 fail-open、獨立 terminal class）在 prod 全部成立；in-pod 基線 + 100% 寫入驗證 + 全表反向稽核 + blast-radius 事前分析被三天數據證實；LBS-1799 的「comment 到票裡再 Done」守住；VP-18372 在設計任何東西之前先把前提對 prod 量一次——那一次量測讓 PM 的整個需求改向。
+
+## Leo 09-29 的決定與打回（TRANS-OPT wave 1-2 / VP-18243 / BIOINSIGHTS）
+- **「ok 做」→ 十張 trans-opt 票分三波照節奏跑；「繼續往下做」→ 同一天開 wave 2。** 接受的形態：全部 config-only 的 prod 變更（ConfigMap patch + 一次 restart）不需要逐張回來問，但每張票的 STM 要有舊值、探針證據、restart 噪音對照；跨團隊權限缺口（VP-18456 admin、VP-18480 LIS-Sample 不能 push）直接標 blocked 並把 patch 放 `drafts/`，不去找替代路徑。
+- **VP-18243「只要對齊 MSH-6 ↔ clinic，行為不變」**：要的是一張以 CHARM 自己的 ACK 為 oracle 的對齊表（已證實正確 / 已證實錯誤 / 無法判定），不是重寫路由；**「CHARM 說沒有就記下來然後改成 REJECTED」**：對方書面說沒有介接的 practice，把對方的話寫進 notes 然後關掉，缺口從靜默變成會叫（scope-drop）；未送達的 backlog 交客服，不在這張票裡救。
+- **對外信件的語氣（BioInsights / devcom 回信，Leo 逐項改寫並說「記住我的語氣」）**——已定版進 `~/.claude/CLAUDE.md`「替 Leo 起草對外文字」段，任何 instance 都適用；本 workspace 的對照原文在 `drafts/BIOINSIGHTS-devcom-reply-20260929-draft.md`。核心：結論先給、五個字講得完就不要五行（「The flow looks good to go.」）；不慶祝不列 pipeline 各站；不複述對方修了什麼、不寫我們怎麼查證；給對方**該做什麼**（替代值）不給我們**怎麼分支**；不安排對方測試節奏；別人的交付只 @ 擁有者；取捨界線是**歸屬**（我方系統的事實要講——153 個未取的 result 檔 Leo 保留；對方怎麼做事不講）；精確度只給對方用得到的（日期要、UTC 時分不要）。這是 09-24「只回答被問的那一題／不幫別人背書」的延伸：補的是長度與姿態。

@@ -3,7 +3,7 @@ id: repos
 type: ltm
 category: technical
 status: active
-score: 1.2363
+score: 1.292
 base_weight: 0.9
 created: 2026-04-22
 updated: 2026-09-24
@@ -97,6 +97,11 @@ links:
 - VP-18344
 - VP-18400
 - VP-18406
+- VP-18461
+- VP-18462
+- VP-18464
+- VP-18466
+- VP-18480
 - VP-9299
 - business-model
 - business-model-deep
@@ -322,3 +327,11 @@ sudo prompt 用 `echo <pw> | sudo -S <cmd>`。Heredoc 內含 `[^...]` 之類 exp
 - **LIS-transformer（v1）**：`main` / `stage_test` 雙向分岔（09-25：165 / 105），PR 慣例 = 同一改動兩條分支兩個 PR（`{name}` → main、`{name}-stage` → stage_test）；`prisma2/generated/client2/` **在版控中**且 `npm install` 會重生 → 絕不 `git add -A`；ConfigMap `lis-trans-config`（162 key）/ `-st`（165）的真正 apply 來源不在 repo（`lis-trans-k8env.yml` 只有 5 key），加 key 用 merge patch + rollout restart；deploy Actions `lis-transformer-deploy-prod`（main）/ `-staging`（stage_test）成功即上線。本機沒裝 `@azure/event-hubs` 時 `src/utility` 7 個 suite 不會跑。**自 VP-18404 起 trans 會呼叫 emr-v2**（`src/trans/emr-integration-deactivate.ts`，`EMR_V2_BASE_URL` 含 `/api/v1`）。
 - **lis-backend-emr-v2**：gRPC v2 client 現在 **6 個**（customer / patient / sample / sales / setting / **clinic**，`GRPC_V2_CLINIC_HOST/PORT`）；新表 `platforms` + `platform_public_keys`（prod 09-28 手動套用，0 列）；`PLATFORM_PUBLIC_KEYS` env 已退役；新端點 `PATCH .../deactivate-clinic-member`（宣告在 `:id` 之前）；hl7 新 terminal failure class `provider_not_in_clinic`。Jenkins 狀態看 commit status `continuous-integration/jenkins/branch`；prod pod 09-28 在 8c99cde（#438），staging 9fec7d0（#439）。
 - **可觀測性**：emr-v2 無 exception filter log、無 SentryGlobalFilter、無 request id（VP-18400）；trans pod 啟動 30 s 後固定一則 ioredis ETIMEDOUT（疑似既有）。
+
+## 【更新 2026-09-29】LIS-Sample 部署與權限、transv2 stage_test 缺口、setting-consumer 設定、trans 兩 repo 的 CI 護欄現況（VP-18480 / VP-18466 / VP-18462 / VP-18449 / VP-18456）
+- **LIS-Sample**：NestJS 9 + nestjs-pino（`LoggerModule.forRoot`，autoLogging false，`LoggerMiddleware` 全路由除 /healthcheck，已有 x-request-id）；Sentry middleware 已對 JWT 做未驗證解碼取 user context。部署 Jenkinsfile：`master` → prod、`dev` → staging，PR 慣例一個 base 一個 PR（VP-17797：#183 dev + #184 master）。**agent 對 LIS-Sample 只有 pull**——改動只能出 patch 給 Leo / committer（Michaelzbchen、Zhibin、Ray）。
+- **LIS-transformer-v2**：`stage_test` 與 main 分岔 53/45，靠週期性「Merge stage_test to main」PR 同步；proxy gRPC 路徑（#629）從未進 stage_test，st image `9c54a17` = stage_test head 09-25。`lis-transv2-config-st` 沒有 `TRANS_PROXY_GRPC_MODE`，`SHIPPING_RPC`/`TEST_RESULT_RPC` 指死掉的 on-prem `192.168.60.6`；正確 st 值 = `lis-shipping-service-staging-grpc.shipping...:63142` / `lis-test-connect-staging-grpc-service.results...:6889`（trans v1 st 09-23 起已用）。
+- **LIS-setting-consumer**：兩個 deployment `lis-setting-consumer`（envFrom ConfigMap）與 `-local`（+ `lis-setting-consumer-local-secret`），image 3c0a8bb（含 #179/#180，`grpc.options.ts` 已無 prod 預設位址）；prod 09-29 18:17Z 起 `SETTING_GRPC_MODE=shadow`；`-local-st-config` 三個 key 都還沒有。Kafka `kafka.consumer.crash`（`Cannot read properties of undefined (reading '0')`）每天都有、與 deploy 無關（VP-18453 / VP-18471）。
+- **in-cluster 服務位址表（prod）**：base-report `lis-base-report.report:30800`（staging `-staging:30801`，transv2-st 用 `-dev:30802`）、shipping `lis-shipping-service.shipping:16256`、accounting `lis-accounting-service.bkkeeping:8084`、charging `lis-charging-service.charging:8084`、samples `lis-sample-service.sample:16300`、order `lis-order.default:4242`、interactive-report `lis-interactive-report.report:30900`、oauth `oauth-service.oauth:8000`、trans 自己 `lis-trans-service.default:3146`、pdf engine `report-pdf-engine.report:80`、shipping gRPC `lis-shipping-service-grpc.shipping:63142`、test-connect gRPC `lis-test-connect-grpc-service.results:6889`。
+- **trans v1/v2 CI 護欄**（dream 09-29 從 GitHub 驗）：`ci-tests.yml` 在兩 repo main 上、每個 PR 都跑（09-29 當天 v1 三次、v2 一次全綠）；但 main 的 ruleset `required_status_checks` 仍是 `[]`——紅的 check 只是建議，merge to main 就是 deploy。補上 required check 是 VP-18456，需要 repo admin（agent `admin:false`）。
+- 兩 repo 的 cloud-proxy 相關：`default/lis-trans-config` 是叢集裡唯一含 cloud-proxy URL 的 ConfigMap（14 個死 key，09-29 已刪）；`LIS-backend-billing ProZOrderServiceImpl.java:115` hardcode `www.vibrant-america.com/lisapi/v1/lis/cloud-proxy/`，打的是 on-prem 實例不是 AKS。

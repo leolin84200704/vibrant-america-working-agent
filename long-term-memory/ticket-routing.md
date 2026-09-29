@@ -120,3 +120,14 @@ summary: Ticket keyword to repo/module routing table
 - **"Schedule Consult 六個月 / consultationEligible / 資格搬後端 / VP-18406 / VP-18407 / PH-925"** → STM `VP-18406`（Step 4 待 Leo；零額外 upstream call）+ `patterns.md`「trans v1 InitialPatientPageHome 的資料形狀」；FE 三個入口 + inline 重寫見 `emr-integration.md`。
 - **"LIS-transformer PR 幾萬行 / conflict / stage_test 跟 main 分岔 / prisma2/generated 進 PR"** → `patterns.md`「LIS-transformer 的 PR 慣例：一個改動、兩條分支、兩個 PR」+「版控中的 generated 檔」。
 - **"trans 要打 emr-v2 / EMR_V2_BASE_URL / lis-trans-config 的來源"** → `patterns.md`「`lis-trans-k8env.yml` 不是 apply 來源」+ `repos.md` 2026-09-28。
+
+## 2026-09-29 新增路由（dream；TRANS-OPT wave 1-2 / VP-18460 / VP-18461 / VP-18462 / VP-18464 / VP-18466 / VP-18480 / VP-18485 / VP-18243 / BIOINSIGHTS）
+- **"trans 的 public URL 改 in-cluster / api.vibrant-wellness.com → svc.cluster.local / ingress rewrite / probe.js / staging 不是 twin"** → STM `VP-18460`（42 keys 六批，batch 1 prod 已切、2-6 prod 已探針等 09-30）+ `patterns.md`「staging 不是孿生就不是彩排」「in-pod 逐 byte 探針」「ingress rewrite 規則」。
+- **"ConfigMap 死 key / cloud-proxy key / 192.168.10.153:8081 / 刪 key 回滾"** → STM `VP-18461`（22 key 已刪、舊值在 STM；Jira 仍 Dev To Do）+ `patterns.md`「ConfigMap 改法」。
+- **"setting-consumer grpc shadow / SETTING_GRPC_MODE / SHIPPING_RPC / TEST_RESULT_RPC / grpc_shadow 事件"** → STM `VP-18462`（prod 在 shadow，0 事件，09-30 再看才翻 grpc）。
+- **"誰在打 cloud-proxy / ingress access log / Datadog 沒 nginx log / Cloudflare edge IP"** → STM `VP-18464`（blocked：Ray 的 on-prem log）+ `patterns.md`「Datadog 裡沒有 nginx ingress access log」。
+- **"transv2 拿掉 proxy http 路徑 / TRANS_PROXY_GRPC_MODE / stage_test 落後 main / GetKitStatusBySampleId"** → STM `VP-18466`（draft #659 → main；stage_test 缺 #629，也卡 VP-18320 的 st twin）。
+- **"LIS-Sample 誰在呼叫 / caller attribution / request log / LIS-Sample 沒 push 權限"** → STM `VP-18480`（patch 在 `drafts/VP-18480-caller-attribution.patch`）+ `repos.md` 2026-09-29。
+- **"redis_s.ts / trans 開機 ioredis ETIMEDOUT / 明文 Redis 密碼 / config.yaml 含 secret"** → STM `VP-18485`（#843 main / #844 stage_test draft；rotation owner 未定）。
+- **"CHARM 回 null ACK / hl7_version / MSH-12 2.3 vs 2.3.1 / CHARM SFTP 沒人取 / practice 沒有 interface"** → `emr-integration.md`「CHARM 的第二個預設值缺陷」+ STM `VP-18243`。
+- **"BioInsights 第一筆 order / V00000417 / IN1-2 C 掛 JAG / 153 個 result 沒取 / devcom 回信語氣"** → `emr-integration.md`「BioInsights：第三個檔」+ `leo-working-rules.md` 09-29 + `~/.claude/CLAUDE.md` 對外文字段。

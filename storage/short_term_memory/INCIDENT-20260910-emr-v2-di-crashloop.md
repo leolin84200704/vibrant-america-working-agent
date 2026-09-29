@@ -4,7 +4,7 @@ type: stm
 category: technical
 status: resolved
 follow_up: factory PRs
-score: 0.4915
+score: 0.5063
 base_weight: 0.9
 created: 2026-09-10
 updated: '2026-09-11'
@@ -72,6 +72,11 @@ links:
 - VP-18344
 - VP-18400
 - VP-18406
+- VP-18461
+- VP-18462
+- VP-18464
+- VP-18466
+- VP-18480
 - VP-9299
 - business-model
 - business-model-deep
