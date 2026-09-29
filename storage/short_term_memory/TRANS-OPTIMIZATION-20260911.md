@@ -17,7 +17,7 @@ tags:
 - vp-18152
 - core-v1-retirement
 created: 2026-09-11
-updated: '2026-09-24'
+updated: '2026-09-29'
 links:
 - CONFLUENCE-2684321795
 - INCIDENT-20260518
@@ -1153,3 +1153,15 @@ setting-consumer）各自佈建後**當場看它 PASS 才留下**（setting-cons
 - **VP-18355 PASS (first live proof)**: emr-v2 #433 merged into staging 18:39Z 09-24, release PR #434 opened 18:42Z, staging `c3b75db` Jenkins status success 18:51Z. Under the old rule the job would have been disabled at the next scan.
 - **In-flight, not closed**: emr-v2 #433 (INCIDENT-20260908 repoint) is on staging only; #434 staging → main awaits Leo. Prod main is still `f52c6dd`.
 - Removal job `com.lis.proxy-old-report-removal` is armed for 09-30 09:00 PT; announcement page on Confluence (2703851521) with 09-30 dates; Jira VP-18320 description still says 10-02 / 10-09 and QH-7163 still lists three routes (both need Leo's token).
+
+### [2026-09-29] Wave 1 of the 10-ticket batch (Leo：「ok 做」) — 6 tickets touched, 4 prod changes, all config-only
+Yekai opened 8 tickets on 09-28 (VP-18456/60/61/62/64/66/80/85) under epic VP-18260, all assigned to me; with my own VP-18320/18347 that is 10. Grouped into three waves by cadence (see the 09-29 report); today = wave 1. Per-ticket detail in the six new STMs (sibling-linked). Headlines:
+- **VP-18485**: `redis_s.ts` is dead code → deleted (PR #843 main, #844 stage_test, both draft). Rotation still open; same literal lives in setting-consumer's on-prem branch.
+- **VP-18461**: 22 dead keys gone from all four ConfigMaps; values recorded in the STM.
+- **VP-18460**: batch 1 (base-report ×7) on staging + prod, byte-identical old-vs-new from inside the pod (7/7 both envs). Batch 2 not before 09-30 18:30Z.
+- **VP-18462**: prod setting-consumer on `shadow` (not grpc yet). #180 already removed the prod-address defaults the ticket warns about.
+- **VP-18464**: cloud half done by subagent — ingress logs are excluded from Datadog by the agent config, so there is no 30-day zero window to be had without changing that; billing's hardcoded URL hits the on-prem instance, not AKS.
+- **VP-18480**: code + tests done locally; **no push permission on LIS-Sample** → patch in `drafts/`.
+- **VP-18456** cannot be mine (admin:false on both repos).
+Method notes: `kubectl patch --type=json` remove-ops for deletions, `--type=merge` for adds, previous values always captured to the STM first; prod trans v1 got ONE rolling restart for VP-18461+VP-18460 together. Restart error bursts in Datadog (npm notice / redis_s ETIMEDOUT / dd-trace stack) are identical to the unrelated 17:07Z restart earlier — that is the baseline to compare future rollouts against. Probing upstreams from inside the pod with its own OAuth env (`probe.js`, node not curl) is the cheapest byte-level equivalence test for URL swaps.
+

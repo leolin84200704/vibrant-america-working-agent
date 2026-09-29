@@ -1,0 +1,272 @@
+From f2fe21c89132f35cc7be1c1367b91044d4314420 Mon Sep 17 00:00:00 2001
+From: Hung Fan Lin <leolin84200704@gmail.com>
+Date: Tue, 29 Sep 2026 11:29:02 -0700
+Subject: [PATCH] [VP-18480] Log one caller_attribution line per request (who
+ called which route)
+
+Phase A of the LIS-Sample -> trans merge needs a caller table per route
+built from request logs, not from sampled spans or code search (a caller
+configured only in Kubernetes is invisible to grep). This adds a structured
+'caller_attribution' event emitted on response 'finish' by the existing
+LoggerMiddleware: method, matched Express route pattern, path without
+query string, status, latency, x-request-id, user-agent, x-forwarded-for,
+remote ip, and a fixed allowlist of JWT claims (sub, client_id, user_id,
+customer_id, internal_user_name, role) decoded without verification -- the
+guards already verified the token; this is attribution, not authorisation.
+No bodies, no query strings, no patient fields.
+
+Co-Authored-By: Claude Fable 5.1 <noreply@anthropic.com>
+---
+ src/middleware/caller-attribution.spec.ts |  88 +++++++++++++++++++
+ src/middleware/caller-attribution.ts      | 102 ++++++++++++++++++++++
+ src/middleware/logger.middleware.ts       |  18 ++++
+ 3 files changed, 208 insertions(+)
+ create mode 100644 src/middleware/caller-attribution.spec.ts
+ create mode 100644 src/middleware/caller-attribution.ts
+
+diff --git a/src/middleware/caller-attribution.spec.ts b/src/middleware/caller-attribution.spec.ts
+new file mode 100644
+index 0000000..7490f96
+--- /dev/null
++++ b/src/middleware/caller-attribution.spec.ts
+@@ -0,0 +1,88 @@
++import { buildCallerAttribution, decodeClaims } from './caller-attribution';
++
++// Unsigned test token: header {alg:none}, payload with allowlisted and
++// non-allowlisted claims. jwt-decode does not verify signatures.
++function unsignedJwt(payload: Record<string, unknown>): string {
++  const b64 = (o: unknown) =>
++    Buffer.from(JSON.stringify(o)).toString('base64url');
++  return `${b64({ alg: 'none', typ: 'JWT' })}.${b64(payload)}.`;
++}
++
++describe('decodeClaims', () => {
++  it('reports no auth when the header is absent', () => {
++    expect(decodeClaims(undefined)).toEqual({ auth: 'none', claims: {} });
++  });
++
++  it('reports other for a non-bearer scheme', () => {
++    expect(decodeClaims('Basic abc')).toEqual({ auth: 'other', claims: {} });
++  });
++
++  it('keeps only allowlisted claims', () => {
++    const token = unsignedJwt({
++      user_id: 42,
++      customer_id: 7,
++      internal_user_name: 'svc',
++      sub: 'abc',
++      patient_name: 'must not appear',
++      nested: { a: 1 },
++    });
++    expect(decodeClaims(`Bearer ${token}`)).toEqual({
++      auth: 'bearer',
++      claims: { user_id: 42, customer_id: 7, internal_user_name: 'svc', sub: 'abc' },
++    });
++  });
++
++  it('survives a bearer value that is not a JWT', () => {
++    expect(decodeClaims('Bearer not-a-jwt')).toEqual({
++      auth: 'bearer',
++      claims: {},
++    });
++  });
++});
++
++describe('buildCallerAttribution', () => {
++  const res = { statusCode: 200 } as any;
++
++  it('uses the matched route pattern and strips the query string', () => {
++    const req = {
++      method: 'GET',
++      originalUrl: '/patients/v2/kits/123?x=1',
++      baseUrl: '',
++      route: { path: '/patients/v2/kits/:id' },
++      headers: {
++        'user-agent': 'axios/1.6',
++        'x-forwarded-for': '10.1.2.3, 10.0.0.1',
++        'x-request-id': 'req-1',
++      },
++      ip: '10.0.0.9',
++    } as any;
++    const a = buildCallerAttribution(req, res, 12);
++    expect(a).toMatchObject({
++      event: 'caller_attribution',
++      method: 'GET',
++      route: '/patients/v2/kits/:id',
++      path: '/patients/v2/kits/123',
++      status: 200,
++      response_time_ms: 12,
++      request_id: 'req-1',
++      user_agent: 'axios/1.6',
++      forwarded_for: '10.1.2.3, 10.0.0.1',
++      remote_ip: '10.0.0.9',
++      auth: 'none',
++      claims: {},
++    });
++  });
++
++  it('falls back to the concrete path when no route matched', () => {
++    const req = {
++      method: 'POST',
++      originalUrl: '/does/not/exist',
++      headers: {},
++      socket: { remoteAddress: '10.0.0.2' },
++    } as any;
++    const a = buildCallerAttribution(req, { statusCode: 404 } as any, 1);
++    expect(a.route).toBe('/does/not/exist');
++    expect(a.remote_ip).toBe('10.0.0.2');
++    expect(a.status).toBe(404);
++  });
++});
+diff --git a/src/middleware/caller-attribution.ts b/src/middleware/caller-attribution.ts
+new file mode 100644
+index 0000000..a7da449
+--- /dev/null
++++ b/src/middleware/caller-attribution.ts
+@@ -0,0 +1,102 @@
++import { Request, Response } from 'express';
++import jwt_decode from 'jwt-decode';
++
++/**
++ * VP-18480 (LIS-Sample -> trans merge, Phase A): one structured log line per
++ * request that says WHO called WHICH route, so the caller table for the merge
++ * comes from request logs rather than sampled spans or code search.
++ *
++ * Deliberately narrow: only the routing identity (method + matched route
++ * pattern), the network identity (forwarded-for / user-agent) and the token
++ * identity (a fixed allowlist of JWT claims, decoded without verification —
++ * the guards already verified it, this is attribution not authorisation).
++ * No request or response body, no query string, no patient fields.
++ */
++export const CALLER_ATTRIBUTION_EVENT = 'caller_attribution';
++
++const CLAIM_ALLOWLIST = [
++  'sub',
++  'client_id',
++  'user_id',
++  'customer_id',
++  'internal_user_name',
++  'role',
++] as const;
++
++export interface CallerAttribution {
++  event: typeof CALLER_ATTRIBUTION_EVENT;
++  method: string;
++  // Express route pattern (e.g. "/patients/v2/kits/:id"), so one row per
++  // route family instead of one per id. Falls back to the concrete path when
++  // no route matched (404s), which is itself useful: unknown callers hitting
++  // paths that no longer exist.
++  route: string;
++  path: string;
++  status: number;
++  response_time_ms: number;
++  request_id: string | undefined;
++  user_agent: string | undefined;
++  forwarded_for: string | undefined;
++  remote_ip: string | undefined;
++  auth: 'bearer' | 'none' | 'other';
++  claims: Partial<Record<(typeof CLAIM_ALLOWLIST)[number], string | number>>;
++}
++
++function first(h: string | string[] | undefined): string | undefined {
++  if (Array.isArray(h)) return h[0];
++  return h;
++}
++
++function pathWithoutQuery(url: string | undefined): string {
++  if (!url) return '';
++  const q = url.indexOf('?');
++  return q === -1 ? url : url.slice(0, q);
++}
++
++export function decodeClaims(
++  authorization: string | undefined,
++): Pick<CallerAttribution, 'auth' | 'claims'> {
++  if (!authorization) return { auth: 'none', claims: {} };
++  const [scheme, token] = authorization.split(' ');
++  if (!/^bearer$/i.test(scheme || '') || !token) {
++    return { auth: 'other', claims: {} };
++  }
++  try {
++    const payload = jwt_decode<Record<string, unknown>>(token);
++    const claims: CallerAttribution['claims'] = {};
++    for (const k of CLAIM_ALLOWLIST) {
++      const v = payload[k];
++      if (typeof v === 'string' || typeof v === 'number') claims[k] = v;
++    }
++    return { auth: 'bearer', claims };
++  } catch {
++    // Not a JWT (or malformed). Still worth knowing that something sent a
++    // bearer token we cannot read.
++    return { auth: 'bearer', claims: {} };
++  }
++}
++
++export function buildCallerAttribution(
++  req: Request,
++  res: Response,
++  responseTimeMs: number,
++): CallerAttribution {
++  const path = pathWithoutQuery(req.originalUrl || req.url);
++  const routePath = (req as any).route?.path as string | undefined;
++  const route = routePath ? `${req.baseUrl || ''}${routePath}` : path;
++  const { auth, claims } = decodeClaims(first(req.headers['authorization']));
++  return {
++    event: CALLER_ATTRIBUTION_EVENT,
++    method: req.method,
++    route,
++    path,
++    status: res.statusCode,
++    response_time_ms: responseTimeMs,
++    request_id: first(req.headers['x-request-id']),
++    user_agent: first(req.headers['user-agent']),
++    forwarded_for: first(req.headers['x-forwarded-for']),
++    remote_ip: req.ip || req.socket?.remoteAddress,
++    auth,
++    claims,
++  };
++}
+diff --git a/src/middleware/logger.middleware.ts b/src/middleware/logger.middleware.ts
+index 8ee829b..be81a38 100644
+--- a/src/middleware/logger.middleware.ts
++++ b/src/middleware/logger.middleware.ts
+@@ -2,11 +2,16 @@ import { Injectable, NestMiddleware, Logger } from '@nestjs/common';
+ import { Request, Response, NextFunction } from 'express';
+ import { v4 as uuidv4 } from 'uuid';
+ import { GrpcRequestContextService } from '../grpc/grpc-request-context.service';
++import { buildCallerAttribution } from './caller-attribution';
+ 
+ /**
+  * This middleware has two jobs:
+  * 1. Insert the X-Request-Id into the request header if it doesn't already exist, this is for distributed request tracing.
+  * 2. Log the response for each request, if the response body is json type, insert it into log
++ * 3. (VP-18480) Emit one `caller_attribution` line per request on `finish` — who
++ *    called which route — for the LIS-Sample -> trans merge caller inventory.
++ *    `finish` rather than the `send` override so streamed / `res.end` responses
++ *    are counted too.
+  */
+ @Injectable()
+ export class LoggerMiddleware implements NestMiddleware {
+@@ -28,6 +33,19 @@ export class LoggerMiddleware implements NestMiddleware {
+ 
+     const startAt = process.hrtime();
+ 
++    res.on('finish', () => {
++      try {
++        const diff = process.hrtime(startAt);
++        const responseTime = Math.round(diff[0] * 1e3 + diff[1] * 1e-6);
++        this.logger.log(
++          buildCallerAttribution(req, res, responseTime),
++          'CallerAttribution',
++        );
++      } catch (err) {
++        this.logger.error('failed to log caller attribution', err);
++      }
++    });
++
+     const send = res.send;
+     res.send = (exitData) => {
+       // since we modify the send function, we add the try catch block in
+-- 
+2.39.2 (Apple Git-143)
+
