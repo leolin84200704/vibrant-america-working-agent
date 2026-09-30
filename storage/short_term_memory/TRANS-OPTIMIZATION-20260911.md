@@ -1195,3 +1195,9 @@ Method notes: `kubectl patch --type=json` remove-ops for deletions, `--type=merg
 - Cut-off left `feature/leo/VP-18466-stage` with 4 unpushed cherry-picks. Verified content-identical to #629/#637/#659/#628, tests + tsc parity with main, pushed, draft PR #661 → stage_test.
 - `lis-transv2-config-st` SHIPPING_RPC/TEST_RESULT_RPC moved to the AKS staging services (same values as lis-trans-config-st since 09-23); restarted alone; probe from the pod OK. Detail in VP-18466 STM.
 - Still pending on the clock: VP-18460 prod batch 2 ≥ 09-30 18:30Z; VP-18462 flip after a clean shadow window + proto-sync PR; VP-18320 stage_test twin after #661 deploys.
+
+### [2026-09-30 00:15Z] Leo: "#661 merged; 18462 do it directly; VP-18485 boss suggestion"
+- VP-18466 both halves DONE (staging deploy verified, -st proxy keys deleted 145→142). VP-18320 stage_test twin unblocked.
+- VP-18462 prod flipped shadow→grpc 00:13Z on in-pod replay evidence (224/224 agree through the consumer's own decoder; script + README in `scripts/vp18462-replay/`). Clock for deleting proxy_getkit/proxy_getresult from the 4 setting-consumer ConfigMaps starts now: 14 days of proxyGrpcCaller=0 (exclude 00:03-00:12Z replay calls).
+- VP-18485 reopened as a config-hygiene proposal (15 plaintext credentials in lis-trans-config; committed lis-trans-secret.yml holds the live Turnstile key). Draft comment for Leo in drafts/.
+- Method note: when organic traffic is too sparse for a shadow window, replay inside the consumer's pod with its own dist/ helpers — same verdict function, hours instead of days.
