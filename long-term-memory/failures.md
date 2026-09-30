@@ -7,7 +7,7 @@ score: 1.6361
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-09-29
+updated: 2026-09-30
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -153,7 +153,7 @@ summary: Auto-aggregated failure index from 116 entries across STM
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-09-29 — total 116 entries
+> Last updated: 2026-09-30 — total 116 entries
 
 ## Themes
 
@@ -237,19 +237,6 @@ monitor 端再加 `grep -v '^spawn'` 雙重防護。
 **任何 grep-for-evidence 都先對載體下一個 sanity 斷言**（總行數、已知必定存在的 marker），
 再對內容下斷言；只有「找到 0 個」而沒有「載體有東西」是無效證據。
 
-### **[[VP-16251]]** — `2026-04-21 21:50` — Script 產出的資料有 3 個問題需手動修正:
-
-1. sftp_ordering_path = null（script 未設定）
-2. sftp_archive_path 缺尾部 /
-3. sftp_folder_mapping sftp_source_id = null（已修正）
-4. 誤插 sftp_folder_mapping result mapping — sftp_folder_mapping 僅用於 ORDER（已刪除）
-
-### **[[VP-16280]]** — `2026-04-23 18:05` — 兩個遺漏（both caught by Leo at review, not by agent）:
-
-- 沒查 `kit_delivery_option` same-clinic 既有 → 預設 `NO_DELIVERY` 與 practice 實際 `BOTH_BLOOD_AND_NON_BLOOD` 不一致
-- 沒查 `order_clients.old_clinic_id` → 新 record null，既有皆 1002859
-Root cause: Step 5c 只查了 integration-level 欄位（report_option / integration_type / sftp paths），沒把 `kit_delivery_option` 和 order_clients 的 `old_clinic_id` 納入 same-practice-follow-existing 檢查清單。
-
 ### **[[VP-16921]]**
 
 - F1: Concluded "not a bug, customer misremembered" from a clean prod DB — WRONG. The bug (cancel cascade + a second producer) had erased/never-wrote the prod evidence. Corrected only after reading the customer's actual reminder screenshot (Leo supplied).
@@ -287,23 +274,6 @@ Prod pod: `lis-emr-v2-deployment-prod-54d77c8846-c8l9b` (default ns, container `
 - cron-status 端點需 auth (401)，未強驗 cron 是否真的 fire。
 
 **Code path 確認**: `periodicReportRecord.createMany` 只在 **SFTP 上傳成功 AND processedRecords>0** 後才寫 (base-report.service.ts:598-605)。空表 = 從未走到成功上傳。自動產 **`.xlsx`**，但客戶收到/手動腳本送的是 **`.csv`** → 格式不一致。
-
-### **[[VP-17120]]** — `2026-07-02 23:00` — Follow-up investigation: 3 orders exhausted all 5 retries (2026-07-01~07-02)
-
-- Retry-rescan itself works: INITIAL_RETRY_NUM=5; 6517/6518/6520 also failed initial attempts in the same window but eventually got samples (2589157-59) created upstream; 6515/6525/6526 burned all 5 retries in ~1h (rescan every 15 min) and stopped.
-- Root-cause signature (from DB, pod logs lost): healthy orders record order_input.sampleId == final sample_id (generateSampleID returned real id). All failing attempts record order_input.sampleId=0 → v2 coresamples_service (10.224.0.199:32100) GenerateSampleID returned an EMPTY response, and grpc-client-v2.service.ts:482 `parseInt(response.sample_id || '0')` silently coerces it to 0 instead of rejecting. sendOrder (POST api.vibrant-wellness.com/v1/portal/order/orderTest/order) then fails with sampleId=0 — but for 6517/18/20 at least one "failed" attempt actually created the sample server-side (samples exist in lis_core_v7.sample, correct patients) → client-failure ≠ server-failure (non-idempotent POST).
-- Evidence loss chain: original error messages unrecoverable — both processing replicasets (5bbb5d7548, 5cb5966c99) were replaced by later deploys; docker containers GC'd; /var/log/pods dirs for those replicasets removed.
-- File loss chain: rows were ingested when HL7_LOCAL_ROOT was still ephemeral /tmp/hl7 (before a85515e); fetch deletes the remote SFTP file at ingest → pod restart destroyed the only copy. Verified: all 3 SFTP order folders empty, PVC /EMR_storage has no copies. a85515e (persistent /EMR_storage) is live in prod since 2026-07-02 ~17:49 UTC — new ingests are safe (verified id 6528 localDir=/EMR_storage/... parsed OK).
-- THM keeps its own /Prod/OrderArchive on their SFTP → recovered 12554_070126.hl7 (valid HL7, NPI 1801889050 → single LIVE integration customer 17565, bundle VACP85842). Saved to lis-code-agent/storage/recovered-files/. OPTIMANTRA has no archive; MDHQ file unrecovered.
-- Secondary gap: 6517/6518/6520 were manually backfilled (2026-07-02 11:01 UTC, sample_id set on hl7_file_input) but emr_sample rows were NOT inserted → result matching for those 3 MDHQ orders will break when results arrive.
-- Replay safety verified: patients 3249545 (6525) / 3249575 (6526) have NO samples in lis_core_v7.sample — no orphan orders upstream; replay cannot duplicate.
-
-### **[[VP-17120]]** — `2026-07-02 23:00` — Recovery execution (Leo approved: 1=re-ingest, 6525/6526=option B, code fix fast)
-
-- 6515 (THM): file restored from THM's own /Prod/OrderArchive → uploaded to pod /EMR_storage path, localDir fixed + retry_num=1 → rescan re-parsed cleanly. sample 2589795, emr_sample 5962 (control_id 202607011246361542), upstream verified (RUTH MOORHEAD, customer 17565), no duplicates.
-- 6525 (OPTIMANTRA): replayed via in-pod script (jsonwebtoken sign with pod JWT_SECRET_PROD, UserPayload = system user bolin.l/54674 + customer 50342/clinic 153585 from the winning ehr_integration) POSTing the stored order_input with sampleId=0 → sample 2589807, barcode 2607026655. control_id/emr_order_id = filename number (66128162607012036) — OPTIMANTRA pattern verified against history. Patient is literally "Test Patient" (new integration onboarding order).
-- 6526 (MDHQ): same replay → sample 2589808, barcode 2607026656. control_id/emr_order_id UNKNOWN (MDHQ internal MQ* ids come from file content, not filename) → emr_sample row 5964 has NULLs; MDHQ result write-back may not reconcile. Do NOT ask vendor to resend (would duplicate — order is now placed); ask MDHQ for MSH.10 + specimen id from their message log instead, then UPDATE emr_sample.
-- Both replays verified upstream: exactly 1 sample per patient, correct customer.
 
 ### **[[VP-17544]]** — `2026-08-03` — 測試抓到我 code 的真實缺陷：bare `void` 造成 unhandled rejection
 
@@ -579,6 +549,36 @@ Known and accepted at close: the SUCCESS path (a real removeCustomerFromClinic a
 deactivating an integration) has never fired in production — zero provider removals occurred in the
 window — so it is verified only at the unit and function level, never end-to-end. Leo chose not to
 force a trigger.
+
+### **[[VP-16251]]** — `2026-04-21 21:50` — **
+
+1. sftp_ordering_path = null（script 未設定）
+2. sftp_archive_path 缺尾部 /
+3. sftp_folder_mapping sftp_source_id = null（已修正）
+4. 誤插 sftp_folder_mapping result mapping — sftp_folder_mapping 僅用於 ORDER（已刪除）
+
+### **[[VP-16280]]** — `2026-04-23 18:05` — **
+
+- 沒查 `kit_delivery_option` same-clinic 既有 → 預設 `NO_DELIVERY` 與 practice 實際 `BOTH_BLOOD_AND_NON_BLOOD` 不一致
+- 沒查 `order_clients.old_clinic_id` → 新 record null，既有皆 1002859
+Root cause: Step 5c 只查了 integration-level 欄位（report_option / integration_type / sftp paths），沒把 `kit_delivery_option` 和 order_clients 的 `old_clinic_id` 納入 same-practice-follow-existing 檢查清單。
+
+### **[[VP-17120]]** — `2026-07-02 23:00` — **
+
+- Retry-rescan itself works: INITIAL_RETRY_NUM=5; 6517/6518/6520 also failed initial attempts in the same window but eventually got samples (2589157-59) created upstream; 6515/6525/6526 burned all 5 retries in ~1h (rescan every 15 min) and stopped.
+- Root-cause signature (from DB, pod logs lost): healthy orders record order_input.sampleId == final sample_id (generateSampleID returned real id). All failing attempts record order_input.sampleId=0 → v2 coresamples_service (10.224.0.199:32100) GenerateSampleID returned an EMPTY response, and grpc-client-v2.service.ts:482 `parseInt(response.sample_id || '0')` silently coerces it to 0 instead of rejecting. sendOrder (POST api.vibrant-wellness.com/v1/portal/order/orderTest/order) then fails with sampleId=0 — but for 6517/18/20 at least one "failed" attempt actually created the sample server-side (samples exist in lis_core_v7.sample, correct patients) → client-failure ≠ server-failure (non-idempotent POST).
+- Evidence loss chain: original error messages unrecoverable — both processing replicasets (5bbb5d7548, 5cb5966c99) were replaced by later deploys; docker containers GC'd; /var/log/pods dirs for those replicasets removed.
+- File loss chain: rows were ingested when HL7_LOCAL_ROOT was still ephemeral /tmp/hl7 (before a85515e); fetch deletes the remote SFTP file at ingest → pod restart destroyed the only copy. Verified: all 3 SFTP order folders empty, PVC /EMR_storage has no copies. a85515e (persistent /EMR_storage) is live in prod since 2026-07-02 ~17:49 UTC — new ingests are safe (verified id 6528 localDir=/EMR_storage/... parsed OK).
+- THM keeps its own /Prod/OrderArchive on their SFTP → recovered 12554_070126.hl7 (valid HL7, NPI 1801889050 → single LIVE integration customer 17565, bundle VACP85842). Saved to lis-code-agent/storage/recovered-files/. OPTIMANTRA has no archive; MDHQ file unrecovered.
+- Secondary gap: 6517/6518/6520 were manually backfilled (2026-07-02 11:01 UTC, sample_id set on hl7_file_input) but emr_sample rows were NOT inserted → result matching for those 3 MDHQ orders will break when results arrive.
+- Replay safety verified: patients 3249545 (6525) / 3249575 (6526) have NO samples in lis_core_v7.sample — no orphan orders upstream; replay cannot duplicate.
+
+### **[[VP-17120]]** — `2026-07-02 23:00` — **
+
+- 6515 (THM): file restored from THM's own /Prod/OrderArchive → uploaded to pod /EMR_storage path, localDir fixed + retry_num=1 → rescan re-parsed cleanly. sample 2589795, emr_sample 5962 (control_id 202607011246361542), upstream verified (RUTH MOORHEAD, customer 17565), no duplicates.
+- 6525 (OPTIMANTRA): replayed via in-pod script (jsonwebtoken sign with pod JWT_SECRET_PROD, UserPayload = system user bolin.l/54674 + customer 50342/clinic 153585 from the winning ehr_integration) POSTing the stored order_input with sampleId=0 → sample 2589807, barcode 2607026655. control_id/emr_order_id = filename number (66128162607012036) — OPTIMANTRA pattern verified against history. Patient is literally "Test Patient" (new integration onboarding order).
+- 6526 (MDHQ): same replay → sample 2589808, barcode 2607026656. control_id/emr_order_id UNKNOWN (MDHQ internal MQ* ids come from file content, not filename) → emr_sample row 5964 has NULLs; MDHQ result write-back may not reconcile. Do NOT ask vendor to resend (would duplicate — order is now placed); ask MDHQ for MSH.10 + specimen id from their message log instead, then UPDATE emr_sample.
+- Both replays verified upstream: exactly 1 sample per patient, correct customer.
 
 ### **[[LIS-7690]]** — `2026-08-18 18:20` — **
 
@@ -992,10 +992,6 @@ Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`
 
 預防：destructive ops (rollout restart / pod delete) 前必須 `kubectl logs <pod> > /tmp/preserve.log` + `kubectl describe pod <pod> > /tmp/preserve_describe.txt`。已寫進 user memory feedback。
 
-### **[[LBS-1541]]**
-
-(none yet)
-
 ### **[[PH-847]]** — `2026-09-11` — Dream closeout audit — PASS (PM-owned ticket)
 
 - PH-847 Done 09-10 13:13 PDT; assignee Xiaoye (PM). Implementation shipped under VP-18080 (order half, Leo) and VP-18066 (envelope), both audited PASS on 2026-09-03. Nothing further owed by this STM.
@@ -1003,10 +999,6 @@ Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`
 ### **[[PO-256]]**
 
 - az CLI MFA expired — could not inspect RBAC Container App directly; bounded diagnosis at the coresamples→container-app hop via error strings and timing.
-
-### **[[VP-16766]]** — `2026-05-27` — **Minor TS slip**：`_apply` 腳本初版用 `${ehr.created_at = now}`（賦值表達式）想偷塞欄位，TS2339 編譯失敗。改成直接 `${now}`。教訓：raw SQL 的 template binding 不要塞賦值/副作用，值先算好再代入。
-
-
 
 ### **[[VP-16934]]** — `2026-06-09` — #157 部署後 staging dry-run 驗證通過
 
@@ -1017,13 +1009,6 @@ Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`
   - **真客戶 5794 → `201 {rejected, unrecognized_test_codes:[VACP1001]}`** = customer 解析成功 + 代碼分類有跑（VACP1001 是假 code 才被擋）。
 - **結論：order intake 在 staging dry-run 全程跑通**（auth/gating/validation/customer 查詢/代碼分類）。差「完整成功單(sampleId:-1)」需對 staging 客戶有效的真 test code。
 - staging order_intake 留了 2 筆 VP16934-TEST-* rejected 測試列（無害，可清）。
-
-### **[[VP-17120]]** — `2026-07-02 23:05` — ROOT CAUSE UPGRADED during replay (filed VP-17318, branch bugfix/leo/VP-17318 pushed)
-
-- emr-v2 generateSampleID NEVER worked: proto field is `sampleId` (camelCase in proto) but client reads `response.sample_id` with keepCase:true → undefined → `|| '0'` → always 0 since the VP-16463 port. Pre-5/28 nonzero patientPayLater ids were written by Java EMR-Backend.
-- sendOrder with sampleId=0 self-assigns a correct id (70/74 zero-id orders succeeded). The stuck rows are occasional sendOrder failures on that path.
-- coresamples v2 GenerateSampleID sequence is ~311k STALE: live probes returned ids 2277991-2278000, ALL existing patient samples in lis_core_v7.sample. A field-name-only fix would inject colliding ids → order path must NOT consume this RPC until their sequence is repaired (needs a coresamples-team ticket).
-- Fix on branch: finalizer skips pre-generation (sends 0 explicitly), client reads correct field + rejects invalid, [RETRY-EXHAUSTED] loud log, decrement floored. 21/21 targeted tests pass, build clean.
 
 ### **[[VP-17283]]**
 
@@ -1082,6 +1067,21 @@ VP-18402 Dev In Progress -> **Done** (transition id 15).
 NOT transitioned, on the "don't touch other people's tickets" instruction: VP-18403 (FE, Siyun
 Liang), PH-917 (Xiaoye Li), QH-7271 (QA, unassigned). QH-7275 is assigned to me but is a QA Task
 and QA has not run — moving it would falsely signal it was tested, so it was left in To Do.
+
+### **[[LBS-1541]]** — **
+
+(none yet)
+
+### **[[VP-16766]]** — `2026-05-27` — **
+
+
+
+### **[[VP-17120]]** — `2026-07-02 23:05` — **
+
+- emr-v2 generateSampleID NEVER worked: proto field is `sampleId` (camelCase in proto) but client reads `response.sample_id` with keepCase:true → undefined → `|| '0'` → always 0 since the VP-16463 port. Pre-5/28 nonzero patientPayLater ids were written by Java EMR-Backend.
+- sendOrder with sampleId=0 self-assigns a correct id (70/74 zero-id orders succeeded). The stuck rows are occasional sendOrder failures on that path.
+- coresamples v2 GenerateSampleID sequence is ~311k STALE: live probes returned ids 2277991-2278000, ALL existing patient samples in lis_core_v7.sample. A field-name-only fix would inject colliding ids → order path must NOT consume this RPC until their sequence is repaired (needs a coresamples-team ticket).
+- Fix on branch: finalizer skips pre-generation (sends 0 explicitly), client reads correct field + rejects invalid, [RETRY-EXHAUSTED] loud log, decrement floored. 21/21 targeted tests pass, build clean.
 
 ### **[[VP-16521]]** — `2026-05-28 17:52` — **
 
@@ -1142,16 +1142,6 @@ origin/main + origin/staging 的 400 個 commit **沒有任何 commit 對得上*
 **次要教訓**：我當時的分析（那 61 個檔沒有獨特價值）事後看是對的——42 個與
 origin/main 逐 byte 相同、19 個是被 main 取代掉的舊碼。但**分析正確不等於執行安全**。
 一個正確的判斷加上一個不安全的執行方式，結果仍然是資料遺失。
-
-### **[[VP-17120]]** — `2026-07-03 00:15` — CORRECTION: /tmp ingestion was NOT a pre-deploy-wide state — it was the AKS Phase A test pods
-
-Leo caught that /EMR_storage was already the norm since ~June. Data: localDir by day shows /EMR_storage steadily since 6/1, with /tmp only on 6/23 (6441/6442), 6/30 (6506), 7/1 (6517/18/20), 7/2 early (6525/26) — interleaved with /EMR_storage rows within the same hour on 7/1. Same pod cannot flip localRoot (constructor-read) → TWO fetchers ran concurrently:
-- The /tmp fetcher = AKS Phase A test pods (VP-17291/92 pipeline iteration; 7 replicasets in 24h in AKS ns emr-v2; the /tmp rows' parser replicasets don't exist in on-prem history). They lacked HL7_LOCAL_ROOT and had fetch cron enabled.
-- Redlock lives in each pod's OWN redis sidecar → no cross-pod mutual exclusion → AKS + on-prem raced SFTP; whoever won stored the file locally (AKS /EMR_storage is a DIFFERENT storage than on-prem — AKS has no HL7Message_prod dir at all).
-- Both pods run the 15-min retry-rescan against the shared DB → the pod WITHOUT the file burns retry_num with "Local file missing" while the owner pod burns it with real failures → double-speed exhaustion. That's why exactly the /tmp rows died fast.
-- Current state safe: AKS pod now has POD_ROLE=web (fetch cron off, 0 fetch logs in 5h) + HL7_LOCAL_ROOT set + a85515e default; on-prem is the only fetcher.
-- Cutover TODO (Phase B): shared/migrated HL7Message_prod storage, single-side cron via POD_ROLE, and gate the retry-rescan on intake role too (otherwise cross-pod retry_num trampling returns).
-- Side mystery resolved-ish: the 7/2 11:01 heal of 6517/18/20 did not touch last_parse_time nor last_update_pod_name → not an app code path; someone ran manual SQL at 11:01 UTC (ask team — not Leo's session with me).
 
 ### **[[VP-17591]]** — `2026-08-04 18:35` — 診斷修正：emr-v2 根本不送 address，PR #316 沒解決核心症狀
 
@@ -1338,6 +1328,16 @@ gate on the order hot path should ship behind an env-var kill switch.
 STILL UNTESTED: the endpoint actually executing (needs a JWT), and trans -> emr-v2 end to end
 (needs `EMR_V2_BASE_URL`, still unset in both ConfigMaps).
 
+### **[[VP-17120]]** — `2026-07-03 00:15` — **
+
+Leo caught that /EMR_storage was already the norm since ~June. Data: localDir by day shows /EMR_storage steadily since 6/1, with /tmp only on 6/23 (6441/6442), 6/30 (6506), 7/1 (6517/18/20), 7/2 early (6525/26) — interleaved with /EMR_storage rows within the same hour on 7/1. Same pod cannot flip localRoot (constructor-read) → TWO fetchers ran concurrently:
+- The /tmp fetcher = AKS Phase A test pods (VP-17291/92 pipeline iteration; 7 replicasets in 24h in AKS ns emr-v2; the /tmp rows' parser replicasets don't exist in on-prem history). They lacked HL7_LOCAL_ROOT and had fetch cron enabled.
+- Redlock lives in each pod's OWN redis sidecar → no cross-pod mutual exclusion → AKS + on-prem raced SFTP; whoever won stored the file locally (AKS /EMR_storage is a DIFFERENT storage than on-prem — AKS has no HL7Message_prod dir at all).
+- Both pods run the 15-min retry-rescan against the shared DB → the pod WITHOUT the file burns retry_num with "Local file missing" while the owner pod burns it with real failures → double-speed exhaustion. That's why exactly the /tmp rows died fast.
+- Current state safe: AKS pod now has POD_ROLE=web (fetch cron off, 0 fetch logs in 5h) + HL7_LOCAL_ROOT set + a85515e default; on-prem is the only fetcher.
+- Cutover TODO (Phase B): shared/migrated HL7Message_prod storage, single-side cron via POD_ROLE, and gate the retry-rescan on intake role too (otherwise cross-pod retry_num trampling returns).
+- Side mystery resolved-ish: the 7/2 11:01 heal of 6517/18/20 did not touch last_parse_time nor last_update_pod_name → not an app code path; someone ran manual SQL at 11:01 UTC (ask team — not Leo's session with me).
+
 ### **[[VP-15460]]** — `2026-04-28` — **
 
 Agent committed migration SQL to repo and assumed release pipeline would `prisma migrate deploy` it. Leo had to remind: "你 sftp_folder_mapping 的改動還沒真的上傳到 database". Then `prisma migrate deploy` failed with P3005 (DB never baselined for prisma migrations) → fell back to `prisma db execute --file <sql>` (raw SQL apply). Then "192.168.60.11:3306 也要 apply" — second DB. Lesson: this repo has two MySQL instances + Prisma is not the migration source-of-truth in prod.
@@ -1352,26 +1352,6 @@ Agent committed migration SQL to repo and assumed release pipeline would `prisma
 - Fixed by switching to `--no-headers -o custom-columns=NAME:.metadata.name`.
 - Lesson: avoid `jsonpath` with Tcl-significant chars in expect scripts; prefer custom-columns output for single-field extraction.
 
-### **[[VP-16193]]** — `2026-04-17 18:30` — **insert-order-client.ts script bug: customer_id 設為 clinic_id 值**
-
-- 問題: 執行 insert-order-client.ts 後，order_clients.customer_id = 6338（Practice ID）而非 5408（Provider ID）
-- Root cause: script 內部將 customer_id 參數映射到 clinic_id 值，已知 bug
-- 修正: 手動 SQL `UPDATE order_clients SET customer_id = 5408 WHERE id = 2278`
-- 可預防: 是。未來執行 insert-order-client.ts 後必須驗證 customer_id 是否正確
-
-### **[[VP-16329]]** — `2026-04-27 23:00` — **Failure: 第二次重跑 36816 INSERT 觸發 duplicate constraint error。**
-
-Root cause: 第一次跑時我用 `tail -50` 截取 output，後段顯示 record 資料但沒看到「✅ Successfully inserted」字樣（卡在 record dump），誤判沒成功就重跑。
-影響: 無實質影響（script 在 unique check 時擋下，沒 partial insert）。
-教訓: 確認 INSERT 成敗應 grep `Successfully|Error|❌` 而非看 record dump。後續 4 個 INSERT 都用 grep 過濾，順利完成。
-
-### **[[VP-16734]]**
-
-（無實作層失敗）
-
-**Minor procedural slip**:
-- Probe script `_vp16734-check.ts` 初版查 `ehr_integration_status_history` 用 column `ehr_integration_id`（推測），實際是 `integration_id` — 一次 retry 後補上 information_schema 查欄位名再改。教訓：跨表的 FK column 命名不要憑猜，先 `SHOW COLUMNS` / information_schema 看 schema
-
 ### **[[VP-16934]]** — `2026-06-10` — 完整 happy-path + exactly-once 在 staging 驗證通過（Leo 提供值）
 
 - 值：orderingProviderId=999997（→fetchById，clinic 10136 帶出）、testCodes=[VAREQUISTION463]、chargeIndicator=C、測試病患 Vptest Dryrun。
@@ -1380,17 +1360,37 @@ Root cause: 第一次跑時我用 `tail -50` 截取 output，後段顯示 record
 - ⚠️ dry-run 仍會跑 patient find/create（gRPC），staging 可能新增測試病患 Vptest Dryrun；order_intake 留了 HAPPY/DUP/TEST 測試列（皆 staging 測試資料，可清）。
 - **結論：order intake API 在 staging 可正常下單（dry-run）且 exactly-once 生效。**
 
-### **[[VP-17076]]** — `2026-06-22` — 重大查詢 bug — Prisma $queryRaw IN() 用 join 字串
+### **[[VP-18050]]**
+
+- GraphQL wire spec first asserted the resolver's clinic-user gate using a patient token that carried `patient_id` + `barcode` but no `clinic_id`. `AuthGuard.validatePatient` rejected it one layer earlier ("Missing required patient identifiers"), so the test proved nothing about the resolver. Fixed by giving the token the identifiers the guard requires, so the request actually reaches the gate under test. Cheap instance of a general trap: a rejection test that passes for the wrong reason looks identical to one that passes for the right reason.
+
+### **[[VP-16193]]** — `2026-04-17 18:30` — **
+
+- 問題: 執行 insert-order-client.ts 後，order_clients.customer_id = 6338（Practice ID）而非 5408（Provider ID）
+- Root cause: script 內部將 customer_id 參數映射到 clinic_id 值，已知 bug
+- 修正: 手動 SQL `UPDATE order_clients SET customer_id = 5408 WHERE id = 2278`
+- 可預防: 是。未來執行 insert-order-client.ts 後必須驗證 customer_id 是否正確
+
+### **[[VP-16329]]** — `2026-04-27 23:00` — **
+
+Root cause: 第一次跑時我用 `tail -50` 截取 output，後段顯示 record 資料但沒看到「✅ Successfully inserted」字樣（卡在 record dump），誤判沒成功就重跑。
+影響: 無實質影響（script 在 unique check 時擋下，沒 partial insert）。
+教訓: 確認 INSERT 成敗應 grep `Successfully|Error|❌` 而非看 record dump。後續 4 個 INSERT 都用 grep 過濾，順利完成。
+
+### **[[VP-16734]]** — **
+
+（無實作層失敗）
+
+**Minor procedural slip**:
+- Probe script `_vp16734-check.ts` 初版查 `ehr_integration_status_history` 用 column `ehr_integration_id`（推測），實際是 `integration_id` — 一次 retry 後補上 information_schema 查欄位名再改。教訓：跨表的 FK column 命名不要憑猜，先 `SHOW COLUMNS` / information_schema 看 schema
+
+### **[[VP-17076]]** — `2026-06-22` — **
 
 - 錯誤寫法 `WHERE clinic_id IN (${CLINICS.join(',') as any})` → Prisma 把整串當**單一 bound param** → SQL 變 `clinic_id IN (?)` param='2930,8003,...' → MySQL 字串轉 int 只取開頭 → **只比對到 2930**。
 - 後果: 兩支 check script (_vp17076-check.ts / _vp17076-exist.ts) 全程只看到 2930，誤判「19 clinic 都不存在 / 需新建」。Leo 自己跑 SELECT * 抓到一堆既有 row 才發現。
 - Root cause: 沿用 scripts/check-vp16329.ts 的 hardcode 單值模式，改成 array 時沒用 `Prisma.join()`。
 - 正解: `import { Prisma }` + `IN (${Prisma.join(CLINICS)})`，或對信任的整數陣列直接字串內插建 SQL。
 - 教訓: 多值 IN 查詢務必**先驗證回傳筆數合理**（20 clinic 只回 1 筆就該起疑），不能直接拿來下「不存在」結論。對應 [[feedback_batch_db_verify]] / [[feedback_join_scope_reverse_audit]]。
-
-### **[[VP-18050]]**
-
-- GraphQL wire spec first asserted the resolver's clinic-user gate using a patient token that carried `patient_id` + `barcode` but no `clinic_id`. `AuthGuard.validatePatient` rejected it one layer earlier ("Missing required patient identifiers"), so the test proved nothing about the resolver. Fixed by giving the token the identifiers the guard requires, so the request actually reaches the gate under test. Cheap instance of a general trap: a rejection test that passes for the wrong reason looks identical to one that passes for the right reason.
 
 ### **[[VP-16232]]** — `2026-04-20 14:30` — **
 
@@ -1450,13 +1450,6 @@ Root cause: 第一次跑時我用 `tail -50` 截取 output，後段顯示 record
   Cloudflare bearer page, target shape = order's envelope.
 - Work continues in VP-18080 / VP-18066 STMs; this file is closed out.
 
-### **[[VP-17076]]** — `2026-06-23` — 改用 shortcut_id 比對（commit 0ea3cbe，取代 name 比對）
-
-- Leo 定案：EMR 在 OBR-4 送 `VASC{shortcut_id}`（如 VASC727441），emr-v2 用 `shortcut_id` 比對（唯一），不再用 name。
-- shortcut.service: `parseShortcutCode`(VASC{id}) 取代 normalizeName；resolveShortcut 改 `s.shortcut_id === id`；非 VASC → null（不打 API）。is_practice 過濾移除（id 唯一無碰撞，a219f82 的考量被取代）。expand(tests/groups/bundles) 不變。candidatePairs(winner first + NPI fallback) 不變。
-- live 驗證 144510+40660：VASC727441→Total Baseline(MALE)[376+853]、VASC727440→(FEMALE)[853]、VASC999999→null、非VASC→null。109 tests pass。
-- **3 份 Confluence doc 現已過時**（它們寫 by-name；實際是 VASC{id}）：內部 2506326018 / 外部 2506457090 / 差異清單 2506653698。外部 vendor doc 尤其需改成「OBR-4 填 VASC{shortcut_id}」+ 提供 per-clinic shortcut_id 對照（xlsx）。待 Leo 決定如何對 vendor 呈現再更新。
-
 ### **[[VP-17497]]** — `2026-07-27` — SERIOUS MISS (Leo): defect known 14 days before external partner hit it
 
 - The exact bug was discovered during VP-17286 E2E (2026-07-13, scope item 7) and recorded ONLY as a "proposed follow-up" STM note — no ticket filed, nobody scheduled it. api-product hit it in sandbox 2026-07-22; fixed 2026-07-27.
@@ -1481,6 +1474,13 @@ ConfigMap 快照，但那兩個檔只存在主 repo 工作目錄 → 在 worktre
 所以改成 `markTerminalFailure` 不覆寫 `last_update_pod_name`。
 **教訓：guard 抓到的不一定是新變數，可能只是既有變數的新使用點；用「塞空值進 config」
 去消除警告會偷偷改變 `??` 的語意。**
+
+### **[[VP-17076]]** — `2026-06-23` — **
+
+- Leo 定案：EMR 在 OBR-4 送 `VASC{shortcut_id}`（如 VASC727441），emr-v2 用 `shortcut_id` 比對（唯一），不再用 name。
+- shortcut.service: `parseShortcutCode`(VASC{id}) 取代 normalizeName；resolveShortcut 改 `s.shortcut_id === id`；非 VASC → null（不打 API）。is_practice 過濾移除（id 唯一無碰撞，a219f82 的考量被取代）。expand(tests/groups/bundles) 不變。candidatePairs(winner first + NPI fallback) 不變。
+- live 驗證 144510+40660：VASC727441→Total Baseline(MALE)[376+853]、VASC727440→(FEMALE)[853]、VASC999999→null、非VASC→null。109 tests pass。
+- **3 份 Confluence doc 現已過時**（它們寫 by-name；實際是 VASC{id}）：內部 2506326018 / 外部 2506457090 / 差異清單 2506653698。外部 vendor doc 尤其需改成「OBR-4 填 VASC{shortcut_id}」+ 提供 per-clinic shortcut_id 對照（xlsx）。待 Leo 決定如何對 vendor 呈現再更新。
 
 ---
 
@@ -1662,7 +1662,7 @@ expect -re {[Pp]assword:} { send -- "$env(ONPREM_PW)\r" }
   5. **「無 reference range」`abnormalFlag` 預期錯**：Service 對齊 Java `getMasterListInfo()==null` 返回 `''`，但 spec 期望 `'N'`
 - 全部本 commit 一次修齊，6/6 pass
 
-### **[[VP-17076]]** — `2026-06-22` — is_practice 過濾（重要修正，commit a219f82）
+### **[[VP-17076]]** — `2026-06-22` — **
 
 - 真相更正：144510 的「重複 Total Baseline」**不是 catalog 重複**，而是 provider 40660 的**個人 shortcut**(is_practice=false, 33-test 含 Magnesium) 與診所 preset(is_practice=true, 727441, 2-test) 同名。Get Shortcuts 回傳 practice + personal 兩種；同一 customer 43262 在 2930/144510 都無碰撞(無個人 shortcut)，只有 40660 有。
 - 修正：resolver 只比對 `is_practice === true`(Leo 一開始就說 clinic-level)。個人 shortcut 忽略 → 永遠用診所 preset。live 驗證 40660@144510 改解析到 727441(PSA+Foundation) 非 724454(33-test)。
@@ -1686,7 +1686,7 @@ expect -re {[Pp]assword:} { send -- "$env(ONPREM_PW)\r" }
 
 ## GraphQL / API design <a id='graphql-api'></a>
 
-### **[[VP-17076]]** — `2026-06-22` — 收尾動作
+### **[[VP-17076]]** — `2026-06-22` — **
 
 - PR #190 → base=staging（feature/leo/VP-17076，commit 243079d）。
 - 差異清單 doc（pricing team）：page 2506653698。掃 14 clinic 證實 **Total Baseline (Male/Female) 13/14 缺 Magnesium**（test 384）；**Fashion Island 144510 有重複 Total Baseline shortcut**(大小寫兩套，含/不含 Magnesium)→ resolver first-match 不確定；建議 catalog 去重 + 統一大小寫。
