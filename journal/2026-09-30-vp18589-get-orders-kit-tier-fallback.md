@@ -46,3 +46,13 @@ then 「全部按照文檔先做完，然後給我回覆客戶的comment」.
 ## Output
 PR #444 draft → staging, head 9826235. Customer reply drafted for Leo (engineer's
 view: who owns what, why it is missing), not sent.
+
+## Post-merge (same day)
+Leo merged #444 → staging at 22:36Z; image :288bb1e live 22:46Z. Old pod reproduced
+the bug on 4 rows (kit_delivered vs placed) seconds before it was terminated; new pod:
+119/119 kit-tier rows agree across 6 customers. Learned the integrator (customer 50687)
+has since cancelled all 40 of its sandbox orders, so their own placerIds can no longer
+demonstrate the fix — the proof is on other customers' rows.
+Two pre-existing lookup-vs-list asymmetries surfaced by the sweep (report-service signal
+only in lookup; core order_cancel_time only in list). Not touched — one-PR-one-scope.
+Leo's sequencing: Chris fixes the doc first, customer reply after.
