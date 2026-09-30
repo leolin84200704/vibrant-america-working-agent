@@ -3,7 +3,7 @@ id: NEXTECH-onboarding
 type: stm
 category: emr_integration
 status: active
-score: 1.2909
+score: 1.2486
 base_weight: 1.0
 created: 2026-09-22
 updated: 2026-09-24

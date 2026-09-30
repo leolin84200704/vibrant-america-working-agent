@@ -147,7 +147,7 @@ summary: 'New EMR vendor BioInsights — first key-based (non-password) SFTP int
   unaffected; AKS pod egress to bioinsights:2022 OK. 2026-07-21 email sent to Thomas
   (perms + dir layout + sample HL7). STATUS: waiting on vendor reply.'
 jira_status: none
-score: 1.3725
+score: 1.3275
 ---
 
 # BioInsights EMR vendor onboarding (SFTP, key-based auth)
@@ -302,7 +302,7 @@ L4 verified 2026-09-29 (prod DB + SFTP live):
 - **Real remaining blocker is the compendium (test catalog w/ CPT+LOINC) from Zhenhe Zhang** — devcom has asked
   three times. Per the 09-24 rule, it stays *his* open item in any external reply; we do not attach our timeline to it.
 
-### [2026-09-29] Leo 定版了給 devcom 的回信 — 語氣規則（pending dream distillation -> leo-working-rules.md 外部溝通段）
+### [2026-09-29] Leo 定版了給 devcom 的回信 — 語氣規則（distilled 2026-09-29 -> leo-working-rules.md 09-29 段 + ~/.claude/CLAUDE.md「替 Leo 起草對外文字」）
 Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」。定版全文在
 `drafts/BIOINSIGHTS-devcom-reply-20260929-draft.md`（含逐項刪改對照）。抽出來的規則：
 - **不慶祝、不報里程碑**：「This is the first order that has ever come through ... ordering side is now

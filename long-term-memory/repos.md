@@ -3,7 +3,7 @@ id: repos
 type: ltm
 category: technical
 status: active
-score: 1.292
+score: 1.3476
 base_weight: 0.9
 created: 2026-04-22
 updated: 2026-09-24
@@ -17,6 +17,7 @@ links:
 - INCIDENT-20260910-emr-v2-di-crashloop
 - LBS-1487
 - LBS-1547
+- LIS-7882
 - PO-222
 - QH-1104
 - QH-1130
@@ -93,15 +94,19 @@ links:
 - VP-18048
 - VP-18050
 - VP-18303
+- VP-18320
 - VP-18342
 - VP-18344
+- VP-18347
 - VP-18400
 - VP-18406
 - VP-18461
 - VP-18462
+- VP-18463
 - VP-18464
 - VP-18466
 - VP-18480
+- VP-18485
 - VP-9299
 - business-model
 - business-model-deep
@@ -335,3 +340,13 @@ sudo prompt 用 `echo <pw> | sudo -S <cmd>`。Heredoc 內含 `[^...]` 之類 exp
 - **in-cluster 服務位址表（prod）**：base-report `lis-base-report.report:30800`（staging `-staging:30801`，transv2-st 用 `-dev:30802`）、shipping `lis-shipping-service.shipping:16256`、accounting `lis-accounting-service.bkkeeping:8084`、charging `lis-charging-service.charging:8084`、samples `lis-sample-service.sample:16300`、order `lis-order.default:4242`、interactive-report `lis-interactive-report.report:30900`、oauth `oauth-service.oauth:8000`、trans 自己 `lis-trans-service.default:3146`、pdf engine `report-pdf-engine.report:80`、shipping gRPC `lis-shipping-service-grpc.shipping:63142`、test-connect gRPC `lis-test-connect-grpc-service.results:6889`。
 - **trans v1/v2 CI 護欄**（dream 09-29 從 GitHub 驗）：`ci-tests.yml` 在兩 repo main 上、每個 PR 都跑（09-29 當天 v1 三次、v2 一次全綠）；但 main 的 ruleset `required_status_checks` 仍是 `[]`——紅的 check 只是建議，merge to main 就是 deploy。補上 required check 是 VP-18456，需要 repo admin（agent `admin:false`）。
 - 兩 repo 的 cloud-proxy 相關：`default/lis-trans-config` 是叢集裡唯一含 cloud-proxy URL 的 ConfigMap（14 個死 key，09-29 已刪）；`LIS-backend-billing ProZOrderServiceImpl.java:115` hardcode `www.vibrant-america.com/lisapi/v1/lis/cloud-proxy/`，打的是 on-prem 實例不是 AKS。
+
+## 【更新 2026-09-30】results-grpc 的 token 攔截器實況、emr-v2 的 OAuth2 caller 與部署鏈、on-prem test-connect 已不健康（LIS-7882 / VP-18320 / VP-18463 / VP-18466）
+- **LIS-backend-results-grpc（cloud prod image = main `efdf8a2`）`MetadataLoggerInterceptor`**：沒 token → 放行 + warn `gRPC missing token`；有 token 但解不開／驗不過 → `RpcException(Unauthorized)`（client 端看到 code 2 UNKNOWN `Invalid authorization token`）。`selectJwtKey`：HS256 用共享 `JWT_SECRET`、RS256 用 `JWT_RS256_PUBLIC_KEY`。**空的或過期的 Bearer 比沒有 Bearer 更糟**。VP-18528 之後的 blocking 只擋「metadata 與 token payload 都沒有 service-name」的 caller；缺 x-request-id 只 warn。攔截器的 log 標題（`gRPC missing token` / `Intercepted gRPC Request` / `gRPC caller identity`）**不進 Datadog**——Yuteng 的 Confluence audit doc（gRPC Caller Metadata Audit，每日 ~17:25Z 刷新）用的是 APM span metadata；要驗 server 收到什麼只能 `kubectl -n results logs` 對 pod（prod 兩個 replica，只有其中一個會有那筆）。
+- **lis-backend-emr-v2 呼叫 results-grpc 的 token（LIS-7882，#441 → staging、#440 → main，prod image `9a9fc98` 09-30 18:55Z 起）**：新 `src/modules/grpc/services/oauth2-token.service.ts`（client_credentials，用既有 `OAUTH2_CLIENT_ID/SECRET/TOKEN_ENDPOINT`，prod/staging pod env 都有；5 分鐘到期保護、in-flight dedup、10s timeout、60s 失敗冷卻），`GrpcClientService` 以 `@Optional()` 注入（4 個零參數建構的 spec 不用改），`buildResultsGrpcMetadata()` 供 cloud 與 on-prem fallback 兩個 call site 共用：service-name + `x-request-id`（randomUUID）+ `authorization`（拿得到才附；拿不到 = 省略 + warn 計數 `miss #n` + Sentry 10 分鐘阻尼）。`ShortcutService` 自己那套 minting 沒動（Leo 要最小改動）。**emr-v2 的 OAUTH2_CLIENT_ID 在 OAuth service 註冊名是 `trans v2`**（token 解出 internal_user_name "trans v2"、role INTERNAL、internal_user_id 10000）——audit doc 的 token-payload 欄會顯示這個名字，不是 lis-backend-emr-v2。
+- **emr-v2 部署鏈**：feature → PR 到 `staging`（Jenkins `LIS-EMR-V2-BACKEND/staging`，commit status `continuous-integration/jenkins/branch`；Jenkins UI 192.168.60.9:9602 本機打不到，用 `gh api repos/.../commits/{sha}/status`）→ release PR `staging → main` 標題就叫 "Staging"（#440 是 09-28 開的長壽 PR，head 跟著 staging 走，Leo 09-30 在 #441 merge 後 11 秒 merge 它）→ Jenkins main → AKS `emr-v2/lis-emr-v2-deployment-prod`（container 名 `lis-emr-v2-prod`，sidecar `redis:7-alpine`）。**rollout 噪音基線**：舊 pod graceful shutdown 時對 sidecar `127.0.0.1:6379` / `::1:6379` 連續 ECONNREFUSED，3 秒內 ~800 行 error（09-30 18:55:43–46Z），之後歸零；跟改動無關。main checkout 常停在別票的 branch → 用 `~/src/lis-backend-emr-v2.worktrees/{ticket}`；commit 用 `core.hooksPath=/dev/null` 繞過 config-yaml-coupling hook 的假陽性（#249–#266 慣例），CJK 檢查手動跑。
+- **staging emr-v2 的 runtime config ≠ repo 裡的 ConfigMap 副本**：真正的 `GRPC_TEST_RESULT_CLOUD_HOST` 指 staging test-connect（dd service `lis-test-connect-staging-deployment`），不是本機副本寫的 10.224.0.x；staging 的 `NODE_ENV=production` 所以 service-name 也是 `lis-backend-emr-v2-production`。staging integrations 會被人切 LIVE/非 LIVE（同一批 sample 00:06Z 過、19:00Z 不過），要驗 staging 用 E2E sample 2494299（integration `vp17312-e2e-test-int`）。
+- **on-prem lis-test-connect 192.168.60.6:30600**（emr-v2 的 fallback）：跑的是**舊 image、沒有 MetadataLoggerInterceptor**（garbage Bearer 也放行），而且對真實 sample（2555493 / 2641983）一律回 `Internal server error`，cloud 正常——fallback 今天實際上是壞的，別人的服務，Leo 決定要不要開票。
+- **LIS-transformer `/proxy/*` 現況（VP-18320 #847/#848、VP-18463 #849/#850，09-30 全部部署）**：13 條（3 grpc + 10 old-report）+ `/proxy/old-report/downloadTestOrderPDF` 共 14 條已 404；`ProxyModule` 只剩 `ProxyController`，`proxy-removed-routes.spec.ts` 用真的 module 釘 `controllers == [ProxyController]` + 14 paths 404。還活著：`/proxy/grpc/getKitStatus`、`/proxy/grpc/getPatientTestsResult`（10-14 之後隨 VP-18463 下）、`/trans/downloadTestOrderPDF`（portal 偶發用）。`proxy.service.ts` 的 `getTestStatus/getQuestionaireBySampleId/listTnpCode` 仍被 `trans.service.ts` 內部呼叫，不能刪。叢集裡已無 `proxy_getteststatus/proxy_getQuestionaire/proxy_getTnpCode` key；`proxy_getkit/proxy_getresult` 只剩 4 張 setting-consumer ConfigMap（VP-18462 step 4）。
+- **LIS-transformer-v2 stage_test 缺口已補（VP-18466 #661）**：#629/#637/#659/#628 cherry-pick 進 stage_test，`lis-transv2-config-st` 的 `SHIPPING_RPC`/`TEST_RESULT_RPC` 改成 AKS staging 服務（`lis-shipping-service-staging-grpc.shipping:63142` / `lis-test-connect-staging-grpc-service.results:6889`），3 個 `proxy_*` key 刪除（145→142）；prod `lis-transv2-config` 157→145（含 VP-18461 的 8 個）。transv2-st 曾是 trans v1 st `/proxy/grpc/*` 的最後 caller。
+- **LIS-setting-consumer 09-29 晚上三個 deploy（#183 Ray VP-18497 21:34Z、#184 Leo VP-18462 proto 同步 22:19Z、#186 Ray 22:38Z 刪 on-prem Redis 設定）+ 00:13Z `SETTING_GRPC_MODE` shadow→grpc**：Kafka consumer crash/restart 噪音 21:40–00:16Z 全是 rollout；`check order tag` 這條 error 行每天 1.4–2.4 萬行（09-28 起）是既有的，不是這批改動造成。#183 之後 `/trans/downloadTestOrderPDF` 的組織流量歸零（order-summary PDF 改直接從 order-management 下載）——當 positive control 的路由會被別人的 deploy 拿走。

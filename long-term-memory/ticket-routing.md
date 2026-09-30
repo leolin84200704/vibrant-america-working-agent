@@ -131,3 +131,13 @@ summary: Ticket keyword to repo/module routing table
 - **"redis_s.ts / trans 開機 ioredis ETIMEDOUT / 明文 Redis 密碼 / config.yaml 含 secret"** → STM `VP-18485`（#843 main / #844 stage_test draft；rotation owner 未定）。
 - **"CHARM 回 null ACK / hl7_version / MSH-12 2.3 vs 2.3.1 / CHARM SFTP 沒人取 / practice 沒有 interface"** → `emr-integration.md`「CHARM 的第二個預設值缺陷」+ STM `VP-18243`。
 - **"BioInsights 第一筆 order / V00000417 / IN1-2 C 掛 JAG / 153 個 result 沒取 / devcom 回信語氣"** → `emr-integration.md`「BioInsights：第三個檔」+ `leo-working-rules.md` 09-29 + `~/.claude/CLAUDE.md` 對外文字段。
+
+## 2026-09-30 新增路由（dream；LIS-7882 / VP-18320 / VP-18463 / VP-18466 / VP-18462 / VP-18460 / VP-18372 / VP-18485）
+- **"emr-v2 打 results-grpc 要帶 OAuth2 token / x-request-id / gRPC Caller Metadata Audit / VP-18411 blocking / Invalid authorization token / trans v2 這個 client 名"** → STM `LIS-7882`（#441 staging + #440 main 09-30 都上；prod 端到端 PASS）+ `repos.md` 2026-09-30「results-grpc 的 token 攔截器實況」+ `patterns.md` 2026-09-30「加 auth 前先探拒絕路徑」。
+- **"trans v1 /proxy 路由 404 / 13 條 removed / old-report controller 沒了 / downloadTestOrderPDF 去哪了 / verify-18320.js"** → STM `VP-18320`（Done 09-30）與 `VP-18463`（controller 09-30 已下；剩 2 條 grpc + key 等 10-14）+ `repos.md` 2026-09-30「LIS-transformer /proxy/* 現況」。
+- **"transv2 stage_test 落後 / #661 port / lis-transv2-config-st SHIPPING_RPC TEST_RESULT_RPC / -st proxy key"** → STM `VP-18466`（兩半都 Done）+ `repos.md` 2026-09-30。
+- **"setting-consumer 切 grpc 了嗎 / SETTING_GRPC_MODE / in-pod replay 224 筆 / proxy_getkit proxy_getresult 何時刪"** → STM `VP-18462`（prod 00:13Z 起 grpc；14 天零窗口到 ~10-14）+ `scripts/vp18462-replay/`。
+- **"trans 的 shipping URL 切 in-cluster 了嗎 / inventory_url / shippin_address / batch 3 accounting charging 何時"** → STM `VP-18460`（batch 1+2 prod 已切；batch 3 不早於 10-01 18:35Z）。
+- **"JAG 重推 / 8/31 amended / 64.124.9.100:2223 是誰 / jagconsulting SFTP / ehr_vendors id 跳號 / BioInsights 沒取 result"** → STM `VP-18372`（Done 09-30，兩個殘項掛 practice / BIOINSIGHTS）+ `emr-integration.md` 2026-09-30。
+- **"lis-trans-config 明文密碼 / lis-trans-secret.yml 含 Turnstile / ConfigMap 改 Secret 提案 / Redis 密碼輪替誰負責"** → STM `VP-18485`（Done；提案草稿 `drafts/VP-18485-configmap-secret-proposal-draft.md`，VP-18458 是 transv2 的同題）。
+- **"skin care 訂單直打 CRM / SKIN_CRM_PLACEPATIENTORDERS_URL / shipSkinCare 沒流量"** → STM `VP-18347`（#660 已部署、key 未設 = 仍走 proxy；等 Leo 選 cutover 方式）。

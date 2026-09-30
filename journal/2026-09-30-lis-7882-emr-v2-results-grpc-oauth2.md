@@ -3,6 +3,8 @@ date: 2026-09-30
 ticket: LIS-7882
 slug: emr-v2-results-grpc-oauth2
 tags: [lis-7882, vp-18411, emr-v2, results-grpc, oauth2, grpc-metadata]
+distilled: true
+distilled_on: 2026-09-30
 ---
 # 2026-09-30 LIS-7882: emr-v2 sends OAuth2 token + x-request-id to results-grpc
 

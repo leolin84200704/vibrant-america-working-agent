@@ -479,3 +479,19 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 - **「ok 做」→ 十張 trans-opt 票分三波照節奏跑；「繼續往下做」→ 同一天開 wave 2。** 接受的形態：全部 config-only 的 prod 變更（ConfigMap patch + 一次 restart）不需要逐張回來問，但每張票的 STM 要有舊值、探針證據、restart 噪音對照；跨團隊權限缺口（VP-18456 admin、VP-18480 LIS-Sample 不能 push）直接標 blocked 並把 patch 放 `drafts/`，不去找替代路徑。
 - **VP-18243「只要對齊 MSH-6 ↔ clinic，行為不變」**：要的是一張以 CHARM 自己的 ACK 為 oracle 的對齊表（已證實正確 / 已證實錯誤 / 無法判定），不是重寫路由；**「CHARM 說沒有就記下來然後改成 REJECTED」**：對方書面說沒有介接的 practice，把對方的話寫進 notes 然後關掉，缺口從靜默變成會叫（scope-drop）；未送達的 backlog 交客服，不在這張票裡救。
 - **對外信件的語氣（BioInsights / devcom 回信，Leo 逐項改寫並說「記住我的語氣」）**——已定版進 `~/.claude/CLAUDE.md`「替 Leo 起草對外文字」段，任何 instance 都適用；本 workspace 的對照原文在 `drafts/BIOINSIGHTS-devcom-reply-20260929-draft.md`。核心：結論先給、五個字講得完就不要五行（「The flow looks good to go.」）；不慶祝不列 pipeline 各站；不複述對方修了什麼、不寫我們怎麼查證；給對方**該做什麼**（替代值）不給我們**怎麼分支**；不安排對方測試節奏；別人的交付只 @ 擁有者；取捨界線是**歸屬**（我方系統的事實要講——153 個未取的 result 檔 Leo 保留；對方怎麼做事不講）；精確度只給對方用得到的（日期要、UTC 時分不要）。這是 09-24「只回答被問的那一題／不幫別人背書」的延伸：補的是長度與姿態。
+
+## Leo 09-30 的決定與打回（LIS-7882 / VP-18372 / VP-18320 / VP-18461 / VP-18462 / VP-18463 / VP-18466 / VP-18460 / VP-18485）
+- **「A, 只要能解決doc的問題。然後改動盡量小就可以」**（LIS-7882）：目標定義成「讓 audit doc 那一列消失」，不是「把 OAuth 做對做全」；ShortcutService 重構、npm client、strict fail-closed 全部不要。與 09-25 VP-18404「一個對外呼叫 = 一個純函式」同一條線：**最小可驗證改動**。
+- **「不管反正沒有人抱怨，先done」**（VP-18372）：我方能驗的都驗了（重推、P2P 取件、29 筆 TRANSMITTED），對方（JAG 在 P2P 看到哪個值）不回就不等——結案 comment 把兩個 open item 各掛給擁有者（practice / BIOINSIGHTS 線），沒有人抱怨就不再追。這是 09-28「Done 了但世界還沒扣板機」的又一例，差別是這次**Leo 主動選擇不等別人的驗證**。
+- **「batch 2 好了就直接切，不用再問」**（VP-18460）、**「你不能直接做嗎」**（VP-18462 shadow→grpc）、**「9/30 要下掉的那些看一下 datadog 流量後沒有問題就直接下了」**（VP-18463 提前下 downloadTestOrderPDF）：wave 進行中，**已經批准的 pattern 再出現就直接做**，只回報結果；再問一次會被打回。門檻是「同型、有 rollback、有探針」，不是「同一張票」。
+- **「發吧…都發並轉狀態」「結案 comment 發吧，轉 Done」「VP-18466 也可 done」**：Jira 結案 comment 草稿累積到一批後 Leo 一次放行，agent 才發+轉狀態；draft 先寫在 `drafts/`，一批一批送審。VP-18461 因此在 Jira 上晚了一天才 Done（09-29 dream 已標成 mismatch）。
+- **一個 PR 一個 head 在 09-29~30 完全成立**：#843/#844/#847/#848/#849/#850/#659/#441 全部 1 commit、開 PR 後零推送；#661 是 4 個 cherry-pick 一次推完。Leo merge 節奏：staging twin 先（幾分鐘到一小時），prod 隨後；emr-v2 的 release PR 在 feature PR merge 後 11 秒就 merge——**staging 不是觀察期，是同一動作的前半**。
+- 對外／跨團隊語氣（09-24、09-25、09-29 三條）今晚沒有新例；VP-18372 09-30 的 Jira comment 189923 是 Leo 明說「直接 post」的例外。
+
+## 「我方做完 + 殘項掛名結案」成為常態、in-pod 探針成為驗證標準、對照組被別人搬走（cross-ticket review 2026-09-30；證據 VP-18461 / VP-18485 / VP-18320 / VP-18466 / VP-18372 / LIS-7882）
+六張票 09-29 晚到 09-30 結案，全部 PASS 過 dream 的 closeout audit，但 retrospective 段幾乎全空（wave 票的方法筆記寫在 section 裡）。橫著看：
+1. **結案形狀已經定型：「我方鏈條全驗過 + 殘項一條一條掛名」**。VP-18485 Done 但 Redis 密碼輪替沒做（owner 未知，票被重開成 config-hygiene 提案）；VP-18372 Done 但 JAG 看到的值沒驗（Leo 選擇不等）；VP-18320 Done 但 description/日期/QH-7163 還是舊的（要 Leo 的 token）；LIS-7882 Done 時 audit doc 還沒刷新（下次 ~17:25Z 才看得到那列消失）。09-28 review 說的「尚未觸發清單」要擴成**「殘項 + 擁有者 + 第一個可觀察訊號」**，dream 夜巡就巡這張表；Jira Done 的意思是「Leo 那邊沒事了」，不是「世界沒事了」。
+2. **驗證方法收斂成一種：在服務自己的 pod 裡、用它自己的身份、跑一支可重跑的腳本**（patterns.md 09-30 第 4 條）。六張票沒有一張靠 mock 或 build 綠燈結案；每張的 STM 都有「探針 → 期望值 → 實測值」三欄。這已經是本 instance 的預設，WORK-LOOP 的 live-verify 步驟可以直接指這條。
+3. **錯的不是證據是對照組**：三次 attribution 失誤（ETIMEDOUT 歸錯 client、PR body 舊流量數、positive control 路由被 #183 拿走）都在證據正確的情況下下錯結論，因為對照組沒在下結論的當下重驗。修法寫進 patterns.md：**每個「流量為零／訊號消失」的結論都要附一個同時刻仍在動的 control，而且 control 要挑別人的 deploy 拿不走的**（例如 `/trans/findPatient`，不是即將被搬走的 PDF 路由）。
+4. **一天內三個人 deploy 同一個 namespace**（09-29 晚 setting-consumer：Ray ×2、Leo ×1、再加 grpc flip）：pod IP、RS、log 檔全部換過，事後對 IP 做 attribution 必然錯。以後 attribution 先列「呼叫當時的 pod 集合」（Datadog `pod_name` / RS creationTimestamp），再比。
+下一次 cross-review：再 5 張完成後（marker：2026-09-30）。

@@ -3,7 +3,7 @@ id: repo-catalog
 type: ltm
 category: technical
 status: active
-score: 1.0024
+score: 1.0692
 base_weight: 0.9
 created: 2026-06-07
 updated: 2026-06-07
@@ -16,6 +16,7 @@ links:
 - INCIDENT-20260908-grpc-dead-node-ip
 - INCIDENT-20260910-emr-v2-di-crashloop
 - LBS-1547
+- LIS-7882
 - PO-222
 - QH-1104
 - QH-1130
@@ -78,11 +79,16 @@ links:
 - VP-17870
 - VP-18048
 - VP-18303
+- VP-18320
 - VP-18342
+- VP-18347
 - VP-18400
 - VP-18406
 - VP-18462
+- VP-18463
 - VP-18466
+- VP-18480
+- VP-18485
 - VP-9299
 - business-model
 - business-model-deep

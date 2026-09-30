@@ -27,6 +27,7 @@ links:
 - VP-17065
 - VP-17217
 - VP-18303
+- VP-18480
 - failures
 - repo-catalog
 - repos

@@ -1,11 +1,12 @@
 # Journal Index (Episodic Memory — L3a)
 
 > Auto-maintained by the dream pipeline. One line per entry, newest first.
-> Last updated: 2026-09-29. 09-29 run: no new entries (the 09-29 trans-opt wave 1-2 / VP-18243 / BIOINSIGHTS sessions wrote STM only, no journal); nothing undistilled. Previous: one 09-28 entry distilled by the 09-28 run (vp18402-04-deactivate-on-removal → patterns/emr-integration/leo-working-rules/repos + 3 factory inbox proposals).
+> Last updated: 2026-09-30. 09-30 run: one new entry (2026-09-30 lis-7882-emr-v2-results-grpc-oauth2, no `distilled:` field on arrival) distilled → repos/patterns/leo-working-rules/ticket-routing + 1 factory inbox proposal. Previous: 09-29 run: no new entries (the 09-29 trans-opt wave 1-2 / VP-18243 / BIOINSIGHTS sessions wrote STM only, no journal); nothing undistilled. Previous: one 09-28 entry distilled by the 09-28 run (vp18402-04-deactivate-on-removal → patterns/emr-integration/leo-working-rules/repos + 3 factory inbox proposals).
 > Archived 3 distilled >30d entries (2026-08-26, 2026-08-27, 2026-08-28) → archive/journal/. Previous: 09-24 run distilled the two 09-22 entries.
 
 | Date | Slug | Related | Distilled |
 |------|------|---------|-----------|
+| 2026-09-30 | lis-7882-emr-v2-results-grpc-oauth2 | LIS-7882, VP-18411, VP-18528, VP-16556 | true |
 | 2026-09-28 | vp18402-04-deactivate-on-removal | VP-18402, VP-18404, PH-917, SIIR-293, VP-18403, QH-7271, QH-7275, LBS-1784, LBS-1785, LIS-7716, VP-17120, VP-18055, VP-18216 | true |
 | 2026-09-22 | vp18342-w2w-patient-not-found | VP-18342, VP-18343, VP-18344, VP-18355, VP-17283, VP-18064, VP-17437 | true |
 | 2026-09-22 | vp18194-per-report-pdf | VP-18194, PH-907, SIIR-291, QH-7066, VP-18138, VP-17344, VP-17493, VP-17715, LIS-7716 | true |

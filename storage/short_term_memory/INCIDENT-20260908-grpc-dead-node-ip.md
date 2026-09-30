@@ -26,6 +26,7 @@ links:
 - INCIDENT-20260601-sftp-hang
 - INCIDENT-20260817-onprem-deploy-freeze
 - INCIDENT-20260910-emr-v2-di-crashloop
+- LIS-7882
 - NEXTECH-onboarding
 - QH-1130
 - QH-1159
@@ -48,17 +49,20 @@ links:
 - VP-17870
 - VP-18048
 - VP-18303
+- VP-18320
 - VP-18342
 - VP-18344
 - VP-18400
 - VP-18406
 - VP-18461
+- VP-18463
 - VP-18466
+- VP-18480
 - VP-9299
 - failures
 - repo-catalog
 - repos
-score: 0.4285
+score: 0.4513
 ---
 
 # INCIDENT 2026-09-08 — result pushes failing: gRPC targets pointed at a dead AKS node IP
