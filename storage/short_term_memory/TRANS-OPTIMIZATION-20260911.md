@@ -1201,3 +1201,8 @@ Method notes: `kubectl patch --type=json` remove-ops for deletions, `--type=merg
 - VP-18462 prod flipped shadow→grpc 00:13Z on in-pod replay evidence (224/224 agree through the consumer's own decoder; script + README in `scripts/vp18462-replay/`). Clock for deleting proxy_getkit/proxy_getresult from the 4 setting-consumer ConfigMaps starts now: 14 days of proxyGrpcCaller=0 (exclude 00:03-00:12Z replay calls).
 - VP-18485 reopened as a config-hygiene proposal (15 plaintext credentials in lis-trans-config; committed lis-trans-secret.yml holds the live Turnstile key). Draft comment for Leo in drafts/.
 - Method note: when organic traffic is too sparse for a shadow window, replay inside the consumer's pod with its own dist/ helpers — same verdict function, hours instead of days.
+
+### [2026-09-30 00:45Z] VP-18320 removal PRs opened; 18461 Done; 18462 Dev In Progress
+- VP-18320: drafts LIS-transformer #847 (main) / #848 (stage_test), 13 routes, evidence re-measured (STM VP-18320 has the working Datadog query shape: `@request_type:Response @url:` split by `kube_deployment`, staging logs under the prod service/env tags).
+- Jira: VP-18461 comment 189808 + Done; VP-18462 comment 189809 + Dev In Progress. VP-18463 announcement drafted (10-14), not posted.
+- Remaining clocks: VP-18460 prod batch 2 ≥ 09-30 18:30Z; VP-18462 zero window to ~10-14; VP-18463 announce → 10-14; VP-18456 needs an org owner (Wang-tianhao) for the ruleset.
