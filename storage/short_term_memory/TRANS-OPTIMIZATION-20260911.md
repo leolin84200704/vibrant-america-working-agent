@@ -1206,3 +1206,7 @@ Method notes: `kubectl patch --type=json` remove-ops for deletions, `--type=merg
 - VP-18320: drafts LIS-transformer #847 (main) / #848 (stage_test), 13 routes, evidence re-measured (STM VP-18320 has the working Datadog query shape: `@request_type:Response @url:` split by `kube_deployment`, staging logs under the prod service/env tags).
 - Jira: VP-18461 comment 189808 + Done; VP-18462 comment 189809 + Dev In Progress. VP-18463 announcement drafted (10-14), not posted.
 - Remaining clocks: VP-18460 prod batch 2 ≥ 09-30 18:30Z; VP-18462 zero window to ~10-14; VP-18463 announce → 10-14; VP-18456 needs an org owner (Wang-tianhao) for the ruleset.
+
+### [2026-09-30 01:12Z] VP-18320 Done; VP-18463 announced
+- VP-18320 closed (comment 189822) after #847/#848 deploy verification (13/13 404 prod+staging, 0 errors, no dead keys left). VP-18463 announced 10-14 (comment 189816), assigned to Leo; Confluence 2697166874 got a footer status comment (body still 09-21).
+- Program tally today: VP-18461 Done, VP-18320 Done, VP-18466 done both halves, VP-18462 on grpc (Dev In Progress, window to 10-14), VP-18485 reopened as config-hygiene proposal, VP-18456 blocked on org owner, VP-18460 batch 2 ≥ 18:30Z.
