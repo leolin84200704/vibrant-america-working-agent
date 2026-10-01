@@ -67,3 +67,10 @@ existing RPC made that moot. Lesson: enumerate the server's @GrpcMethod handlers
 saying "the RPC does not expose X". Both PRs merged + promoted; verified on the prod
 pod with the deployed build against live shipping. Prod has no real integrator orders
 yet, so the customer's own orders cannot be shown — the proof is on internal samples.
+
+## Night: VP-18595 / VP-18596 (Leo: 「直接做」)
+Two branches off staging, two PRs (#448, #449), both merged by Leo within the hour.
+Staging sweep after 2ac6b05: the cancel-timestamp divergence is gone (3 left, all
+report-service-only). The return-label rule cannot fire on staging; its proof is the
+six-case unit matrix plus a prod check after promotion. Leo had already set both
+tickets to Done before the code existed — left as-is, noted.
