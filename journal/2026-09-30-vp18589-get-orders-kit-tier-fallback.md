@@ -56,3 +56,14 @@ demonstrate the fix — the proof is on other customers' rows.
 Two pre-existing lookup-vs-list asymmetries surfaced by the sweep (report-service signal
 only in lookup; core order_cancel_time only in list). Not touched — one-PR-one-scope.
 Leo's sequencing: Chris fixes the doc first, customer reply after.
+
+## Evening: VP-18593 (carrier / shippedAt / deliveredAt) — same day
+Leo challenged the 08-13 "no upstream has them" premise. LIS-Shipping read-only review:
+FedEx EDI → Service Bus → shipping tables; pickup_time already on the kit RPC (our
+proto copy was 4 fields, proto-loader dropped field 5); carrier + delivery scan on
+GetTrackingDetails in a SECOND proto file (shipping-protos/shipping-service.proto).
+I first proposed asking shipping for a field — Leo: 「不要改shipping 的東西」 — and the
+existing RPC made that moot. Lesson: enumerate the server's @GrpcMethod handlers before
+saying "the RPC does not expose X". Both PRs merged + promoted; verified on the prod
+pod with the deployed build against live shipping. Prod has no real integrator orders
+yet, so the customer's own orders cannot be shown — the proof is on internal samples.
