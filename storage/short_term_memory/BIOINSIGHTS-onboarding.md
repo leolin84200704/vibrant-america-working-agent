@@ -11,7 +11,7 @@ unblock_when: 'BioInsights grants account perms (test: sftp key-auth to sftp.bio
   then ls / — currently auth OK but ls/stat/put all fail); waiting on Thomas reply
   to 2026-07-21 email'
 created: 2026-07-21
-updated: 2026-09-29
+updated: 2026-10-01
 links:
 - BETA-E2E-20260729
 - BIOINSIGHTS-SFTP-KEY
@@ -322,6 +322,22 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
 - 精確度只給對方用得到的：「We received it on 25 September」保留，「at 18:30 UTC」刪。
 延伸自 09-24 已記的「vendor email 只回答被問的那一題 / 不幫別人背書」，這次補的是**長度與姿態**：
 結論先給、五個字能講完就不要五行、不回顧、不解釋內部機制、不指導對方做事。
+
+### [2026-10-01] JAG noticed the John Doe test order + charge in their portal — asked why their account is used to test BioInsights
+- JAG message (via Leo): lab order + charge for "John doe" not placed by their staff, no phone/address for kit shipping,
+  Vitamin D + Gut Zoomer. = devcom's V00000417.hl7 test order (accession 2609256344, $570 customerPay, clinic 132493).
+- Prod re-verified 2026-10-01 (lis_emr): BioInsights row cms3icsz700010xfq... (vendor 46) still customer 30248 / clinic 132493 /
+  effective_npi 1730269200, FULL_INTEGRATION LIVE, ordering_enabled=1, kit_delivery_option NO_DELIVERY (no kit ships);
+  sibling P2P row cmjxaqui500i50xfq4zc5yddg (vendor 4, RESULT_ONLY, clinic_name "JAG Consulting, LLC"). Only 3 BIOINSIGHTS
+  hl7_file_input rows ever (7126/7154/7196); 7196 is the only parsed one. Could NOT re-check lis_re.order_table is_canceled today
+  (lis_emr / lis_frontend_service users lack SELECT on lis_re); last known 09-29: not canceled, no charging transaction.
+- Why JAG: the mapping is exactly what BioInsights (Serdar, 07-27) gave us — Office JAG Holdings Group, LLC / Provider 30248 /
+  Practice 132493 — and we told devcom (09-18) to put 1730269200 in ORC-12 because it is the only NPI on the integration.
+  Every devcom test file will keep landing in JAG's account (and billing JAG when IN1-2=C) until the mapping is moved or
+  ordering is paused on that row.
+- Deliverable: `drafts/BIOINSIGHTS-jag-mapping-reply-20261001-draft.md` (Leo's voice: mapping listed, ask for the correct
+  provider/practice). Decisions left to Leo: void order 2609256344 or not (bracketed sentence), CC BioInsights, and whether to
+  set ordering_enabled=0 on the BioInsights row until the correct mapping arrives.
 
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
