@@ -326,7 +326,7 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
 ### [2026-10-01] JAG noticed the John Doe test order + charge in their portal — asked why their account is used to test BioInsights
 - JAG message (via Leo): lab order + charge for "John doe" not placed by their staff, no phone/address for kit shipping,
   Vitamin D + Gut Zoomer. = devcom's V00000417.hl7 test order (accession 2609256344, $570 customerPay, clinic 132493).
-- Prod re-verified 2026-10-01 (lis_emr): BioInsights row cms3icsz700010xfq... (vendor 46) still customer 30248 / clinic 132493 /
+- Prod re-verified 2026-10-01 (lis_emr): BioInsights row cms3icsz700010xlgywfuj8do (vendor 46) still customer 30248 / clinic 132493 /
   effective_npi 1730269200, FULL_INTEGRATION LIVE, ordering_enabled=1, kit_delivery_option NO_DELIVERY (no kit ships);
   sibling P2P row cmjxaqui500i50xfq4zc5yddg (vendor 4, RESULT_ONLY, clinic_name "JAG Consulting, LLC"). Only 3 BIOINSIGHTS
   hl7_file_input rows ever (7126/7154/7196); 7196 is the only parsed one. Could NOT re-check lis_re.order_table is_canceled today
