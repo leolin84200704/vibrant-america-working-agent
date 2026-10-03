@@ -7,7 +7,7 @@ score: 1.6361
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-09-30
+updated: 2026-10-02
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -38,6 +38,7 @@ links:
 - QH-862
 - QH-918
 - QH-919
+- TICKET-WATCH-20260930
 - TRANS-OPTIMIZATION-20260911
 - VP-15460
 - VP-16164
@@ -132,6 +133,7 @@ links:
 - VP-18466
 - VP-18480
 - VP-18485
+- VP-18593
 - VP-9299
 - business-model
 - business-model-deep
@@ -146,28 +148,28 @@ tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 116 entries across STM
+summary: Auto-aggregated failure index from 118 entries across STM
 ---
 
 # Failure Index
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-09-30 — total 116 entries
+> Last updated: 2026-10-02 — total 118 entries
 
 ## Themes
 
 - [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 31 entries
 - [Build / TypeScript / Tooling](#build-tooling) — 20 entries
-- [Other / uncategorized](#other) — 19 entries
+- [Other / uncategorized](#other) — 20 entries
 - [Deploy / commit / push coordination](#deploy-coordination) — 13 entries
 - [DB / migration / backfill](#db-migration) — 9 entries
 - [Scope / requirement / PM communication](#scope-communication) — 5 entries
 - [Error handling / throw vs log](#error-handling) — 5 entries
 - [Redis / cache / pending list](#redis-cache) — 4 entries
 - [Auth / permission / role](#auth-permission) — 4 entries
+- [gRPC / network / timeout](#grpc-network) — 3 entries
 - [Test / mock / spec](#test-mocking) — 2 entries
-- [gRPC / network / timeout](#grpc-network) — 2 entries
 - [GraphQL / API design](#graphql-api) — 1 entries
 - [Tool / cwd / branch / repo confusion](#tool-usage) — 1 entries
 
@@ -1000,6 +1002,10 @@ Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`
 
 - az CLI MFA expired — could not inspect RBAC Container App directly; bounded diagnosis at the coresamples→container-app hop via error strings and timing.
 
+### **[[TICKET-WATCH-20260930]]** — `2026-09-30 16:10` — Trial run 1: both claude -p attempts died with `401 Authentication Failed`. Cause: the runner's Jira pre-flight did `set -a; source .env`, exporting the empty `ANTHROPIC_API_KEY=` / `ANTHROPIC_BASE_URL=` lines into the claude process, which then bypassed the keychain login. Fix: read only the three JIRA_* values with grep/cut, export nothing. The failure-report path worked as designed (report file + notification produced).
+
+
+
 ### **[[VP-16934]]** — `2026-06-09` — #157 部署後 staging dry-run 驗證通過
 
 - endpoint no-auth → 401（route live + guard）。
@@ -1650,6 +1656,27 @@ expect -re {[Pp]assword:} { send -- "$env(ONPREM_PW)\r" }
 
 ---
 
+## gRPC / network / timeout <a id='grpc-network'></a>
+
+### **[[VP-18593]]**
+
+- Proposed a shipping-side change before exhausting the shipping service's existing
+  surface: grep'd only core-protos/shipping.proto, not shipping-protos/shipping-service.proto.
+  Lesson: a service can serve several proto files on one gRPC server — list the
+  @GrpcMethod handlers in the controller (done later: 25 methods) before concluding
+  "the RPC does not expose X".
+
+### **[[VP-16521]]** — `2026-05-28 17:53` — **
+
+- 試 2 次都 timeout，改跑 `npx eslint <file>` CLI 直接拿同樣結果
+- 教訓：WebStorm 抓 lint 等於 eslint + prettier；agent 端不要等 IDE diagnostics，CLI 更快更穩
+
+### **[[VP-17532]]** — **
+
+- (none blocking) setting_audit table in lis_frontend_service does not record the `timezone` setting; had to query core SettingService via gRPC (grpcurl + client-credentials OAuth token from transformer .env) — worked.
+
+---
+
 ## Test / mock / spec <a id='test-mocking'></a>
 
 ### **[[INCIDENT-2604156666]]** — `2026-05-21` — spec 在 HEAD 已壞（pre-existing，Leo 要求併本 hotfix 修）
@@ -1668,19 +1695,6 @@ expect -re {[Pp]assword:} { send -- "$env(ONPREM_PW)\r" }
 - 修正：resolver 只比對 `is_practice === true`(Leo 一開始就說 clinic-level)。個人 shortcut 忽略 → 永遠用診所 preset。live 驗證 40660@144510 改解析到 727441(PSA+Foundation) 非 724454(33-test)。
 - spec.ts: fetch mock 預設 is_practice:true，加 personal-vs-practice 測試。108 tests pass。
 - 差異清單 doc(2506653698) v2 已更正 Finding 2（個人 vs 診所，emr-v2 已解決，無需 catalog 動作）；Finding 1(Magnesium) 仍是 catalog action。
-
----
-
-## gRPC / network / timeout <a id='grpc-network'></a>
-
-### **[[VP-16521]]** — `2026-05-28 17:53` — **
-
-- 試 2 次都 timeout，改跑 `npx eslint <file>` CLI 直接拿同樣結果
-- 教訓：WebStorm 抓 lint 等於 eslint + prettier；agent 端不要等 IDE diagnostics，CLI 更快更穩
-
-### **[[VP-17532]]** — **
-
-- (none blocking) setting_audit table in lis_frontend_service does not record the `timezone` setting; had to query core SettingService via gRPC (grpcurl + client-credentials OAuth token from transformer .env) — worked.
 
 ---
 
