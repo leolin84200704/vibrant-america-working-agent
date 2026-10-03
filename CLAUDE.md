@@ -23,7 +23,8 @@
 - 例外（僅 personal repo `vibrant-america-working-agent` 與 `project-agent-factory`）: 允許 push 到 `main`；仍禁 force-push、reset --hard
 - **Automation 行為變更必須走 PR**：改 `scripts/dream.md`、`DailyJob/`、launchd 排程、`.claude/skills/` 等會改變 agent 自動行為的檔案，即使在 personal repo 也不得直接 commit main — 開 PR 讓 Leo 看到規則變了什麼（2026-07-06：dream 的 lesson-PR 規則曾被 agent 直接寫進 main，Leo 事後才發現）
 - **本 repo 的主 checkout 永遠停在 `main`**：STM／journal 這類記憶 commit 本來就直接進 main，不需要分支；只有 automation 變更需要分支，而那要用 `git worktree`（放 `.git-worktrees/`，已 gitignore），**絕不在主 checkout 切分支**。三個理由：(1) `run-dream.sh` 讀的是主 checkout（`$AGENT_ROOT`），它離開 main 就等於 dream 對著錯的樹跑；(2) 併行 session 共用同一個工作目錄，切分支會直接把另一個 session 腳下的地板換掉；(3) dirty-memory 守衛只問「有沒有未 commit」，不問「commit 到哪去了」——記憶 commit 落到分支上它照樣放行，dream 就會在缺那份內容的情況下蒸餾。2026-09-24 三種情況同時發生：一個 session 的 STM commit 落在另一個 session 的 feature branch 上，PR 沒帶到，merge 後內容不在 main，靠 reflog 才找回來。
-- Agent 不 merge — Leo 決定（例外不適用於 LIS 工作 repo）
+- **Merge 權限（Leo 指令 2026-10-03）**：agent 自己開的 PR，target 是 staging-class branch（emr-v2 `staging`、LIS-transformer `stage_test`）時**直接 merge、等 deploy、自己測**，不用等 Leo 手動 merge；merge 前條件不變（相關 suite 綠、build 乾淨、無 CJK、PR body 寫好）。staging → `main` 的 release PR 仍由 Leo merge；測完回報結果讓 Leo 決定。背景：PH-931 三張票一晚四次 merge 都要 Leo 手按，staging 本來就是給測的。
+- Agent 不 merge `main` / 保護分支 — Leo 決定
 
 ## Ticket 系統
 - Jira（VP project），經 Atlassian MCP 取用
