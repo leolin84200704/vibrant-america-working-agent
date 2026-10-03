@@ -11,7 +11,7 @@ unblock_when: 'BioInsights grants account perms (test: sftp key-auth to sftp.bio
   then ls / — currently auth OK but ls/stat/put all fail); waiting on Thomas reply
   to 2026-07-21 email'
 created: 2026-07-21
-updated: 2026-10-01
+updated: 2026-10-02
 links:
 - BETA-E2E-20260729
 - BIOINSIGHTS-SFTP-KEY
@@ -338,6 +338,11 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
 - Deliverable: `drafts/BIOINSIGHTS-jag-mapping-reply-20261001-draft.md` (Leo's voice: mapping listed, ask for the correct
   provider/practice). Decisions left to Leo: void order 2609256344 or not (bracketed sentence), CC BioInsights, and whether to
   set ordering_enabled=0 on the BioInsights row until the correct mapping arrives.
+
+### [2026-10-02] Leo: "done" — JAG mapping reply sent
+- Leo replied "done" to the 10-01 draft, taken as: the reply to JAG went out. Not stated: whether order 2609256344 was voided,
+  whether BioInsights was CC'd, or whether ordering was paused on the BioInsights row. Prod not re-checked. Waiting on JAG for
+  the correct provider/practice before any ehr_integrations change.
 
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
