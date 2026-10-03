@@ -141,3 +141,15 @@ summary: Ticket keyword to repo/module routing table
 - **"JAG 重推 / 8/31 amended / 64.124.9.100:2223 是誰 / jagconsulting SFTP / ehr_vendors id 跳號 / BioInsights 沒取 result"** → STM `VP-18372`（Done 09-30，兩個殘項掛 practice / BIOINSIGHTS）+ `emr-integration.md` 2026-09-30。
 - **"lis-trans-config 明文密碼 / lis-trans-secret.yml 含 Turnstile / ConfigMap 改 Secret 提案 / Redis 密碼輪替誰負責"** → STM `VP-18485`（Done；提案草稿 `drafts/VP-18485-configmap-secret-proposal-draft.md`，VP-18458 是 transv2 的同題）。
 - **"skin care 訂單直打 CRM / SKIN_CRM_PLACEPATIENTORDERS_URL / shipSkinCare 沒流量"** → STM `VP-18347`（#660 已部署、key 未設 = 仍走 proxy；等 Leo 選 cutover 方式）。
+
+## 2026-10-02 新增路由（dream；VP-18589 / VP-18593 / VP-18595 / VP-18596 / VP-18406 / VP-18243 / VP-18372 / VP-18485 / BIOINSIGHTS / TICKET-WATCH）
+- **"GET /orders list 跟 lookup 不一樣 / kit null / placed vs kit_delivered / DELIVERY_EXCEPTION / order_kit_status fallback / sandbox 沒有 shipping"** → STM `VP-18589`（Done，prod `:8d0838d`）+ `emr-integration.md` 2026-10-02；文件 = Confluence 2485977089（v27）+ mintlify（Chris）。
+- **"kit.carrier / shippedAt / deliveredAt / pickup_time field 5 / GetTrackingDetails / shipping 第二個 proto 檔 / seq %g 事故"** → STM `VP-18593`（Done）+ `scripts/probes/shipping-kit-status-probe.js`。
+- **"READY_FOR_RETURN_SHIPMENT 算不算 delivered / return label 在 PO 時就印 / 874611616610"** → STM `VP-18595`（Done，#448 → #450；prod 實測 2598251 = kit_shipped）。
+- **"lookup 沒看 order_cancel_time / list cancelled lookup kit tier / E2E-iaston-valid-110341"** → STM `VP-18596`（Done，#449 → #450）。
+- **"consultationEligible / Schedule Consult 六個月搬後端 / stage_test 被 ruichennrobot 重指 / #853 #854 reportPrefer 復活"** → STM `VP-18406`（Done 10-02；FE 契約在 VP-18407、QA 在 QH-7277）+ `patterns.md` 2026-10-02 stage_test 條。
+- **"CHARM 2.3.1 必須 / null body 未送達 / 98737 Melissa Jones 再核准 / 7 筆 transport error 重推 / Geyer 維持 REJECTED / 143 筆走 interface 以外"** → STM `VP-18243`（Done 10-02）+ `emr-integration.md` 2026-10-02 CHARM 段；workstream 2/3 要另開票。
+- **"季報 Q3 205 sheets / queryReportsReleasedInPeriod / on-prem pod 跑季報 / amended 進哪一季"** → STM `VP-18372`（Done）+ `emr-integration.md` 2026-10-02 季報段。
+- **"trans staging NOAUTH / on-prem Redis 要密碼了 / 192.168.60.10:6390 / 192.168.60.9:4646 / calendar Bull queue staging"** → STM `VP-18485`（Done，dream 10-02 加了 RE-CHECK）+ `repos.md` 2026-10-02 Redis 條。修法在 `calendar/redis/redis-options.ts` 的 stprod 分支（給密碼 env 或改走 Azure db 5）。
+- **"JAG 問 John Doe 訂單 / devcom 測試單落在 JAG / BioInsights mapping 搬家 / ordering_enabled 要不要先關"** → STM `BIOINSIGHTS-onboarding`（10-02 Leo「done」= 回信已發；等 JAG 正確 mapping）。
+- **"ticket watch / 早上九點報告 / agent 當 initiator / REPORT_SMTP / bug_watch 為何沒跑"** → STM `TICKET-WATCH-20260930` + `DailyJob/ticket_watch/README.md`；10-01、10-02 兩天 RUN FAILED（無網路），SMTP 未設。

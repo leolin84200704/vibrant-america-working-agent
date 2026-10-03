@@ -3,19 +3,32 @@ id: TICKET-WATCH-20260930
 type: stm
 category: process
 status: active
-score: 0.00
+score: 0.075
 base_weight: 0.6
 created: 2026-09-30
-updated: 2026-09-30
+updated: '2026-10-02'
 links: []
 relations:
   unblocked_by: []
   blocks: []
   sibling: []
-unblock_when: "Leo sets REPORT_SMTP_* in .env (Gmail app password); test = the 09:00 email arrives on the next weekday"
-tags: [ticket-watch, initiator, daily-report, automation, launchd, bug-watch, phase-1, email]
-summary: "Workflow inversion: the agent becomes the initiator. Daily 08:00 headless run scans Leo's Jira queue (WORK-LOOP Step 1-2, read-only), writes DailyJob/ticket_watch/report_<date>.md; 09:00 mailer sends it to leolin84200704@gmail.com. Phase 1 = analysis only; Phase 2 = execute Routine tickets; Phase 3 = draft PRs. Built on branch feature/leo/ticket-watch-daily-report."
+unblock_when: Leo sets REPORT_SMTP_* in .env (Gmail app password); test = the 09:00
+  email arrives on the next weekday
+tags:
+- ticket-watch
+- initiator
+- daily-report
+- automation
+- launchd
+- bug-watch
+- phase-1
+- email
+summary: 'Workflow inversion: the agent becomes the initiator. Daily 08:00 headless
+  run scans Leo''s Jira queue (WORK-LOOP Step 1-2, read-only), writes DailyJob/ticket_watch/report_<date>.md;
+  09:00 mailer sends it to leolin84200704@gmail.com. Phase 1 = analysis only; Phase
+  2 = execute Routine tickets; Phase 3 = draft PRs. Built on branch feature/leo/ticket-watch-daily-report.'
 ---
+
 # TICKET-WATCH-20260930 - Work Loop Record
 
 ## Ticket Analysis
@@ -63,3 +76,6 @@ Leo: 「merged」(PR #52, merge commit 81da828). Main checkout fast-forwarded; w
 Trial run 1: both claude -p attempts died with `401 Authentication Failed`. Cause: the runner's Jira pre-flight did `set -a; source .env`, exporting the empty `ANTHROPIC_API_KEY=` / `ANTHROPIC_BASE_URL=` lines into the claude process, which then bypassed the keychain login. Fix: read only the three JIRA_* values with grep/cut, export nothing. The failure-report path worked as designed (report file + notification produced).
 ## Retrospective
 ## Lessons Learned
+
+### [2026-10-02 dream] First two scheduled days: both RUN FAILED (no network), mailer exit 2 (SMTP unset)
+- 10-01 and 10-02 `run_ticket_watch.sh` aborted "Network unavailable after 60s" (api.anthropic.com unreachable from this Mac most of both days — dream deferred 5 times for the same reason) and wrote the failure report (`report_2026-10-01.md`, `report_2026-10-02.md`); `send_report.py` exited 2 both mornings ("email not configured"). The alert-on-silence path works; Leo still has to set `REPORT_SMTP_USER/PASSWORD` for anyone to receive it. `unblock_when` unchanged.

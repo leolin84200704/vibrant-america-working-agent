@@ -495,3 +495,25 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 3. **錯的不是證據是對照組**：三次 attribution 失誤（ETIMEDOUT 歸錯 client、PR body 舊流量數、positive control 路由被 #183 拿走）都在證據正確的情況下下錯結論，因為對照組沒在下結論的當下重驗。修法寫進 patterns.md：**每個「流量為零／訊號消失」的結論都要附一個同時刻仍在動的 control，而且 control 要挑別人的 deploy 拿不走的**（例如 `/trans/findPatient`，不是即將被搬走的 PDF 路由）。
 4. **一天內三個人 deploy 同一個 namespace**（09-29 晚 setting-consumer：Ray ×2、Leo ×1、再加 grpc flip）：pod IP、RS、log 檔全部換過，事後對 IP 做 attribution 必然錯。以後 attribution 先列「呼叫當時的 pod 集合」（Datadog `pod_name` / RS creationTimestamp），再比。
 下一次 cross-review：再 5 張完成後（marker：2026-09-30）。
+
+## Leo 09-30 → 10-02 的決定與打回（VP-18589 / VP-18593 / VP-18595 / VP-18596 / VP-18406 / VP-18243 / BIOINSIGHTS / TICKET-WATCH）
+- **「我看不懂你的回覆，重點是什麼？」**（VP-18589 第一版客戶回覆草稿）：對客戶要的是工程師視角——每個缺口**誰擁有、為什麼存在**，不是「我們會再通知」。接著「第三點是emr的問題嗎」= 他要先確認歸屬再決定怎麼回。
+- **「全部按照文檔先做完，然後給我回覆客戶的comment」**：文件說有、code 沒有 → 先補 code。但文件裡**做不到**的部分（08-13 已砍、無 upstream 的欄位）要明說「這是 docs fix」，不要默默補回。
+- **「merged, 請等deploy 後測試，然後comment要改，先讓chris 改 doc, 再回報客戶」**：順序 = staging 驗 → PM 改 mintlify → 才回客戶。客戶回覆不能跑在文件前面。
+- **「我們tracking status 是直接接fedex? carrier、shippedAt、deliveredAt 感覺應該要有？」→「要，這是嚴重的問題。請改善，doc + comment也要改」**：Leo 會挑戰一個月前「沒有 upstream」的結論；被挑戰時先重新列 upstream surface，不要替舊結論辯護。
+- **「不要改shipping 的東西啊，為什麼要改？」**：能不跟別的團隊要東西就不要（與 VP-18347「走選項 1，直接設 key，能不跟別人要東西就不要」同一條）。先把對方既有的 RPC 列完。
+- **「VP-18595 / VP-18596 直接做」**：自己發現、自己開的 follow-up 票，Leo 一句就放行；而且他在 code 存在前就把兩張設 Done——Jira 狀態是他的看板，不是交付證明；STM 要自己把 promotion 補上。
+- **「你這些是有更新在confluence doc 裡面嗎？」**：Step 7.3 的文件檢查要包含 Confluence（2485977089），不只 repo 與 mintlify。
+- **VP-18406「做」→ BE 完成就關**：不等 FE（VP-18407）契約確認、不等 QA（QH-7277）；殘項寫進結案 comment 掛給對應票。
+- **VP-18243「直接reject(完全按照charm) 3. 請repush」→「都不做。轉done」**：vendor 書面說沒有 interface 就照它改終態；Geyer 三條路選「什麼都不做」；兩個 workstream 不開在本票。
+- **BIOINSIGHTS「done」**（10-02）：對 JAG 的回信草稿他發了就回一個字，沒說的（void 訂單、CC、關 ordering）就當沒做，prod 不要自行補動作。
+- **TICKET-WATCH（Leo 的 workflow 反轉）**：「現在基本上我的工作方式就是我把ticket number 給你然後你自主 → 這一步是不是可以省略 → initiator 從我變成你」；「每天要寫一個report（早上九點）到我的 leolin84200704@gmail.com 給我看哪些ticket 可以做、做了哪些、哪些需要我決定」；「一開始我先確定這個模式可行，沒問題我們再逐漸放寬限制讓你直接更改code」。→ Phase 1 只分析、Phase 2 做 Routine、Phase 3 開 draft PR，放寬要走 PR。他「merged」後兩個 plist 已 load，但 `REPORT_SMTP_*` 他還沒設。
+
+## 前提被推翻三次、Jira Done 不是交付證明、閘沒有機制就不是閘（cross-ticket review 2026-10-02；證據 VP-18589 / VP-18593 / VP-18595 / VP-18596 / VP-18243 / VP-18406）
+六張票 09-30 晚到 10-02 結案，closeout audit 全 PASS。橫著看：
+1. **「做不到」的前提一天內被推翻三次**，而且三次都是「沒列完對方的 surface」：08-13「沒有 upstream 有 carrier/shippedAt」（proto 副本少一欄）、「RPC 沒有 delivery time」（第二個 proto 檔）、「report date 不在 payload」（`samples` 複數）。VP-18406 的 explore agent 自己標了 UNVERIFIED 才被 live 驗證救回。規則：任何「upstream 沒有 X」要附「列了哪些 handler / 哪個 proto / 哪個欄位名」，否則視為未驗證。
+2. **Jira Done 與交付脫鉤已是 Leo 的常態**：18595/18596 在 code 存在前 Done、18406 在 FE 確認前 Done、18243 在兩個 workstream 未開時 Done。這不是問題，但後果是**STM 必須自己追到 prod**（18595/18596 的 STM 停在「未 promote」，#450 一小時後就 promote 了，dream 才補）。closeout audit 是 chain of custody，不是 Jira。
+3. **自傷模式換了形狀**：09-28 是「交付前不重讀 artifact」，這次是「探針輸入沒驗」（seq %g）——都在「我方動作對外可見」的時刻出事，且都由別人（shipping 同事）先發現。從 prod pod 發出的每一個請求都要當成對外交付來驗輸入。
+4. **沒有機制接住的閘會被繞過**：PENDING + note 擋不住 admin 再核准（22h 後）、stage_test 被 robot reset 會關 PR 並讓舊 lineage 復活、「不得再核准」寫在 notes 裡沒人看。用終態（REJECTED）、用祖先檢查（`merge-base --is-ancestor`）、用 CI gate，不用「請勿」。
+5. **殘項掛名結案形狀延續**（09-30 第 1 條）：六張票全部帶著命名的殘項關（Chris 的 mintlify、shipping 的 staging 實例、VP-18407 契約、CHARM 兩個 workstream、JAG 的正確 mapping、Redis 密碼輪替）。其中 **Redis 輪替這一項 10-01 22:30Z 疑似被人默默做了**（on-prem Redis 開始要 AUTH，trans staging calendar client 沒密碼路徑 → 每小時 5k NOAUTH）——「殘項 owner 未知」的殘項會在沒人通知的情況下發生，dream 的 armed register 要把它當 first-observable 來巡。
+下一次 cross-review：再 5 張完成後（marker：2026-10-02）。

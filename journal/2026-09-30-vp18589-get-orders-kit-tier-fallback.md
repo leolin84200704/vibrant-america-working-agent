@@ -2,6 +2,8 @@
 date: 2026-09-30
 tickets: [VP-18589, VP-17760, VP-18030]
 tags: [partner-api, get-orders, shipping, kit-status, staging, docs-drift]
+distilled: true
+distilled_on: 2026-10-02
 ---
 # 2026-09-30 — GET /orders list vs lookup disagreement (VP-18589)
 

@@ -3,7 +3,7 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 1.7201
+score: 1.7696
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-09-24
@@ -132,6 +132,10 @@ links:
 - VP-18372
 - VP-18402
 - VP-18404
+- VP-18593
+- VP-18664
+- VP-18665
+- VP-18666
 - fhir-api
 tags:
 - emr
@@ -2108,3 +2112,36 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 - **`ehr_vendors` id 跳號來歷**：17/18/43 = 2026-08-04 VEJO 刪除；20–31 = 2026-01-02 `emr_sftp_source` migration 第一次失敗吃掉的 12 個 id（對應 32–43 那 12 列）。`sftp_templates` / `test_name_mappings` / integrations 沒有孤兒 FK；退役的 `emr_sftp_source` 快照裡沒有 JAG。
 - **VP-18372 的 29 筆 result_transmission_records `sftp_host` 為 NULL = 用 vendor 層 credential**：P2P `labftp.power2practice.net:22` `lab-vibrantamerica` `/public/`；BioInsights `sftp.bioinsights.com:2022` `vibrant-wellness` `/incoming/`。vendor 46（BioInsights）只有一條 integration（JAG），`order_intake_records` 0 列（order 走 `hl7_file_input`），**從未消費過任何 result 檔**——153 個未取檔 09-29 已告知 devcom，屬 BIOINSIGHTS-onboarding 線，不是 VP-18372 的 bug。
 - **dream 09-30 夜巡**：window 內 `result_transmission_records` 127 筆全 TRANSMITTED（1 筆 client 15185 ACKNOWLEDGMENT_ERROR，非投遞失敗）；Cascades 8180 這段時間沒有新 record。
+
+## 【蒸餾 2026-10-02】Portal API GET /orders 的四張票（lookup 與 list 對齊、kit block 五欄回歸、return label 規則、order_cancel_time）、CHARM 收尾、季報範圍擴大、JAG 帳號被拿來測 BioInsights（VP-18589 / VP-18593 / VP-18595 / VP-18596 / VP-18243 / VP-18372 / BIOINSIGHTS）
+> 來源：journal 2026-09-30-vp18589-get-orders-kit-tier-fallback + 四張 STM（全部 Done，#444/#446/#448/#449 → staging，#445/#447/#450 → main；prod pod 自 10-01 01:37Z 起 `:8d0838d`）。dream 10-02 在 prod pod 用部署版 dist 重跑：sample 2598251 → `kit_shipped`（修前 `kit_delivered`）、2597500 → `kit_delivered`（對照）。
+
+### GET /orders 的 status 推導現況（lookup = `order-status.derivation.ts`，list = `order-list.derivation.ts`）
+- **kit tier 的來源優先序**：shipping gRPC 可達 → 只信 shipping；`kit === null`（shipping 不可達）→ 用 core `order_info.order_kit_status` 走 list mode 同一張 ladder（`core-kit-status.ts` 的 `CORE_KIT_STATUS_LADDER`，兩個 mode 共用）。shipping 可達但說「沒出貨」時**不會**被 core 覆蓋。`kit` block 在 degraded 時維持 null（null = 問不到 shipping，不合成）。
+- **shipping 實際會吐 8 個 raw 值**，emr-v2 原本只認 6 個：`DELIVERY_EXCEPTION`（outbound → `kit_shipped`、return → `sample_in_transit`、kit block `shipped`+tracking）與 `VOIDED_SHIPMENT`（rank 0 = not_shipped）補上；core 的 `kit_delivery_exception` → `kit_shipped`。契約 enum 沒有 exception 槽位，再往外露就是改契約。
+- **READY_FOR_RETURN_SHIPMENT 在 PO 時就隨 return label 一起出現**（prod 874611616610：outbound 永遠 DELIVERY_EXCEPTION，return 已 READY）。VP-18595 後：有 outbound package 時由 outbound 決定 delivered/shipped；只有 **零 outbound package**（院內交付）時 ready return label 才算 `kit_delivered`。VP-17760 comment 183880 的「READY_FOR_RETURN = 病人拿到了」是錯的。
+- **cancelled 的三個訊號在兩個 mode 一致**（VP-18596）：intake row `cancelled`、core `order_status === ORDER_CANCELED_STATUS`、core `order_cancel_time` 非空。lookup 以前漏第三個 → list 說 cancelled、lookup 說 kit tier（staging 999997 E2E-iaston-valid-110341 sample 2553964）。`SampleDetails.orderCancelTime` 從 PH-850 起就 map 了但沒人讀。
+- **kit block 五欄回來了**（VP-18593；08-13 VP-17760 砍掉 carrier/shippedAt/deliveredAt 的「沒有 upstream」是錯的，三個裡錯兩個）：`shippedAt` = `GetKitStatusBySampleId.Packages.pickup_time`（proto field 5，emr-v2 兩份 proto 副本原本只有 4 欄 → proto-loader 直接丟掉；READY 狀態的 pickup_time 只是 PO 建立時間，所以 rank ≥ 1 才填）；`carrier` + `deliveredAt` = 同一個 ShippingService 的 `GetTrackingDetails(tracking_id_list)`（在 **第二個 proto 檔** `shipping-protos/shipping-service.proto`，不是 `core-protos/shipping.proto`；LIS-Sample 在用），carrier 取 shipping 自己的 provider 欄、退而求其次用 tracking URL host（fedex.com / dhl.com，子網域可、`evil-fedex.com` 不可）；deliveredAt = FedEx DL scan。**shipping 的 kit_status 可能落後 DL scan**（874611616610 DELIVERY_EXCEPTION 卻有 delivery_time）→ API 照 shipping 原樣輸出，不在 emr-v2 調和。沒有改 shipping 任何東西（Leo：「不要改shipping 的東西啊」）。
+- **staging 沒有 shipping 服務**：`grpc.config.ts` 在 staging 故意留空 host；on-prem 192.168.60.6:31995 / :31865 ECONNREFUSED；cloud `lis-shipping-service-grpc.shipping.svc.cluster.local:63142` 通但是 prod 資料。sandbox 的 kit 流程要 shipping team 提供 staging 實例，不是 config 翻一下。所以 staging 的 sweep 只能驗 fallback 路徑，return-label 規則只能靠 unit matrix + prod 探針。
+- **report_available 只在 lookup**：lookup 問 report service，list 只看 core `order_report_status` → 3 列 lookup=report_available / list=kit_delivered 是 VP-18030 的設計差，不是 bug。
+- **文件歸屬**：mintlify `apidemo.mintlify.app` 是 api-product（Chris）的，08-13 砍欄位後從沒更新；Confluence 2485977089（Order Intake API）才是我們維護的活契約（09-30 一天推到 v27）。「repo 裡沒 docs」≠「沒 docs」。
+- **prod 目前沒有任何真正的 integrator 訂單**（W2W 客戶 50687 只在 sandbox，而且 09-25 自己把 40 張 sandbox 單全取消 → 他們自己的 placerId 證明不了修復）；prod 上 API-placed 的只有 999997 兩張六月測試單（never shipped）。證明只能用內部 sample 跑部署版 dist。
+- **自傷事故 09-30 23:24Z**：從 prod emr-v2 pod 掃 sample 區間時用 macOS BSD `seq`，id ≥ 1e6 變 `2.5983e+06`，每 10 個 id 黏成一串；shipping 的 V2 ListSamples 拒收（strconv.Atoi）後 fallback 到 V1 `Number()` → 查到**別的 sample**（唯讀，無寫入；結論全來自 23:23Z 用整數 id 的那幾次）。被 shipping 同事從 Datadog trace 抓到，不是我們。硬化版 `scripts/probes/shipping-kit-status-probe.js`（`/^\d+$/` 驗證、dedup）。
+
+### CHARM（vendor 7）收尾 — VP-18243 Done 10-02
+- **CHARM 書面確認（第三、四封）**：results interface **必須 HL7 2.3.1**（MSH-12 必填），2.3 的訊息「視為從未被接受」；**空 response body = 未送達**；只有 `MSA|AA` 才算收到；沒有批次匯入工具，practice 開通後只能在 CHARM 手鍵 lab result（可附 PDF、不限回溯日期）；以 NPI 1114170123 複查 Melissa Jones **沒有** Vibrant interface（他們記的 "All In One Peace" 是別人）。
+- **退回 PENDING 擋不住再核准**：98737 MELISSA JONES_NPI 列 09-28 22:59Z 被我們退回 PENDING 並留 note「不得再核准」，09-29 20:51Z 同一個 admin（user 144126 Zhenhe Zhang）再核准 → 09-30 22:06Z 送出一筆 HL7 2.3、CHARM 回 `null\n`、我們記成 ACKNOWLEDGED。審核 UI 不顯示 history/notes。要擋就要 **REJECTED**（10-01 18:18Z 已改，hist 215 / note 16；dream 10-02 回讀 REJECTED、last_modified_by VP-18243）。
+- **7 筆 transport-error 結果（timeout 32000ms ×3、EAI_AGAIN ×4，4–8 月）記成 TRANSMITTED + acknowledgment_status=REJECTED 後從沒重試、沒告警**（「沒東西讀 acknowledgment_status」的實證）。10-01 18:19–18:22Z 以 grpcurl `GenerateResultHl7 send_result=true` 逐筆重推，7/7 `MSA|AA`，新 rtr `cmupuyyf5…`～`cmupv2jna…`（舊 REJECTED 列保留作證據；dream 10-02 回讀 7/7 ACKNOWLEDGED）。全 vendor 7 LIVE 列「從未 AA」= 0。
+- **結案時的世界**：六家 + Melissa Jones 共 7 列 REJECTED，143 筆結果只能走 interface 以外管道（客服）；Geyer 兩列維持 REJECTED（Leo：「都不做。轉done」）；所有 CHARM LIVE 列皆 2.3.1、msh06 經 ACK 證實或為 P 開頭 code。**未開的工程項**（要另開票）：workstream 2 = parse `MSA`、空 body 視為未送達 + alert；workstream 3 = auto-integrate 的 msh06 / hl7_version 預設值。April 607 筆 null body 中 550 筆後來 AA（四月手動重送），餘 57 筆都在已 REJECTED 的三家。
+- **Bug 轉 Done 的 validator 又來一次**：Root Cause（customfield_10485）+ Root Cause Category（customfield_10490 = Configuration Error 10240）填完才過；Task 型（VP-18406）沒有這個 validator。
+
+### 季報（periodic report）範圍擴大 — VP-18372 的 10-01 驗證
+- 舊選取 = `order_create_time` 在期間內（RPC `getCustomerSamplesByTimeRange`）AND 曾有 report_finished → 六月下單、七月出報告的 accession 兩季都不在；RPC `end_time` 是最後一天 00:00 UTC，最後一天的單也被跳過。
+- 新選取（#442 → #443 main 6c1cb59，09-30 22:02Z 兩個 prod pod 都滾）：`querySampleDataByRPC` = RPC 來源 ∪ `queryReportsReleasedInPeriod`（ClickHouse `report_finished` / `redraw_report_finished`，`toDate(event_time)` 落在期間，accession 非空），customer+accession 去重，各來源 fail-soft。**後果：amended 報告會進它被重新釋出的那一季**。
+- **誰跑季報**：`emr_periodic_report_customers` JAG 列 `pipeline_location=onprem` → **on-prem pod**（default ns, appserver04）跑 23:59 PT 的季 cron；AKS pod 每日 audit 印 "no periodic report customers configured" 是正常。
+- **Q3 實跑結果（10-01 07:02Z 落地 JAG SFTP）**：`30248_2026-07-01-2026-09-30_periodic_report.xlsx` 16.99 MB、205 sheets（Q2 110）；`periodic_report_records` 205 列（`report_period` 欄截斷成 `2026-07-01-2026-09-3`）；29 筆 amendment accession 全在且 DHT 是 amended 值；20 sheets 與 Q2 重疊（17 筆我們的 + 3 筆別的 re-release）。在 pod 內 15:26Z 測 194 → 實跑 205 = 當天稍晚又釋出的報告。
+
+### BioInsights / JAG — devcom 的測試單落在 JAG 真實帳號裡
+- 10-01 JAG 來問「John Doe」的 lab order + $570 charge：= devcom 的 V00000417.hl7 測試單（accession 2609256344，clinic 132493）。原因：BioInsights 給的 mapping 就是 Office JAG Holdings / Provider 30248 / Practice 132493，我們 09-18 又叫 devcom 把 1730269200 放 ORC-12（整合上唯一的 NPI）→ **每個 devcom 測試檔都會落進 JAG 帳號（IN1-2=C 還會記 JAG 的帳）**，直到 mapping 搬走或該列 `ordering_enabled=0`。
+- BioInsights 列 `cms3icsz700010xlgywfuj8do`（vendor 46）FULL_INTEGRATION LIVE、`kit_delivery_option=NO_DELIVERY`（不寄 kit）；sibling P2P 列 `cmjxaqui500i50xfq4zc5yddg` RESULT_ONLY。`lis_emr` / `lis_frontend_service` 帳號**沒有** `lis_re` 的 SELECT（查不到 order_table.is_canceled）。
+- 10-02 Leo 回「done」= JAG 回信已發（草稿 `drafts/BIOINSIGHTS-jag-mapping-reply-20261001-draft.md`）；是否 void 2609256344、是否 CC BioInsights、是否先關 ordering，**都沒說**，prod 沒再查。等 JAG 給正確 provider/practice 才動 `ehr_integrations`。

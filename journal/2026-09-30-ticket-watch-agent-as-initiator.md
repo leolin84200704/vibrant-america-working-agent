@@ -2,6 +2,8 @@
 date: 2026-09-30
 tickets: [TICKET-WATCH-20260930]
 tags: [ticket-watch, initiator, automation, launchd, email, bug-watch, phase-1]
+distilled: true
+distilled_on: 2026-10-02
 ---
 # 2026-09-30 — Ticket Watch: the agent becomes the initiator
 
