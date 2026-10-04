@@ -7,7 +7,7 @@ score: 1.6361
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-10-02
+updated: 2026-10-03
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -134,6 +134,8 @@ links:
 - VP-18480
 - VP-18485
 - VP-18593
+- VP-18665
+- VP-18666
 - VP-9299
 - business-model
 - business-model-deep
@@ -148,27 +150,27 @@ tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 118 entries across STM
+summary: Auto-aggregated failure index from 120 entries across STM
 ---
 
 # Failure Index
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-10-02 — total 118 entries
+> Last updated: 2026-10-03 — total 120 entries
 
 ## Themes
 
 - [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 31 entries
 - [Build / TypeScript / Tooling](#build-tooling) — 20 entries
 - [Other / uncategorized](#other) — 20 entries
-- [Deploy / commit / push coordination](#deploy-coordination) — 13 entries
+- [Deploy / commit / push coordination](#deploy-coordination) — 14 entries
 - [DB / migration / backfill](#db-migration) — 9 entries
 - [Scope / requirement / PM communication](#scope-communication) — 5 entries
 - [Error handling / throw vs log](#error-handling) — 5 entries
 - [Redis / cache / pending list](#redis-cache) — 4 entries
 - [Auth / permission / role](#auth-permission) — 4 entries
-- [gRPC / network / timeout](#grpc-network) — 3 entries
+- [gRPC / network / timeout](#grpc-network) — 4 entries
 - [Test / mock / spec](#test-mocking) — 2 entries
 - [GraphQL / API design](#graphql-api) — 1 entries
 - [Tool / cwd / branch / repo confusion](#tool-usage) — 1 entries
@@ -1334,6 +1336,24 @@ gate on the order hot path should ship behind an env-var kill switch.
 STILL UNTESTED: the endpoint actually executing (needs a JWT), and trans -> emr-v2 end to end
 (needs `EMR_V2_BASE_URL`, still unset in both ConfigMaps).
 
+### **[[VP-18666]]** — [2026-10-02 22:55 PDT] First CM patch was overwritten by the next staging deploy
+
+- The #451 staging build (Jenkins, kubectl-client-side-apply 05:53Z) re-synced
+  emr-v2/lis-emr-v2-config from its SOURCE OF TRUTH = the **AKS default
+  namespace** `lis-emr-v2-config` (Jenkinsfile ~L421: `./kubectl get configmap
+  lis-emr-v2-config -o yaml` with no -n, then `-n emr-v2 apply`). I had
+  patched only the emr-v2 ns copy -> reverted to dev; FHIR 2512106925 back to
+  `registered` on the 5a65f7e pod. Assumption that broke: "the ns the pod
+  reads is the config to change". Rule: for emr-v2 staging CM changes, patch
+  `default/lis-emr-v2-config` (source) — the next build propagates it; patch
+  emr-v2 ns too only if you need it before a build.
+- Fixed 2026-10-03 06:0xZ: patched default/lis-emr-v2-config
+  VIBRANT_API_BASE_URL -> base-report-staging-service. default/-prod and
+  emr-v2/-prod are base-report-service (correct). The dev value on default
+  ns is owned by a 2026-09-08 kubectl-patch manager (INCIDENT-20260908
+  10.224.0.199->10.224.0.10 repoint touched 13 keys, VIBRANT_API_BASE_URL
+  among them by ownership only — that STM records no deliberate dev choice).
+
 ### **[[VP-17120]]** — `2026-07-03 00:15` — **
 
 Leo caught that /EMR_storage was already the norm since ~June. Data: localDir by day shows /EMR_storage steadily since 6/1, with /tmp only on 6/23 (6441/6442), 6/30 (6506), 7/1 (6517/18/20), 7/2 early (6525/26) — interleaved with /EMR_storage rows within the same hour on 7/1. Same pod cannot flip localRoot (constructor-read) → TWO fetchers ran concurrently:
@@ -1665,6 +1685,26 @@ expect -re {[Pp]assword:} { send -- "$env(ONPREM_PW)\r" }
   Lesson: a service can serve several proto files on one gRPC server — list the
   @GrpcMethod handlers in the controller (done later: 25 methods) before concluding
   "the RPC does not expose X".
+
+### **[[VP-18665]]** — [2026-10-02 23:15 PDT] Staging E2E: bare list 503 — `client.listClinicCustomersByClinicID is not a function`
+
+- Deployed 9b766f3 (both PRs). patientId path PASSED (557149 -> 6 rows,
+  peer placerId null; 589232 -> 4). Bare list (no patientId) -> 503 on every
+  call: pod log `[ORDER_LIST_UPSTREAM] ListClinicCustomersByClinicID failed:
+  client.listClinicCustomersByClinicID is not a function`.
+- Root cause: @grpc/proto-loader 0.8.0 camelCases the rpc name as
+  `listClinicCustomersByClinicId` (trailing "ID" -> "Id"); the original
+  `ListClinicCustomersByClinicID` is also on the stub. I guessed the alias by
+  analogy with listSamples/getPatient. The unit spec mocked the client with
+  MY spelling -> green while wrong (lesson 70's amplifier (a): a mock
+  verifies your transcription of the contract, not the contract).
+- Fix: call the proto's ORIGINAL method name; spec now loads the real
+  clinic.proto through proto-loader and asserts the called name exists on the
+  generated stub (and that the broken alias does not). Branch
+  bugfix/leo/VP-18665-rpc-method-name off origin/staging 9b766f3.
+- Deterministic push-down candidate: for every v1 wrapper, a spec that loads
+  the real proto and asserts the method exists — cheap, no network. Only the
+  new wrapper has it for now.
 
 ### **[[VP-16521]]** — `2026-05-28 17:53` — **
 
