@@ -88,7 +88,7 @@ links:
 - failures
 - repo-catalog
 - repos
-score: 0.1817
+score: 0.1757
 ---
 
 # INCIDENT 2026-08-17 — on-prem emr-v2 deploy freeze

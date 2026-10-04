@@ -153,3 +153,12 @@ summary: Ticket keyword to repo/module routing table
 - **"trans staging NOAUTH / on-prem Redis 要密碼了 / 192.168.60.10:6390 / 192.168.60.9:4646 / calendar Bull queue staging"** → STM `VP-18485`（Done，dream 10-02 加了 RE-CHECK）+ `repos.md` 2026-10-02 Redis 條。修法在 `calendar/redis/redis-options.ts` 的 stprod 分支（給密碼 env 或改走 Azure db 5）。
 - **"JAG 問 John Doe 訂單 / devcom 測試單落在 JAG / BioInsights mapping 搬家 / ordering_enabled 要不要先關"** → STM `BIOINSIGHTS-onboarding`（10-02 Leo「done」= 回信已發；等 JAG 正確 mapping）。
 - **"ticket watch / 早上九點報告 / agent 當 initiator / REPORT_SMTP / bug_watch 為何沒跑"** → STM `TICKET-WATCH-20260930` + `DailyJob/ticket_watch/README.md`；10-01、10-02 兩天 RUN FAILED（無網路），SMTP 未設。
+
+## 2026-10-03 新增路由（dream；VP-18664 / VP-18665 / VP-18666）
+- **"GET /orders?patientId= 404 但 patient 存在 / 0 單要 200 空陣列 / patient not accessible to this account / PATIENT_NOT_FOUND"** → STM `VP-18664` + `emr-integration.md` 2026-10-03。
+- **"clinic scope / 同 clinic 兩個 provider / ListClinicCustomersByClinicID / bare list 變慢 2 秒 / peer placerId null / ORDER_LIST_CLINIC_FANOUT / mintlify every order in your clinic"** → STM `VP-18665` + `emr-integration.md` 2026-10-03。
+- **"list report_available 但 FHIR registered / VIBRANT_API_BASE_URL dev / base-report-dev-service / sandbox FHIR 沒 presentedForm / 2512106925"** → STM `VP-18666`。
+- **"emr-v2 staging ConfigMap 被 deploy 蓋掉 / default ns lis-emr-v2-config / Jenkinsfile L421"** → `patterns.md` 2026-10-03。
+- **"listClinicCustomersByClinicId is not a function / proto-loader camelCase / 載真 proto 的 spec"** → factory ENGINEERING-LESSONS（PR #92）+ STM `VP-18665` Failures。
+- **"sandbox GET /orders 哪個 pod 服務 / .11 查不到 patient"** → `emr-integration.md` 2026-10-03（AKS staging pod；core 用 gRPC 問）。
+- **"PH-931 / QH-7478 / QH-7479 / QH-7480 / #453 release"** → 三張 STM + journal `2026-10-02-ph931-trio`。

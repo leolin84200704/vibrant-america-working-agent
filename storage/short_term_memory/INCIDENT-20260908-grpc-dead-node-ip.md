@@ -62,7 +62,7 @@ links:
 - failures
 - repo-catalog
 - repos
-score: 0.4222
+score: 0.4084
 ---
 
 # INCIDENT 2026-09-08 — result pushes failing: gRPC targets pointed at a dead AKS node IP

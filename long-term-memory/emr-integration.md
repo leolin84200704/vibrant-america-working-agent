@@ -1890,7 +1890,7 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
   `FOOD_ADDITIVES 165→620` 不在 dbs_mapping(is_new)，靠 section 規則補到。productMap external code **大小寫敏感**（`neural_zoomer_dbs` = unrecognized_test_codes）。
   優先序：unrecognized/unsupported → duplicate/mixed → mapping-cache join。NEURAL_ZOOMER + FOOD_ZOOMER_DBS 現在 422（PH-870 / VP-17724 的規則在這裡落地）。
 - `patient_not_found` 在 API 路徑可能蓋住 coresamples GetPatient 的 decode 錯（患者 477769：`13 INTERNAL invalid wire type 7` — 該患者某欄位 vendored proto 解不開），
-  先看 pod log `v2 getPatient failed` 再信 reason。**api-sandbox partner 路徑由 on-prem prod pod 服務**（AKS log 看不到 placerId）；staging 下單共用 prod sample 序號，每個 201 都是真的、立刻 cancel。
+  先看 pod log `v2 getPatient failed` 再信 reason。**api-sandbox partner 路徑由 on-prem prod pod 服務**（AKS log 看不到 placerId）【2026-10-03 修正：GET /v1/orders 的 sandbox 流量實測落在 AKS **staging** emr-v2 pod（requestId 比對，VP-18664）；這條只對當時的 POST /orders / HL7 觀察成立，查 sandbox 行為先看 staging pod log，詳見下方【蒸餾 2026-10-03】】；staging 下單共用 prod sample 序號，每個 201 都是真的、立刻 cancel。
 
 ### Order Summary PDF 隨 HL7 result 一起落 SFTP（VP-18138，prod 09-08 03637bc，只開過 canary）
 - 開關 = `ehr_vendors.deliver_order_summary_pdf`（vendor 層；FOLLOWTHATPATIENT=44 仍 0，ZYMEBALANZ=2 canary 後歸 0）。HL7 TRANSMITTED 後（ChARM 二次投遞同一位置）
@@ -2145,3 +2145,34 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 - 10-01 JAG 來問「John Doe」的 lab order + $570 charge：= devcom 的 V00000417.hl7 測試單（accession 2609256344，clinic 132493）。原因：BioInsights 給的 mapping 就是 Office JAG Holdings / Provider 30248 / Practice 132493，我們 09-18 又叫 devcom 把 1730269200 放 ORC-12（整合上唯一的 NPI）→ **每個 devcom 測試檔都會落進 JAG 帳號（IN1-2=C 還會記 JAG 的帳）**，直到 mapping 搬走或該列 `ordering_enabled=0`。
 - BioInsights 列 `cms3icsz700010xlgywfuj8do`（vendor 46）FULL_INTEGRATION LIVE、`kit_delivery_option=NO_DELIVERY`（不寄 kit）；sibling P2P 列 `cmjxaqui500i50xfq4zc5yddg` RESULT_ONLY。`lis_emr` / `lis_frontend_service` 帳號**沒有** `lis_re` 的 SELECT（查不到 order_table.is_canceled）。
 - 10-02 Leo 回「done」= JAG 回信已發（草稿 `drafts/BIOINSIGHTS-jag-mapping-reply-20261001-draft.md`）；是否 void 2609256344、是否 CC BioInsights、是否先關 ordering，**都沒說**，prod 沒再查。等 JAG 給正確 provider/practice 才動 `ehr_integrations`。
+
+## 【蒸餾 2026-10-03】PH-931 三連：GET /orders 空歷史 vs 404、clinic scope 落地、staging FHIR 讀到 dev 報告庫（VP-18664 / VP-18665 / VP-18666）
+
+### Sandbox 路由修正（推翻 2026-08「on-prem prod pod 服務 sandbox」那條）
+- GET /v1/orders 在 sandbox 由 **AKS staging emr-v2 pod**（`lis-emr-v2-deployment-staging`）服務——requestId 0ffd6f6c… 在它的 log 比對到。舊條目來自 POST /orders / HL7 工作，至少對 list endpoint 不成立；查 sandbox 行為先看 staging pod log，再看 on-prem。
+- staging emr-v2 的 core = v1 cloud 10.224.0.10:30282（on-prem 192.168.60.6 fallback）；**.11 的 lis_core_v7 DB 不是這個 core 服務的資料**（patient 3227432 / 3161747 在 .11 查不到）——sandbox 事實用 gRPC 問 core，不要直接 SQL .11。
+- staging 的 v2 client（grpc-client-v2）指向 **prod core-v2**，所以 v2 的 GetCustomerClinicIdByPatientId / ListPatientRecords 在 staging 不能拿來做 sandbox 的 scope 判斷（VP-18030 debate 的結論再度成立）。
+
+### 三種狀態、三個 patient 可見性關係
+- `GET /v1/patients?patientId=`（LIS-transformer public-patients.controller）**沒有任何 scope 檢查**：bare GetPatient + 10 s Redis cache，200 只證明存在。clinic-scoped 的 `GET /v1/patients`（ListPatientRecords）才有：customer scope = `patient_customer some customer_id`；clinic scope = `patient_clinics some clinic` OR patient_customer 落在 clinic 的 customers。
+- Portal 的 clinic view（coreSamples patient.service order_visibility_or ~2887）：`order.clinic_id === 看的 clinic`（任何 customer 下的單）OR 自己的單（NPI clinics / clinic null / removed clinics）。
+- VP-18664 之前 listForPatient 在 inScope 空時直接 null → 404，把「存在但 0 單」「不可見」「上游掛了」三態折成一個 404（lesson 70 null≠empty）。修法只在空路徑加一次 GetPatient（timeout 15）：null → 404；throw → 503 UPSTREAM_UNAVAILABLE；linked（account 連結，或 clinic providers ∩ patient links）→ 200 `{orders:[],count:0,page,perPage}`；not linked → 同一個 404（保留「不可跨租戶探測」）。熱路徑 0 額外呼叫。404 文案 "patient not found or not accessible to this account"。
+- v1 `mapPatientDetailsV1` 原本丟掉 customer_id / patient_customer_ids——補成 optional customerId / customerIds。
+- staging 上所有共用測試病人（3227413、557149、589232、477769）都連到 3194，**真正的跨租戶 404 案例在 sandbox 做不出來**；legacy 無 patient_customer 列的病人也沒驗——這兩個是殘餘 E2E。
+
+### Clinic scope（VP-18665）實作與代價
+- Leo 推翻 docs-only 選項，選「走路 2」= 只改 emr-v2、不加 core RPC：fan-out `ListClinicCustomersByClinicID`（v1 clinic client，reuse GRPC_CUSTOMER_* env，**無新 env**）。scope 規則 = 自己的單（任何 clinic）OR `order.clinic_id === token.clinic_id`（Portal 規則 1+3；純 clinic-only 會丟 beta 夥伴 clinic-null 的舊單）。
+- bare list：own ids + 每個 peer provider 一次 GetCustomerSamplesByTimeRange（4 並行）→ ListSamples 分塊、過濾 clinicId → merge by sample_id → page；intake join 只對自己的 customer（peer 的 placerId 隱藏為 null）。超過 5000 peer ids 打 `[ORDER_LIST_CLINIC_FANOUT]` warn。
+- 代價：1 + peers + ceil(peerIds/100) + 1 次 upstream。sandbox clinic 125613 "Test Client, MD" 有 57 providers（56 peers、只 5 筆 peer 單）→ bare list 0.6–0.8 s 變 2.0–2.3 s；prod clinic 通常 1–15 providers。短 TTL cache peer id set 是待 Leo 決定的優化。
+- PM 驗證例子：patient 557149 用 3194 token 從 4 → 6（含 35935 "Test AccountJan2025" 的 2501276329 / 2501276341，placerId null）；589232 3 → 4；bare count 4062 → 4067；2025-01 窗 49 → 52 列（3 筆 peer accession 都在）。
+- `?clinicId=` 仍 400 UNSUPPORTED_PARAMETER；scope 一律來自 token（clinic_id 必須正整數否則 null → 退回 account scope）。mintlify 「every order in your clinic」在 #453 上 prod 後才成立。
+
+### VP-18666：list 說 report_available、FHIR 說 registered——是 config，不是 code
+- 兩個來源：list = core `order_info.order_report_status`（deriveListStatus：report_ready/amended/delivered → report_available）；FHIR = base-report `getReportStatusListV2` via `VIBRANT_API_BASE_URL`（fhir-result.service.ts:347）。
+- 判法：同一個 minted admin token、同一個 staging pod，打三個 report service：dev = Analyzing 0/1、staging = Final 1/1、prod = 401（dev secret）→ core 對、FHIR 讀錯環境。
+- 真因：AKS `emr-v2/lis-emr-v2-config` 的 VIBRANT_API_BASE_URL = base-report-**dev**-service，2026-09-10 22:49:35Z 一次 `kubectl-patch`（12 keys）帶進去；default ns 那份的 dev 值 owner 是 09-08 的 .199→.10 repoint（INCIDENT-20260908，13 keys 含它，純 ownership，沒有刻意選 dev 的紀錄）。staging 自 09-10 起**所有** VIBRANT_API_BASE_URL consumer（fhir-result、report-pdf-client、result-generation、kafka report-finished listener、order-status report client、scheduled-reports csv）都在讀 dev 報告庫；customer 3194 的 18 筆 report_available 在 sandbox FHIR 全是 registered。prod CM 是 base-report-service，正確。
+- 修法 config only：改 base-report-staging-service → FHIR 2512106925 = `final`（它就是 PM 要的「可存取的已完成歷史報告」；2605066701 / 2604156916 / 2602126543 同樣）。殘項（非 emr-v2 邏輯）：sandbox FHIR body 沒 Observations / presentedForm——staging result store 對 QA sample 為空、staging Order Team API `orderTest` 500、CM `VIBRANT_API_TOKEN` 是 prod secret 簽的所以 base-report-staging 401（non-fatal「report time will be empty」）。完整 E2E 要等一筆 staging 真跑過 lab pipeline 的 accession。
+- 第一次 patch 被下一次 staging deploy 蓋掉——真相來源在 default ns，見 patterns.md 2026-10-03。
+
+### 交付鏈與狀態
+- #451（18664）→ staging；#452（18665，stacked 在 #451 上）在 GitHub retarget 前被 merge 進 feature branch，用 #454 帶進 staging；#455 修 method name；staging `cb6b802` 13/13 sandbox E2E。**release PR #453 staging → main（235b4a5）由 Leo 2026-10-04 01:44:47Z merge**——部署結果見 STM 三張票的 dream 2026-10-03 段與 dream log。Jira 三張仍 Dev In Progress；QA twins QH-7478 / 7479 / 7480；PM 草稿 `drafts/VP-18665-pm-reply.md`、`drafts/VP-18666-jira-comment.md` 未貼。

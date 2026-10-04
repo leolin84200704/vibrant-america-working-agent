@@ -517,3 +517,9 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 4. **沒有機制接住的閘會被繞過**：PENDING + note 擋不住 admin 再核准（22h 後）、stage_test 被 robot reset 會關 PR 並讓舊 lineage 復活、「不得再核准」寫在 notes 裡沒人看。用終態（REJECTED）、用祖先檢查（`merge-base --is-ancestor`）、用 CI gate，不用「請勿」。
 5. **殘項掛名結案形狀延續**（09-30 第 1 條）：六張票全部帶著命名的殘項關（Chris 的 mintlify、shipping 的 staging 實例、VP-18407 契約、CHARM 兩個 workstream、JAG 的正確 mapping、Redis 密碼輪替）。其中 **Redis 輪替這一項 10-01 22:30Z 疑似被人默默做了**（on-prem Redis 開始要 AUTH，trans staging calendar client 沒密碼路徑 → 每小時 5k NOAUTH）——「殘項 owner 未知」的殘項會在沒人通知的情況下發生，dream 的 armed register 要把它當 first-observable 來巡。
 下一次 cross-review：再 5 張完成後（marker：2026-10-02）。
+
+## Leo 10-02 的決定與打回（VP-18664 / VP-18665 / VP-18666）
+- 「18664 方案 A 動工，18665 選 1，18666 先改 CM(確認都能解決問題)」→ 半小時後對 18665 反問「為什麼不能改code」「如果改code 會改哪些repo?」→「走路2」。**docs-only 的建議被打回：Leo 寧可改 code 也不讓文件退讓。** 提選項時要把「改 code 動哪些 repo、要不要別隊 deploy」一起列出——Leo 問的是這個，不是要不要改。
+- 「規則 OK，先 commit push 開 PR (兩個)」：一張票一個 PR，即使同一分支一起做也要拆；拆法要可重現（patterns 2026-10-03）。
+- 「merge 到 staging 了，等deploy 好你先測，測完沒問題我在merge 到 main」：Leo 的 release 節奏 = agent 在 staging 做 E2E 回報，Leo 再 merge release PR（10-04 01:44Z merge 了 #453）。
+- 「確認都能解決問題」是驗收條件——回報分「票面問題解了」與「完整 E2E 還差什麼」兩段（18666：狀態不一致解了；Observations / PDF 要等 staging 有 lab 資料）。

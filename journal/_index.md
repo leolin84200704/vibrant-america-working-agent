@@ -1,11 +1,12 @@
 # Journal Index (Episodic Memory — L3a)
 
 > Auto-maintained by the dream pipeline. One line per entry, newest first.
-> Last updated: 2026-10-02. 10-02 run: two new 09-30 entries (vp18589-get-orders-kit-tier-fallback, ticket-watch-agent-as-initiator; neither carried a `distilled:` field) distilled → emr-integration/patterns/repos/leo-working-rules/ticket-routing. Previous 09-30 run: one new entry (2026-09-30 lis-7882-emr-v2-results-grpc-oauth2, no `distilled:` field on arrival) distilled → repos/patterns/leo-working-rules/ticket-routing + 1 factory inbox proposal. Previous: 09-29 run: no new entries (the 09-29 trans-opt wave 1-2 / VP-18243 / BIOINSIGHTS sessions wrote STM only, no journal); nothing undistilled. Previous: one 09-28 entry distilled by the 09-28 run (vp18402-04-deactivate-on-removal → patterns/emr-integration/leo-working-rules/repos + 3 factory inbox proposals).
+> Last updated: 2026-10-03. 10-03 run: one new 10-02 entry (ph931-trio-vp18664-18665-18666, no `distilled:` field on arrival) distilled → emr-integration/patterns/repos/leo-working-rules/ticket-routing; no archives due. Previous 10-02 run: two new 09-30 entries (vp18589-get-orders-kit-tier-fallback, ticket-watch-agent-as-initiator; neither carried a `distilled:` field) distilled → emr-integration/patterns/repos/leo-working-rules/ticket-routing. Previous 09-30 run: one new entry (2026-09-30 lis-7882-emr-v2-results-grpc-oauth2, no `distilled:` field on arrival) distilled → repos/patterns/leo-working-rules/ticket-routing + 1 factory inbox proposal. Previous: 09-29 run: no new entries (the 09-29 trans-opt wave 1-2 / VP-18243 / BIOINSIGHTS sessions wrote STM only, no journal); nothing undistilled. Previous: one 09-28 entry distilled by the 09-28 run (vp18402-04-deactivate-on-removal → patterns/emr-integration/leo-working-rules/repos + 3 factory inbox proposals).
 > Archived 5 distilled >30d entries (2026-08-31, 2026-09-01, 2026-09-02 ×3) → archive/journal/ on 10-02; 3 (08-26..08-28) on 09-30. Previous: 09-24 run distilled the two 09-22 entries.
 
 | Date | Slug | Related | Distilled |
 |------|------|---------|-----------|
+| 2026-10-02 | ph931-trio-vp18664-18665-18666 | VP-18664, VP-18665, VP-18666, PH-931, VP-18030, QH-7478, QH-7479, QH-7480 | true |
 | 2026-09-30 | vp18589-get-orders-kit-tier-fallback | VP-18589, VP-18593, VP-18595, VP-18596, VP-17760, VP-18030 | true |
 | 2026-09-30 | ticket-watch-agent-as-initiator | TICKET-WATCH-20260930 | true |
 | 2026-09-30 | lis-7882-emr-v2-results-grpc-oauth2 | LIS-7882, VP-18411, VP-18528, VP-16556 | true |
