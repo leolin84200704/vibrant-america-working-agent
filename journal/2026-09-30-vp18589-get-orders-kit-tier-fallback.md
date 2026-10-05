@@ -76,3 +76,12 @@ Staging sweep after 2ac6b05: the cancel-timestamp divergence is gone (3 left, al
 report-service-only). The return-label rule cannot fire on staging; its proof is the
 six-case unit matrix plus a prod check after promotion. Leo had already set both
 tickets to Done before the code existed — left as-is, noted.
+
+## 2026-10-05: sandbox seed request (Chris + Yekai) and Leo's reply
+Integrator wants 11 sandbox orders in target states. Mapped each to core/report data;
+kit block impossible without shipping. Leo wrote the Slack reply himself from my draft
+and asked me to remember how he phrased it — verbatim in STM
+SANDBOX-SEED-W2W-20261005 § User Feedback, with the deltas vs my draft. Also learned
+(the hard way) that "we" do call FedEx Track directly: LIS-transformer getFedx and
+LIS-Shipping kitTrack, consul shipping secret. in_transit is a shipping-vocabulary
+gap, not a FedEx one; emr-v2 direct FedEx tracking is an open option, not decided.

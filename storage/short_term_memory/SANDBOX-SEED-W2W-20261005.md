@@ -1,0 +1,82 @@
+---
+id: SANDBOX-SEED-W2W-20261005
+type: stm
+category: pm_patterns
+status: active
+score: 0.00
+base_weight: 0.7
+created: 2026-10-05
+updated: 2026-10-05
+links: []
+relations:
+  unblocked_by: []
+  blocks: []
+  sibling: [VP-18589, VP-18593, VP-18595, VP-18596]
+unblock_when: "Chris/Yekai confirm the core + report-service data for the 11 W2W sandbox orders is in place → run the staging sweep and post the 11-row table"
+tags: [sandbox, w2w, get-orders, kit-status, seed-data, chris, yekai, leo-reply-style]
+summary: "Integrator (via Chris Wu, with Yekai Liu) asked us to seed 11 sandbox orders (samples 2554394–2554404, customer 50687) into target GET /orders states. Recipe per order (core order_kit_status / sample_received_time / report service) drafted; kit block impossible in sandbox (no shipping). Leo's final reply recorded verbatim."
+---
+# SANDBOX-SEED-W2W-20261005 - Work Loop Record
+
+## Ticket Analysis
+
+### [2026-10-05] Request
+Chris Wu (Slack, Simplified Chinese): 「需要给用户造一套数据这里 @Yekai Liu @Hung-Fan Lin」
+with the integrator's table M01–M11 (placerId W2W-…, sample 2554394–2554404, target
+state). M09/M10: "please use whatever value production returns for these cases".
+
+Current sandbox state (staging pod sweep, customer 50687): all 11 exist, accessions
+2610016001–2610016011, all status kit_delivered (staging core marks every order
+kit_patient_received_kit); M02 and M06 already have a preliminary report → lookup
+analyzing. kit null on all (no shipping service on staging).
+
+Feasibility (lookup derivation on staging = core fallback ladder + report service):
+- kit block (kit.status/carrier/trackingNumber/shippedAt/deliveredAt): impossible in
+  sandbox — data lives only in shipping (FedEx label + scans); sandbox orders never
+  entered shipping. Only `status` can be produced.
+- M02 in_transit: shipping's 8-value kit_status has no in-transit value; FedEx Track
+  API does (IT/AR/DP/OD) and LIS-transformer `getFedx` + LIS-Shipping `kitTrack`
+  already call apis.fedex.com/track directly (consul shipping secret
+  FEDEX_PRODUCTION_API_KEY/SECRET). emr-v2 could do the same (cache 10–15 min, only
+  in-flight kits) — NOT decided; Leo told Chris 建議拿掉 for now.
+- Recipe: M01 kit_lab_shipped_kit; M03/M08 keep kit_patient_received_kit; M04/M10
+  kit_sample_shipped_back; M05 sample_received_time; M06 already preliminary;
+  M07 report 'Final Report Available' + generated report; M08 + sample-level issue
+  named *redraw* (→ exceptions redraw_needed); M09 kit_delivery_exception (prod answers
+  kit_shipped; M10 prod answers sample_in_transit); M11 kit_lab_shipped_kit, they cancel.
+- Core writes happen via core's `processShippingStatusUpdate` (KIT_STATUS_FLAG_MAP) —
+  something on staging already emits PATIENT_RECEIVED_KIT; core/report data is
+  Yekai's side, emr-v2 does not touch those DBs.
+
+## Decisions Made
+- Leo sent the reply himself (below). Our part: run the 11-row list/lookup table once
+  the data is in and post it.
+
+## User Feedback
+
+### [2026-10-05] Leo's reply to Chris — VERBATIM (Leo: 「請記得我是怎麼回的」)
+```
+sandbox 沒有 shipping 服務，kit.status、carrier、trackingNumber、shippedAt、deliveredAt 在 sandbox 會顯示null(sandbox 的訂單沒有進過shipping)，只有 status 能做出來。M01/M02/M03 在 sandbox 看不到kit.status。M02 的 in_transit 在 prod 也不存在（shipping 沒有對應狀態,建議拿掉)
+其他各筆要放的資料：
+- core order_kit_status：M01 kit_lab_shipped_kit、M04 kit_sample_shipped_back、M09 kit_delivery_exception、M10 kit_sample_shipped_back、M11 kit_lab_shipped_kit；M03/M08維持 kit_patient_received_kit
+- core sample_received_time：M05 填一個時間
+- report service：M06 已經回Analyzing 不用動了、M07 Final Report Available 並產一份報告、M08 加一個名稱含 redraw 的 sample-level issue
+- M09 在 prod 會回 kit_shipped、M10 會回 sample_in_transit，sandbox 放上面的值就會一樣
+```
+How it differs from my draft (style to reuse when drafting PM-facing text for him):
+- Took my structure (限制先講 → 每筆要放的資料 → prod 對照) but compressed to one
+  paragraph + one bullet list; no greeting, no names, no 「資料放好通知我」 closing.
+- States the reason inline in parentheses right after the fact
+  (「會顯示null(sandbox 的訂單沒有進過shipping)」) instead of a separate sentence.
+- Precise about WHAT is invisible: 「M01/M02/M03 在 sandbox 看不到kit.status」 (not
+  "看不到" wholesale) — he accepted that correction.
+- Dropped my option list for M02 (拿掉 / 併到 M01 / 接 FedEx) to a single
+  「建議拿掉」; keeps shipping-side asks out (does not ask shipping to add anything).
+- Took the correction 「M06 已經回Analyzing 不用動了」 in his own words.
+- Field names / values in English inline, everything else Chinese, no bold, no code.
+
+## Failures
+- My first explanation said "in_transit 在 prod 也不存在" without qualifying that it
+  is shipping's vocabulary, not FedEx's — Leo pushed back twice (「我們不是有fedex API
+  嗎？」「我以為我們有自己接fedex api?」). Say which system's vocabulary a limit
+  belongs to; "we" includes LIS-transformer, which calls FedEx directly.
