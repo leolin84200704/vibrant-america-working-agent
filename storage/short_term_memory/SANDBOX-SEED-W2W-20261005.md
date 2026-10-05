@@ -75,6 +75,36 @@ How it differs from my draft (style to reuse when drafting PM-facing text for hi
 - Took the correction 「M06 已經回Analyzing 不用動了」 in his own words.
 - Field names / values in English inline, everything else Chinese, no bold, no code.
 
+## Code Changes
+
+### [2026-10-05 14:22 PT] Staging core DB seed (Leo: 「請你直接造假數據(改db)」)
+- Where: staging core v1 = deployment `lis-core-staging` (ns default, NodePort 30282),
+  DB from its configmap `lis-core-staging-config` DATABASE_URL →
+  **lisportalprod2-testdb.mysql.database.azure.com / lis_core_v7** (user lis_core_emr).
+  NOT the on-prem .11 lis_core_v7 (LTM was right that .11 is not it). Ran Prisma raw SQL
+  from inside the core staging pod (`/app/node_modules/@prisma/client`, DATABASE_URL
+  from pod env) — no credential handling on my side. NOTE: the configmap dump prints
+  the password inline in DATABASE_URL; redact by value, not only by key name.
+- Core table shapes: `sample` (sample_id, accession_id, order_id, sample_received_time);
+  `order_info` (order_id, customer_id, order_kit_status, order_report_status,
+  order_status, order_cancel_time). Not `sample_data` (that is shipping's schema).
+- BEFORE (all 11): order_kit_status kit_patient_received_kit, order_report_status
+  report_not_ready, order_status order_processing, sample_received_time NULL,
+  customer 50687. order_ids: 2554394→11405498, 2554395→11405500, 2554396→11405497,
+  2554397→11405499, 2554398→11405501, 2554399→11405502, 2554400→11405503,
+  2554401→11405504, 2554402→11405505, 2554403→11405506, 2554404→11405507.
+- WRITES (WHERE bound to order_id + customer_id 50687 + explicit id list; 7 rows, 7
+  expected): 11405498 kit_lab_shipped_kit (M01); 11405499 kit_sample_shipped_back (M04);
+  11405501 kit_lab_received + sample 2554398 sample_received_time = 2026-10-05T21:22:32Z
+  (M05); 11405505 kit_delivery_exception (M09); 11405506 kit_sample_shipped_back (M10);
+  11405507 kit_lab_shipped_kit (M11). Untouched: M02 (Leo told Chris to drop it; it
+  already answers analyzing via a preliminary report), M03/M08 (keep delivered), M06
+  (preliminary → analyzing already), M07 (needs a generated report — report pipeline,
+  not a DB flag).
+- Reverse audit: 0 other 50687 orders carry any seeded value. Readback 11/11 as above.
+- Rollback: set the six order_kit_status back to kit_patient_received_kit and
+  sample 2554398 sample_received_time = NULL.
+
 ## Failures
 - My first explanation said "in_transit 在 prod 也不存在" without qualifying that it
   is shipping's vocabulary, not FedEx's — Leo pushed back twice (「我們不是有fedex API
