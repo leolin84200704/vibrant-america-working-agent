@@ -2,7 +2,7 @@
 id: SANDBOX-SEED-W2W-20261005
 type: stm
 category: pm_patterns
-status: active
+status: waiting
 score: 0.00
 base_weight: 0.7
 created: 2026-10-05
@@ -12,7 +12,7 @@ relations:
   unblocked_by: []
   blocks: []
   sibling: [VP-18589, VP-18593, VP-18595, VP-18596]
-unblock_when: "Chris/Yekai confirm the core + report-service data for the 11 W2W sandbox orders is in place → run the staging sweep and post the 11-row table"
+unblock_when: "(1) shipping team answers Chris whether a staging shipping service can be exposed to AKS staging and seeded for accessions 2610016001-2610016011 → set GRPC_SHIPPING_HOST/PORT on staging ConfigMap and re-run m-list.js; (2) report team does M07 (generate a report) and M08 (redraw issue, after pointing staging report GRPC_ISSUE_ADDR at the staging issue service) → re-run m-list.js; test = the 11-row list/lookup table"
 tags: [sandbox, w2w, get-orders, kit-status, seed-data, chris, yekai, leo-reply-style]
 summary: "Integrator (via Chris Wu, with Yekai Liu) asked us to seed 11 sandbox orders (samples 2554394–2554404, customer 50687) into target GET /orders states. Recipe per order (core order_kit_status / sample_received_time / report service) drafted; kit block impossible in sandbox (no shipping). Leo's final reply recorded verbatim."
 ---
@@ -104,6 +104,22 @@ How it differs from my draft (style to reuse when drafting PM-facing text for hi
 - Reverse audit: 0 other 50687 orders carry any seeded value. Readback 11/11 as above.
 - Rollback: set the six order_kit_status back to kit_patient_received_kit and
   sample 2554398 sample_received_time = NULL.
+
+### [2026-10-05 15:10 PT] Readback after seed + handoffs
+- Staging API readback: M01 kit_shipped, M04 sample_in_transit, M05 sample_received
+  (lab true), M09 kit_shipped, M10 sample_in_transit, M11 kit_shipped; M03 kit_delivered,
+  M06 analyzing unchanged; M02 analyzing (dropped); M07 kit_delivered (needs a generated
+  report — report_available is computed from finished reports, not a flag); M08
+  kit_delivered with no exception. kit block null on all 11.
+- M08 blocker found: staging base-report's `GRPC_ISSUE_ADDR` =
+  lis-issue-system-service.issue:30071 = **prod** issue system, although
+  lis-issue-system-service-staging (:30072) exists. Seeding a redraw issue for staging
+  sample 2554401 would land in prod (a real patient's sample id). Not done; report team
+  must repoint staging first.
+- Leo sent Chris (1) the M07/M08 → report team handoff and (2) the shipping ask
+  (staging shipping service exposed to AKS + PO/tracking rows for the 11 accessions;
+  fallback = emr-v2 sandbox synthesis behind a staging-only flag, not decided).
+  Both sent 2026-10-05 ~15:05 PT (「done」). Waiting on their replies.
 
 ## Failures
 - My first explanation said "in_transit 在 prod 也不存在" without qualifying that it
