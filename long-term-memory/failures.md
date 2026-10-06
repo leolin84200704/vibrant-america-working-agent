@@ -7,7 +7,7 @@ score: 1.6506
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-10-03
+updated: 2026-10-06
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -38,6 +38,7 @@ links:
 - QH-862
 - QH-918
 - QH-919
+- SANDBOX-SEED-W2W-20261005
 - TICKET-WATCH-20260930
 - TRANS-OPTIMIZATION-20260911
 - VP-15460
@@ -151,18 +152,18 @@ tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 120 entries across STM
+summary: Auto-aggregated failure index from 122 entries across STM
 ---
 
 # Failure Index
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-10-03 — total 120 entries
+> Last updated: 2026-10-06 — total 122 entries
 
 ## Themes
 
-- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 31 entries
+- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 33 entries
 - [Build / TypeScript / Tooling](#build-tooling) — 20 entries
 - [Other / uncategorized](#other) — 20 entries
 - [Deploy / commit / push coordination](#deploy-coordination) — 14 entries
@@ -201,6 +202,13 @@ summary: Auto-aggregated failure index from 120 entries across STM
 ### **[[NEXTECH-onboarding]]**
 
 - `mcp__vibrant__mysql_query` (lisportalprod) has no `lis_emr` DB — prod lis_emr is only on lisportalprod2 (`lisportal_mysql_query`, read-only). Writes go through emr-v2 `.env` DATABASE_URL (lis_emr account) via Prisma runner.
+
+### **[[SANDBOX-SEED-W2W-20261005]]**
+
+- My first explanation said "in_transit 在 prod 也不存在" without qualifying that it
+  is shipping's vocabulary, not FedEx's — Leo pushed back twice (「我們不是有fedex API
+  嗎？」「我以為我們有自己接fedex api?」). Say which system's vocabulary a limit
+  belongs to; "we" includes LIS-transformer, which calls FedEx directly.
 
 ### **[[VP-16166]]** — [2026-08-26 14:2x PDT] 用錯檔名 → 錯的根因寫進了 Jira 票
 
@@ -554,6 +562,14 @@ Known and accepted at close: the SUCCESS path (a real removeCustomerFromClinic a
 deactivating an integration) has never fired in production — zero provider removals occurred in the
 window — so it is verified only at the unit and function level, never end-to-end. Leo chose not to
 force a trigger.
+
+### **[[VP-18666]]** — [2026-10-05 PDT] 10-02 root cause was inverted
+
+- I concluded "core right, config wrong" because staging-svc agreed with core for
+  2512106925. Both were prod data (core = prod clone, staging-svc = prod-wired), so the
+  agreement proved nothing about staging. Never validated which backend each report
+  service talks to; one GUT5 W2W probe would have shown it. Posted comment 190459 to
+  Xiaoye on that basis -> needs a correction.
 
 ### **[[VP-16251]]** — `2026-04-21 21:50` — **
 
@@ -1644,7 +1660,12 @@ Tests 22 suites / 255 assertions green.
 - `.spec.ts` 文件不能信賴 — 跟 service code 不同步演進（4b10e1a + 多次 service refactor 都沒同步 spec），可能長期沒人跑
 - 應該每個 PR 跑該 service spec；或者 CI gate 上有 spec 必過要求
 
-### **[[VP-17755]]** — `2026-08-27` — `git add -A` 在共用 checkout 掃進了別人的編輯
+### **[[VP-17868]]**
+
+- First BE commit was made with `core.hooksPath=/dev/null`. The repo points `core.hooksPath` at the factory githooks; bypassing them was wrong and pointless. Reset and recommitted through the hooks.
+- `git push` to va-portal: 403. `gh api repos/Vibrant-America/va-portal --jq .permissions.push` → false. Leo's account cannot write to the FE repo; the FE half needs the FE team or a permission grant.
+
+### **[[VP-17755]]** — `2026-08-27` — **
 
 - 現象：commit 61e6e70 目標只含 VP-17753 變更，實際混入了 Leo 同時在 working tree 做的
   VP-17755 gate 移除——違反 Leo 明定的「一票一斷點 commit」。
@@ -1653,11 +1674,6 @@ Tests 22 suites / 255 assertions green.
 - 可預防：staging 一律點名檔案（`git add <paths>`）+ commit 前 `git status -s` 對照
   「這次我改了哪些檔案」清單；或共用機器上先 `git stash list`/`status` 偵測第三方編輯。
 - 交接訊號：對方 session 以 cross-session message 叫停，本 session 立即停止 git 操作。
-
-### **[[VP-17868]]**
-
-- First BE commit was made with `core.hooksPath=/dev/null`. The repo points `core.hooksPath` at the factory githooks; bypassing them was wrong and pointless. Reset and recommitted through the hooks.
-- `git push` to va-portal: 403. `gh api repos/Vibrant-America/va-portal --jq .permissions.push` → false. Leo's account cannot write to the FE repo; the FE half needs the FE team or a permission grant.
 
 ### **[[LIS-7690]]** — `2026-08-18 17:10` — **
 
