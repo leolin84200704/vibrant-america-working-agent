@@ -3,7 +3,7 @@ id: TICKET-WATCH-20260930
 type: stm
 category: process
 status: active
-score: 0.0798
+score: 0.0722
 base_weight: 0.6
 created: 2026-09-30
 updated: '2026-10-02'

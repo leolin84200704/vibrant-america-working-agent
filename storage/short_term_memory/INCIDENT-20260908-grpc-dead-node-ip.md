@@ -58,11 +58,12 @@ links:
 - VP-18463
 - VP-18466
 - VP-18480
+- VP-18673
 - VP-9299
 - failures
 - repo-catalog
 - repos
-score: 0.4084
+score: 0.3771
 ---
 
 # INCIDENT 2026-09-08 — result pushes failing: gRPC targets pointed at a dead AKS node IP

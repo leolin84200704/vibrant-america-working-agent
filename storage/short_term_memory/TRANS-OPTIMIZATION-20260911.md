@@ -90,13 +90,14 @@ links:
 - VP-18466
 - VP-18480
 - VP-18485
+- VP-18673
 - VP-9299
 - business-model
 - business-model-deep
 - failures
 - repo-catalog
 - repos
-score: 0.8369
+score: 0.7662
 ---
 
 # Summary

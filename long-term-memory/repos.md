@@ -3,7 +3,7 @@ id: repos
 type: ltm
 category: technical
 status: active
-score: 1.3476
+score: 1.3588
 base_weight: 0.9
 created: 2026-04-22
 updated: 2026-09-24
@@ -107,6 +107,7 @@ links:
 - VP-18466
 - VP-18480
 - VP-18485
+- VP-18673
 - VP-9299
 - business-model
 - business-model-deep
@@ -367,3 +368,13 @@ sudo prompt 用 `echo <pw> | sudo -S <cmd>`。Heredoc 內含 `[^...]` 之類 exp
 - PR 鏈：#451 → staging（5a65f7e）、#452 stacked（掉進 feature branch）、#454 帶進 staging（9b766f3）、#455 method-name fix（cb6b802，staging pod 10-03 06:11Z）、**#453 staging → main 235b4a5，Leo 2026-10-04 01:44:47Z merge**；Jenkins `LIS-EMR-V2-BACKEND/job/main/311`（http://192.168.60.9:9602 ）。
 - staging CM：來源 default ns `lis-emr-v2-config` → Jenkins 每 build 複製到 emr-v2 ns（patterns 2026-10-03）。staging CM `VIBRANT_API_TOKEN` 是 prod secret 簽的（base-report-staging 401 non-fatal）；`ORDER_API_TOKEN_STAGING` 是 dev 簽的、有效。local gitignored `lis-emr-v2-config.yaml`（六月）與 AKS 有 32 key drift，多是 .199→.10 與單邊新增。
 - 草稿（agent repo）：`drafts/VP-18665-pm-reply.md`、`drafts/VP-18666-jira-comment.md`（未貼）。
+
+## 【更新 2026-10-06】emr-v2 10-04 → 10-06 的 PR 鏈與 prod image、cloud-local-proxy 的部署方式、on-prem ingress 路由、staging core / base-report / issue-system 的真實接線（VP-18664 / VP-18665 / VP-18666 / VP-18673 / VP-18464 / SANDBOX-SEED-W2W-20261005）
+- **emr-v2 PR 鏈（續 2026-10-03）**：#456 VP-18665 peer cache → staging 3691e5b（10-04 02:32Z，agent 自 merge）；#457 release → main **dd88f44**（10-05 00:24Z，Jenkins main #312 success）；#458 VP-18673 → staging ce20f5d（10-05 00:42Z）；#459 release → main **1d12641**（10-05 20:55Z，#313 success 21:06Z）；#460 Yekai `[INFRA]` staging kustomization VIBRANT_API_BASE_URL → base-report-dev-service（10-05 23:18Z）；#462 Yekai VP-18683 redraw_needed（issue type 103 "TNP Sample Type"）→ staging 39c2e5f；#461 / #463 → main **d8f5fda**（10-06 00:40Z，#315 success 00:47Z）；#464 Leo VP-18034 charging ownership-guard 修正 → staging 827126d（10-06 19:29Z，Jenkins pending at dream start）。prod pod 10-06 = `lis-emr-v2-deployment-prod-57fdcdffb-nn2ds` image `:d8f5fda…`（00:45Z，0 restarts）；staging pod `:39c2e5f…`（01:42Z）。`compare main...staging` = ahead 2 / behind 7（#464 + 其 merge）。
+- **emr-v2 新檔**：`src/common/report-service-token.ts`（+spec）；`cachedClinicPeerSampleIds()` 在 order-list 路徑；`k8s/environments/staging/kustomization.yaml` 是 staging CM 值的 git 紀錄（prod 不讀）。Jenkins main job：`http://192.168.60.9:9602/job/LIS-EMR-V2-BACKEND/job/main/`（本機打不到，用 `gh api repos/Vibrant-America/lis-backend-emr-v2/commits/<sha>/status`）。
+- **base-report 兩個服務**：`lis-base-report-staging`（`/v1/lis/base-report-staging-service`）接 **prod** core `lis-core-grpc-service:30113` + prod results；`lis-base-report-dev`（`/v1/lis/base-report-dev-service`，NODE_ENV=staging）接 staging core + staging results。staging base-report 的 `GRPC_ISSUE_ADDR` = `lis-issue-system-service.issue:30071`（**prod**），staging issue system 在 :30072。
+- **staging core v1**：AKS deployment `lis-core-staging`（ns default，NodePort 30282），DB = `lisportalprod2-testdb.mysql.database.azure.com/lis_core_v7`（configmap `lis-core-staging-config`，user lis_core_emr）；是 prod 的 clone（帶 prod 的 order_report_status）。staging order DB 是另一個時間點的 clone（`getOrderPackageAndTest` 只對 2023-09..11 的 sample 200）。
+- **cloud-local-proxy**：repo `Vibrant-America/cloud-local-proxy`，`origin/main` 09f5ddf（PR #21 Ray 09-30 退役 getOrderSummaryReportZip）；PR #20（comments-only）仍 open；**PR #22 `feature/leo/VP-18464` 8d675a4 request-log middleware（`src/request-log.middleware.ts` + spec、`app.use` in main.ts）10-06 ~07:00Z 開、19:13Z 仍 OPEN**。無 CI/CD：Jenkinsfile Dockerfile.prod → `192.168.60.9:6004` registry + `ssh yuxuan@192.168.60.6 kubectl rollout restart -n lis`；AKS image `lisportalprod.azurecr.io/vibrant/cloud-local-proxy:latest`，RS `6cd55bd7c5` 150 天沒換（10-04 03:03–03:37Z 的 SIGTERM 是 node rotation）。每個 AKS pod 都有 `FailedToRetrieveImagePullSecret (regcred)` warning（image 已在 node 上才沒事）。jest 在 Node 24 有 5 個 pre-existing ESM 失敗（auth.controller / grpc.* / old-report.* spec）。
+- **on-prem 叢集（appserver04 經 ssh leo@192.168.60.5；.6/.7 同密碼拒絕；/home/leo root-owned 唯讀；/tmp、/var/tmp 可寫；無 sudo）**：ns `lis` Ingress `k8s-ingress` `/v1/lis/cloud-proxy(/|$)(.*)` → `cloud-local-proxy-service:3047`、`/v1/lis/cloud-proxy-st` → `:3048`（rewrite `/$2`；`use-forwarded-headers` 寫成 annotation 是錯的，跟 AKS 同一個 bug）；controller `ingress-nginx` ns 單 pod 在 appserver06（1.0.4），Service NodePort externalIPs 192.168.60.4/.5/.6:80。proxy prod pods（2d8qj / glcx9 07-16 起、hphwg 08-29 起）各 39 行 = 只有啟動；-st pod 的 per-request 行 07-16..09-11（全是 `checkIfPersonalizedReportCanBeCreated`，多為 `ECONNREFUSED 192.168.60.77:8081`），09-11 後 0（transv2 staging 09-14 重指）。無任何 on-prem ConfigMap / Deployment / CronJob 引用 cloud-proxy（Consul KV 沒查，無 ACL token）。**capture loop**：`appserver04:/var/tmp/vp18464-capture/capture2.sh`（pid 2165176，2026-10-06 19:15:27Z 起，每 60 s poll + `seen.ids` 去重，`cloud-proxy-access.log` / `heartbeat.log`；舊 follow-mode heartbeat 留作 `heartbeat-follow-mode-until-20261006T1914Z.log`）；可證明的零窗從 19:15Z 起算，最早 30 天 = **2026-11-05**；停：用 script 檔跑 `pkill -f vp18464-capture/capture2.sh`；移除：`rm -rf /var/tmp/vp18464-capture`。appserver04 重開機要重跑。
+- **LIS-backend-billing 部署**：Jenkinsfile → AKS `default/lis-order`（5 pods，Datadog `service:lis-order` env productioncloud）+ on-prem `default/lis-billing`（scaled 0/0，`yuxuan@192.168.60.6`）。走 www 公開前端打 cloud-proxy；15 天內 0 次 `sendSkinCareKit`。
+- **agent repo 草稿**：`drafts/VP-18666-order-team-ask.md`（給 order team 的 500 問題）、`drafts/VP-18665-pm-reply.md` / `drafts/VP-18666-jira-comment.md`（已貼為 190458 / 190459）。

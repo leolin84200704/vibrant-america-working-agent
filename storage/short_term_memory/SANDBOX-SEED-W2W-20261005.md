@@ -3,7 +3,7 @@ id: SANDBOX-SEED-W2W-20261005
 type: stm
 category: pm_patterns
 status: waiting
-score: 0.00
+score: 0.0846
 base_weight: 0.7
 created: 2026-10-05
 updated: 2026-10-05
@@ -11,11 +11,32 @@ links: []
 relations:
   unblocked_by: []
   blocks: []
-  sibling: [VP-18589, VP-18593, VP-18595, VP-18596]
-unblock_when: "(1) shipping team answers Chris whether a staging shipping service can be exposed to AKS staging and seeded for accessions 2610016001-2610016011 → set GRPC_SHIPPING_HOST/PORT on staging ConfigMap and re-run m-list.js; (2) report team does M07 (generate a report) and M08 (redraw issue, after pointing staging report GRPC_ISSUE_ADDR at the staging issue service) → re-run m-list.js; test = the 11-row list/lookup table"
-tags: [sandbox, w2w, get-orders, kit-status, seed-data, chris, yekai, leo-reply-style]
-summary: "Integrator (via Chris Wu, with Yekai Liu) asked us to seed 11 sandbox orders (samples 2554394–2554404, customer 50687) into target GET /orders states. Recipe per order (core order_kit_status / sample_received_time / report service) drafted; kit block impossible in sandbox (no shipping). Leo's final reply recorded verbatim."
+  sibling:
+  - VP-18589
+  - VP-18593
+  - VP-18595
+  - VP-18596
+unblock_when: (1) shipping team answers Chris whether a staging shipping service can
+  be exposed to AKS staging and seeded for accessions 2610016001-2610016011 → set
+  GRPC_SHIPPING_HOST/PORT on staging ConfigMap and re-run m-list.js; (2) report team
+  does M07 (generate a report) and M08 (redraw issue, after pointing staging report
+  GRPC_ISSUE_ADDR at the staging issue service) → re-run m-list.js; test = the 11-row
+  list/lookup table
+tags:
+- sandbox
+- w2w
+- get-orders
+- kit-status
+- seed-data
+- chris
+- yekai
+- leo-reply-style
+summary: Integrator (via Chris Wu, with Yekai Liu) asked us to seed 11 sandbox orders
+  (samples 2554394–2554404, customer 50687) into target GET /orders states. Recipe
+  per order (core order_kit_status / sample_received_time / report service) drafted;
+  kit block impossible in sandbox (no shipping). Leo's final reply recorded verbatim.
 ---
+
 # SANDBOX-SEED-W2W-20261005 - Work Loop Record
 
 ## Ticket Analysis

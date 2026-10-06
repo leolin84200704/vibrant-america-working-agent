@@ -3,7 +3,7 @@ date: 2026-09-30
 tickets: [VP-18589, VP-17760, VP-18030]
 tags: [partner-api, get-orders, shipping, kit-status, staging, docs-drift]
 distilled: true
-distilled_on: 2026-10-02
+distilled_on: 2026-10-06  # 10-02 body; the 2026-10-05 appended section distilled 10-06 -> emr-integration / leo-working-rules / patterns
 ---
 # 2026-09-30 — GET /orders list vs lookup disagreement (VP-18589)
 
@@ -78,6 +78,7 @@ six-case unit matrix plus a prod check after promotion. Leo had already set both
 tickets to Done before the code existed — left as-is, noted.
 
 ## 2026-10-05: sandbox seed request (Chris + Yekai) and Leo's reply
+> distilled 2026-10-06 (dream) -> emr-integration.md 2026-10-06 sandbox recipe, leo-working-rules.md 10-03→10-06, patterns.md 2026-10-06.
 Integrator wants 11 sandbox orders in target states. Mapped each to core/report data;
 kit block impossible without shipping. Leo wrote the Slack reply himself from my draft
 and asked me to remember how he phrased it — verbatim in STM

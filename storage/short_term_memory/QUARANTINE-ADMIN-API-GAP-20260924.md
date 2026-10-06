@@ -3,7 +3,7 @@ id: QUARANTINE-ADMIN-API-GAP-20260924
 type: stm
 category: emr_integration
 status: active
-score: 1.1483
+score: 1.039
 base_weight: 1.0
 created: 2026-09-24
 updated: 2026-09-24

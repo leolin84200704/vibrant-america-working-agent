@@ -162,3 +162,12 @@ summary: Ticket keyword to repo/module routing table
 - **"listClinicCustomersByClinicId is not a function / proto-loader camelCase / 載真 proto 的 spec"** → factory ENGINEERING-LESSONS（PR #92）+ STM `VP-18665` Failures。
 - **"sandbox GET /orders 哪個 pod 服務 / .11 查不到 patient"** → `emr-integration.md` 2026-10-03（AKS staging pod；core 用 gRPC 問）。
 - **"PH-931 / QH-7478 / QH-7479 / QH-7480 / #453 release"** → 三張 STM + journal `2026-10-02-ph931-trio`。
+
+## 2026-10-06 新增路由（dream；VP-18664 / VP-18665 / VP-18666 / VP-18673 / VP-18464 / SANDBOX-SEED-W2W-20261005）
+- **"base-report-staging-service 接 prod / base-report-dev-service / Yekai #460 / sandbox 回別人 prod 單的報告 / 2610016006 2610016007 / staging core 是 prod clone / 3194 掃 4059 單"** → `emr-integration.md` 2026-10-06 + STM `VP-18666`（Done 10-06；原因在上游資料，已交 Xiaoye）。
+- **"peer cache / cachedClinicPeerSampleIds / 60s TTL / bare list 5.26s 冷 0.27s 熱 / #456 #457 dd88f44"** → STM `VP-18665`（Done）+ `emr-integration.md` 2026-10-06。
+- **"VIBRANT_API_TOKEN prod 簽 / report time will be empty / mintReportServiceToken / report-service-token.ts / 401 base-report staging"** → STM `VP-18673`（prod 1d12641 10-05 21:06Z；Jira Dev In Progress）。
+- **"sandbox 造資料 / M01–M11 / order_kit_status 對應 status / lisportalprod2-testdb lis_core_v7 / GRPC_ISSUE_ADDR 指 prod / kit block sandbox null / in_transit 拿掉 / Chris Yekai"** → STM `SANDBOX-SEED-W2W-20261005`（waiting on shipping / report team）+ `emr-integration.md` 2026-10-06 + `leo-working-rules.md` 10-03→10-06（回覆風格）。
+- **"cloud-proxy caller / appserver04 capture / kubectl logs --tail=-1 / ingress log 2.5 天 / PR #22 request-log middleware / billing service:lis-order / 2026-11-05"** → STM `VP-18464`（blocked）+ `patterns.md` / `repos.md` 2026-10-06。
+- **"兩個來源吻合但都錯 / 同源 / positive control 要只在 staging 存在的資料"** → `patterns.md` 2026-10-06 第一條 + factory inbox proposal `2026-10-06-agreement-between-sources-sharing-an-upstream.md`。
+- **"chargeIndicator T 403 Authentication fails / allSharedPaymentMethods ownership guard / charging #367 / Get Healthy platform 1001 / #464"** → STM `VP-18034`（10-06 bugfix 進 staging，待 work session 補 STM）。

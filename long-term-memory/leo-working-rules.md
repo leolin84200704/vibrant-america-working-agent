@@ -523,3 +523,15 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 - 「規則 OK，先 commit push 開 PR (兩個)」：一張票一個 PR，即使同一分支一起做也要拆；拆法要可重現（patterns 2026-10-03）。
 - 「merge 到 staging 了，等deploy 好你先測，測完沒問題我在merge 到 main」：Leo 的 release 節奏 = agent 在 staging 做 E2E 回報，Leo 再 merge release PR（10-04 01:44Z merge 了 #453）。
 - 「確認都能解決問題」是驗收條件——回報分「票面問題解了」與「完整 E2E 還差什麼」兩段（18666：狀態不一致解了；Observations / PDF 要等 staging 有 lab 資料）。
+
+## Leo 10-03 → 10-06 的決定與打回（VP-18664 / VP-18665 / VP-18666 / VP-18673 / VP-18464 / SANDBOX-SEED-W2W-20261005）
+- 「2. 直接做」（18665 bare list 2 秒的 peer id-set cache）：自己提的優化選項被選中就直接做，走新權限自 merge 到 staging、E2E、開 release PR；Leo 10-05 00:24Z merge #457。
+- 「18664 18665 轉 Done，三份草稿都貼」：agent 執行 transition（Task 型 transition 15 沒 validator）+ 貼 PM comment；VP-18666 那份貼了之後又被 Leo 兩次改寫（見下）。
+- 「要修」（VIBRANT_API_TOKEN 401）→ 當場開 VP-18673（Relates 18666、Dev In Progress），不是留 follow-up 在 STM。
+- 「自己找自己驗」（Yekai #460 說我 10-02 的 fix 是錯的）：kubectl 掛著也要用公開 URL 重現對方的表再下結論——結論是對方對；LTM 的 10-03 結論同夜修正。
+- 「直接改comment」：Jira comment 原地改（REST PUT），不要再貼一則更正；接著「把兩個上游不一致的證據貼上去然後把問題丟回給 Xiaoye」= **原因在上游資料時，我方的工作是證據 + 路由給 PM，不是替別的 team 承諾 seed / 重 clone**（我 v2 草稿裡「我來安排 seed」被刪掉）。
+- SANDBOX-SEED「請記得我是怎麼回的」：Leo 自己改寫我的 Slack 草稿並要我記住寫法——限制先講、每筆要放的資料一段 bullet、prod 對照一句；理由用括號緊跟事實（「會顯示null(sandbox 的訂單沒有進過shipping)」）；精確說**哪些**看不到（「M01/M02/M03 在 sandbox 看不到kit.status」）而不是籠統「看不到」；三個選項壓成一句「建議拿掉」；不向 shipping 要東西；英文欄位名內嵌、其餘中文、無 bold / code / 問候 / 結尾。全文 verbatim 在 STM `SANDBOX-SEED-W2W-20261005` § User Feedback。
+- 「我們不是有fedex API 嗎？」「我以為我們有自己接fedex api?」（連問兩次）：說「prod 也沒有 in_transit」時要指明是 **shipping 的詞彙**沒有、FedEx Track 有、而且 transformer / LIS-Shipping 本來就直接打 FedEx——「我們」的範圍比 emr-v2 大。
+- 「請你直接造假數據(改db)」：staging core DB 可以由 agent 直接寫（WHERE 綁 id 清單 + customer、反查、rollback 記錄），但一旦發現某個 staging 元件接著 prod（GRPC_ISSUE_ADDR）就停手交給擁有者，不要「反正是 staging」。
+- VP-18464「A, 然後 commit + PR」：三個選項給他選，選了就 commit + PR，一個 head；「merged to main, 請檢查」事後查是**沒有** merge——回報事實（OPEN、main 未動、0 行新 log），不替他找「為什麼沒生效」。Leo 的 Jira comment 190017（09-30，`leo@appserver04:~$ kubectl get pods -n lis`）其實早就告訴我 on-prem 可以從我們這邊進去——「需要 Ray」的前提是我沒讀 comment。
+- Release 節奏延續：#457 / #459 / #461 三張 staging → main 的 release PR 都由 Leo 在數小時內 merge；VP-18673 已上 prod 兩天但 Jira 仍 Dev In Progress（Done 與交付脫鉤，10-02 cross-review 第 2 條再現）。

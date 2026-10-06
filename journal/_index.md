@@ -1,7 +1,7 @@
 # Journal Index (Episodic Memory — L3a)
 
 > Auto-maintained by the dream pipeline. One line per entry, newest first.
-> Last updated: 2026-10-03. 10-03 run: one new 10-02 entry (ph931-trio-vp18664-18665-18666, no `distilled:` field on arrival) distilled → emr-integration/patterns/repos/leo-working-rules/ticket-routing; no archives due. Previous 10-02 run: two new 09-30 entries (vp18589-get-orders-kit-tier-fallback, ticket-watch-agent-as-initiator; neither carried a `distilled:` field) distilled → emr-integration/patterns/repos/leo-working-rules/ticket-routing. Previous 09-30 run: one new entry (2026-09-30 lis-7882-emr-v2-results-grpc-oauth2, no `distilled:` field on arrival) distilled → repos/patterns/leo-working-rules/ticket-routing + 1 factory inbox proposal. Previous: 09-29 run: no new entries (the 09-29 trans-opt wave 1-2 / VP-18243 / BIOINSIGHTS sessions wrote STM only, no journal); nothing undistilled. Previous: one 09-28 entry distilled by the 09-28 run (vp18402-04-deactivate-on-removal → patterns/emr-integration/leo-working-rules/repos + 3 factory inbox proposals).
+> Last updated: 2026-10-06. 10-06 run: no new entries; the 2026-09-30 vp18589 entry had a 10-05 section appended after its 10-02 distillation — that section distilled → emr-integration/leo-working-rules/patterns (`distilled_on` bumped); 1 archive (2026-09-04 vp-17766-consult-recipients, distilled, 32 d). Previous 10-03 run: 10-03 run: one new 10-02 entry (ph931-trio-vp18664-18665-18666, no `distilled:` field on arrival) distilled → emr-integration/patterns/repos/leo-working-rules/ticket-routing; no archives due. Previous 10-02 run: two new 09-30 entries (vp18589-get-orders-kit-tier-fallback, ticket-watch-agent-as-initiator; neither carried a `distilled:` field) distilled → emr-integration/patterns/repos/leo-working-rules/ticket-routing. Previous 09-30 run: one new entry (2026-09-30 lis-7882-emr-v2-results-grpc-oauth2, no `distilled:` field on arrival) distilled → repos/patterns/leo-working-rules/ticket-routing + 1 factory inbox proposal. Previous: 09-29 run: no new entries (the 09-29 trans-opt wave 1-2 / VP-18243 / BIOINSIGHTS sessions wrote STM only, no journal); nothing undistilled. Previous: one 09-28 entry distilled by the 09-28 run (vp18402-04-deactivate-on-removal → patterns/emr-integration/leo-working-rules/repos + 3 factory inbox proposals).
 > Archived 5 distilled >30d entries (2026-08-31, 2026-09-01, 2026-09-02 ×3) → archive/journal/ on 10-02; 3 (08-26..08-28) on 09-30. Previous: 09-24 run distilled the two 09-22 entries.
 
 | Date | Slug | Related | Distilled |
@@ -18,7 +18,7 @@
 | 2026-09-09 | vp18085-menu-section | VP-18085, PH-871, VP-17724 | true |
 | 2026-09-08 | vp18138-order-summary-pdf | VP-18138, PH-904, VP-17812, INCIDENT-20260908-grpc-dead-node-ip | true |
 | 2026-09-08 | vp-17766-deploy-e2e | VP-17766, VP-17765 | true |
-| 2026-09-04 | vp-17766-consult-recipients | VP-17766, VP-17765, VP-17759 | true |
+| ~~2026-09-04~~ | ~~vp-17766-consult-recipients~~ | VP-17766, VP-17765, VP-17759 | archived 2026-10-06 → `archive/journal/` |
 | ~~2026-09-02~~ | ~~vp18080-vp18066-taxonomy-envelope~~ | PH-847, PH-844, VP-18080, VP-18081, VP-18066, QH-6962, QH-6947, VP-17691, VP-17760, LIS-7690 | archived 2026-10-02 → `archive/journal/` |
 | ~~2026-09-02~~ | ~~vp18050-closeout~~ | VP-18050, VP-18051, VP-17868, PH-898, QH-6939, SIIR-279 | archived 2026-10-02 → `archive/journal/` |
 | ~~2026-09-02~~ | ~~vp18048-internal-notes~~ | VP-18048, VP-18049, VP-17359, PH-822, QH-6934 | archived 2026-10-02 → `archive/journal/` |
