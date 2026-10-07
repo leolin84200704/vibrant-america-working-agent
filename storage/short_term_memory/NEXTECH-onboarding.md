@@ -6,7 +6,7 @@ status: active
 score: 1.0558
 base_weight: 1.0
 created: 2026-09-22
-updated: 2026-09-24
+updated: 2026-10-07
 links:
 - BETA-E2E-20260729
 - BIOINSIGHTS-SFTP-KEY
@@ -169,6 +169,18 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 - Leo forwarded the same email thread with Jessica Marshall's reply supplying the provider: **George Moricz, NPI 1215931902**. That is `lis_core_v7.customer` 28981 (George Moricz MD, isActive=1, order_placement_allowed=1) — exact NPI match.
 - Leo's instruction named the vendor as "MDHQ", which contradicted the thread (Nextech throughout, Jessica is Nextech staff). Raised it rather than executing; Leo confirmed it was a slip. **The DB settled it**: `ehr_vendors` 47 NEXTECH was created 2026-09-22 by Leo with template + folder mapping already in place, while MDHQ was missing nothing. A vendor that has just been provisioned and has zero integrations is the one being onboarded.
 - Practice name still unreconciled: the thread's subject says *Alzheimer's Treatment Centers of America*, but no such clinic exists in `lis_core_v7.clinic` (nearest is unrelated "Cancer Treatment Centers of America" 26558). Customer 28981 maps to 3 clinics only: 20834 Naples Center for Functional Medicine, 128573 (same name, no account), 128572 George Moricz_NPI. Leo chose **20834**. The practice-info in the thread is an image and was not readable.
+
+### [2026-10-07 18:10] First Nextech test order — placed EMPTY (no tests), root cause OBR-7 format
+- Terry relayed: Nextech tester sent a test order Friday, "failed"; file `NXHL7Exp 26-0012 - 2`, provider George Moricz NPI 1215931902.
+- Found: `hl7_file_input` id **7251**, `/965721.Vibrant/Export/NXHL7Exp 26-0012 - 2.hl7`, received 2026-10-02 23:00:07Z, processed 23:00:13Z by pod `lis-emr-v2-deployment-prod-7ff9855688-zvwwx`, `parse_finished=1`, `emr_code_not_found=NULL`, `customer_not_found=NULL`, `last_error=NULL`. Raw file still in SFTP `/965721.Vibrant/Export/archive/` (2340 bytes, CR-delimited, MSH-10 `NxMsg1`, ORM^O01 v2.5.1).
+- Routing worked: customer 28981 / clinic 20834 resolved, patient 3290335 "Demo Patient" (DOB 1913-11-12) created, **sample 2646314 / accession 2610026191 / order 11492640** placed. `emr_sample` id 6670 control_id `NxMsg1`, emr_order_id `26-0012 - A`.
+- But the order is EMPTY: `order_input.orderItems = []`, `emr_sample.test_input = ''`, 0 tubes / 0 transactions, `order_major_status=pending_payment_order`, `order_billing_issue_status=billing_issue` (chargeMethod patientPayLater, `emr_payment_fail_reason: no payment method`), `order_unified_status=awaiting_sample`. Only v2 row since 2026-09-25 with empty orderItems (MDHQ 60 / THM 30 / FTP 3 / BioInsights 1 all non-empty).
+- OBR-4 codes are valid: `VAREQUISTION36^Anemia` and `VAREQUISTION106^Thyroid (all)` both exist in `package_price_mapping` (ids 4 / 21, isOrderable TRUE); not in the ClearSky remap table.
+- **Root cause: OBR-7 = `20261002115705` (14 digits, with seconds).** `ObrParserService.isICD9` regex requires exactly `yyyyMMddHHmm` (12 digits) and throws `Invalid sampleCollectionTime format`; `parser.service.ts` OBR loop catches per-OBR (`OBR parse failed: ...`, Java line 755-757 swallow-and-continue), so BOTH OBRs were dropped, errorCodes stayed empty, and assembly proceeded with zero items. Java `ParseHL7.isICD9` (`LocalDateTime.parse(..., "yyyyMMddHHmm")`) throws on trailing seconds too, so this is inherited legacy behaviour, not a v2 regression. Reproduced locally: regex rejects `20261002115705` / `20261002115742`, accepts `202610021157`.
+- Pod zvwwx's processing logs are NOT in Datadog (only host vmss000000 ships; the 23:00 tick on that host logged "Found 1 items ... 0 file(s) enqueued" while zvwwx fetched the file) — the `OBR parse failed` line could not be read back; conclusion rests on code + reproduction.
+- Resend caveat: MSH-10 dedup (`findExistingSampleId(controlId)`) — a resend with `NxMsg1` short-circuits to sample 2646314 and places nothing. Nextech must use a NEW message control id (and ideally new placer numbers) on the retry.
+- Secondary: customer 28981 has no payment method on file -> patientPayLater / billing_issue. Needs a decision on how ATCA orders are charged before go-live.
+- Open: cancel/void empty sample 2646314 / order 11492640 (prod write, gated — Leo decides); decide whether to make `isICD9` lenient (truncate 14 -> 12) in emr-v2 vs ask Nextech for 12-digit OBR-7.
 
 ## Approaches Considered
 - Followed BIOINSIGHTS-onboarding (2026-07) as the precedent for a vendor-hosted SFTP: connectivity probe -> gated ehr_vendors + sftp_folder_mapping INSERT -> wait for practice scope -> ehr_integrations. Differences: password auth (not key), and this time ALSO inserted the `ehr_vendor_sftp_templates` row so the self-service integration create flow (needs a template, else 400) works for Nextech.
