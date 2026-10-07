@@ -232,6 +232,20 @@ origin/staging):
 - M07 end-to-end still open: Yekai must build the PDF in base-report-dev pdf-cache (500 not ready)
   and someone with the W2W 50687 sandbox client (api-product / integrator) must retry.
 
+### [2026-10-07 PT] Leo sent the integrator reply (v5) — 「done」
+- Final shape after four rounds of Leo's cuts, in order: (1) v1 said "kit is null in sandbox" —
+  wrong framing, the plan was always to have shipping seed fake data; (2) M06 dropped — report
+  team's item, 「我們只要做自己的就好」; (3) kit line dropped too — shipping's item, 「只回我們要改
+  code 的」; (4) M07's "PDF not generated yet" clause dropped (also report team's).
+- Sent = three paragraphs, all ours: M02 (no in_transit, drop it), M09/M10 (no exception value in
+  the payload, tracking page only), M07 (link now opens with the sandbox key, new URL shape).
+- Rule distilled (Leo, 4 corrections in one thread): a reply to a partner carries ONLY the items
+  whose code/contract we own. Facts about another team's deliverable — even "not done yet", even
+  a promise to notify — do not go in; the owner answers for their own. Separate @owner note for
+  the handoff (Chris/shipping note drafted; sending it is Leo's call).
+- Still open on others' side: shipping seed for the 11 kit blocks (Chris), M06 preliminary +
+  M07 PDF in base-report-dev (Yekai). Ours: release PR #467 to main (Leo merges).
+
 ## Failures
 - My first explanation said "in_transit 在 prod 也不存在" without qualifying that it
   is shipping's vocabulary, not FedEx's — Leo pushed back twice (「我們不是有fedex API
