@@ -191,6 +191,37 @@ origin/staging):
   kustomization.yaml → staging CM edits must go into the `default` ns copy.
 - Draft reply (English, Leo's voice) in drafts/SANDBOX-SEED-W2W-reply-20261007.md.
 
+### [2026-10-07 10:50 PT] M07 PDF link fix — emr-v2 PR #466 merged to staging (Leo: 「先把link改好，確認在staging 可以連上」)
+- Branch feature/leo/fhir-pdf-proxy (worktree .worktrees/fhir-pdf off origin/staging 827126d),
+  commit f5511ce, PR #466 → staging, self-merged 8a0efc0 (Leo's 10-03 staging-merge rule).
+- 4-part: 目的 = partner API key 打得開 presentedForm 的 PDF link；改前 = link =
+  `${VIBRANT_API_BASE_URL}/pdf-cache/download/{acc}?style=` (base-report portal guard, 401 for
+  partners in BOTH envs; mapper `pdfDownloadUrlBase` + service attachPdfPresentedForm +
+  bindAuthorizedAccession regex); 改後 = link = `https://{x-forwarded-host|host}/v1/report/fhir/{acc}/pdf?style=`
+  served by emr-v2 `GET fhir/DiagnosticReport/:id/pdf` behind FhirAccessGuard + isAuthorizedForSample
+  + the SAME withhold rules (enrichFromReportService + applyOrderCancellation over a shell; serve only
+  when presentedForm survives and status final/corrected/preliminary); bytes proxied from base-report
+  with the env-signed admin token (VP-18673 mintReportServiceToken), arraybuffer, 90 s, %PDF- magic;
+  denied → 404 same message as DiagnosticReport, withheld → 404 "(report status: X)", upstream → 503.
+- Ingress needs NO change: lis-emr-v2-fhir-short-ingress rewrites `/v1/report/fhir(/|$)(.*)` →
+  `/api/v1/fhir/DiagnosticReport$1$2` (hosts api / api-sandbox / api.sandbox .vibrant-america.com;
+  staging alias api.vibrant-america.com/v1/report/staging/fhir). Pre-deploy probe via api-sandbox
+  with the QA (Adam) beta client (customer 50661, creds ~/src/credential/beta-clients-sandbox-20260729.md):
+  `/v1/report/fhir/2608146008/pdf` → Nest "Cannot GET /api/v1/fhir/DiagnosticReport/2608146008/pdf"
+  = sub-path passes through. Scratch verify script: scratchpad/sandbox-verify.sh.
+- New optional env FHIR_PUBLIC_BASE_URL (override only; documented in .env.example +
+  k8s/base/configmap.yaml, deliberately NOT added to live CMs — pre-push env guard flagged it,
+  recorded in PR body). Mapper option renamed pdfDownloadUrlBase → pdfUrl builder.
+- Tests: fhir-result 10 suites/156 green (new fhir-public-url.spec, getReportPdf cases, controller +
+  routes coverage); pre-push related 23 suites/340 + DI smoke OK. eslint 0 errors (148 pre-existing
+  `any` warnings).
+- Live 200-path on staging is blocked twice: (a) needs a customer-50687 sandbox token (W2W's client,
+  api-product holds it; the 5 beta clients are 50657–50661); (b) base-report-dev pdf-cache answers
+  500 "not ready" for 2610016007 even to an internal token → Yekai must build the PDF. What CAN be
+  verified post-deploy with the QA client: own accession → 404 withheld "(report status: registered)"
+  envelope; 2610016007 → 404 "no accessible DiagnosticReport" (denied), FHIR body link shape.
+- Not a ticket yet: commit/PR tagged [SANDBOX-SEED-W2W]; ask Leo whether to open a VP ticket.
+
 ## Failures
 - My first explanation said "in_transit 在 prod 也不存在" without qualifying that it
   is shipping's vocabulary, not FedEx's — Leo pushed back twice (「我們不是有fedex API
