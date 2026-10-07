@@ -16,6 +16,7 @@ relations:
   - VP-18593
   - VP-18595
   - VP-18596
+  - VP-18714
 unblock_when: (1) shipping team answers Chris whether a staging shipping service can
   be exposed to AKS staging and seeded for accessions 2610016001-2610016011 → set
   GRPC_SHIPPING_HOST/PORT on staging ConfigMap and re-run m-list.js; (2) report team
@@ -221,6 +222,15 @@ origin/staging):
   verified post-deploy with the QA client: own accession → 404 withheld "(report status: registered)"
   envelope; 2610016007 → 404 "no accessible DiagnosticReport" (denied), FHIR body link shape.
 - Not a ticket yet: commit/PR tagged [SANDBOX-SEED-W2W]; ask Leo whether to open a VP ticket.
+
+### [2026-10-07 11:25 PT] M07 link fix verified on staging; ticket VP-18714 opened for Leo
+- Staging pod 768487c9dc-kmcxn (image 8a0efc0) up ~11:10 PT. Live via api-sandbox with the QA
+  beta client: own accession 2607296024 FHIR final/296 results, presentedForm links now
+  api-sandbox.vibrant-america.com/v1/report/fhir/2607296024/pdf?style=…, PDF route 200
+  application/pdf 7.5 MB / 7.1 MB; registered accession -> 404 "(report status: registered)";
+  W2W 2610016007 -> 404 denied (same message). Details in VP-18714.md.
+- M07 end-to-end still open: Yekai must build the PDF in base-report-dev pdf-cache (500 not ready)
+  and someone with the W2W 50687 sandbox client (api-product / integrator) must retry.
 
 ## Failures
 - My first explanation said "in_transit 在 prod 也不存在" without qualifying that it
