@@ -6,7 +6,7 @@ status: waiting
 score: 0.0846
 base_weight: 0.7
 created: 2026-10-05
-updated: 2026-10-05
+updated: 2026-10-07
 links: []
 relations:
   unblocked_by: []
@@ -19,8 +19,10 @@ relations:
 unblock_when: (1) shipping team answers Chris whether a staging shipping service can
   be exposed to AKS staging and seeded for accessions 2610016001-2610016011 → set
   GRPC_SHIPPING_HOST/PORT on staging ConfigMap and re-run m-list.js; (2) report team
-  does M07 (generate a report) and M08 (redraw issue, after pointing staging report
-  GRPC_ISSUE_ADDR at the staging issue service) → re-run m-list.js; test = the 11-row
+  (Yekai) re-seeds M06 preliminary on the TRUE staging report service + builds the
+  M07 PDF in base-report-dev pdf-cache; (3) Leo decides the partner PDF download path
+  (presentedForm url = base-report pdf-cache, rejects API keys) and whether a
+  delivery-exception signal should exist in the payload (M09/M10); test = the 11-row
   list/lookup table
 tags:
 - sandbox
@@ -31,6 +33,8 @@ tags:
 - chris
 - yekai
 - leo-reply-style
+- vp-18683
+- pdf-presentedform
 summary: Integrator (via Chris Wu, with Yekai Liu) asked us to seed 11 sandbox orders
   (samples 2554394–2554404, customer 50687) into target GET /orders states. Recipe
   per order (core order_kit_status / sample_received_time / report service) drafted;
@@ -141,6 +145,51 @@ How it differs from my draft (style to reuse when drafting PM-facing text for hi
   (staging shipping service exposed to AKS + PO/tracking rows for the 11 accessions;
   fallback = emr-v2 sandbox synthesis behind a staging-only flag, not decided).
   Both sent 2026-10-05 ~15:05 PT (「done」). Waiting on their replies.
+
+### [2026-10-07 PT] Integrator follow-up (English, via Chris) — ground truth re-checked
+Integrator's five points vs staging (in-pod list+lookup, 11/11 matched, and code on
+origin/staging):
+- "orders have no kit" — still true, kit null on all 11; shipping ask (10-05) has no
+  answer I can see (Slack not readable from here; Leo to confirm). No emr-v2 change.
+- M02 "need kit + kit.status in_transit" — status is now kit_delivered (10-05's
+  `analyzing` was the colliding PROD order read through base-report-staging-service;
+  Yekai repointed to base-report-dev-service 10-06 01:42Z, VP-18683 comment 190706).
+  kit.status vocabulary = not_shipped | shipped | delivered only
+  (order-status.derivation.ts deriveKitBlock; 'in_transit' reserved, no raw value maps
+  to it). Leo already told Chris to drop M02 — the integrator was evidently not told.
+- M09/M10 "how do we know it is a delivery problem" — they cannot, by design today:
+  DELIVERY_EXCEPTION ranks with shipped (OUTBOUND_RANK/RETURN_RANK = 1) → status
+  kit_shipped / sample_in_transit, kit.status 'shipped' + trackingNumber, no
+  exceptions[] entry ("the documented lifecycle has no exception slot", VP-18589).
+  The only signal is the carrier tracking page. Adding a value = product decision.
+- M06 "still kit_delivered, not analyzing" — CORRECT. Same root cause as M02: the
+  preliminary report that made it `analyzing` lived in prod data. Yekai offered in
+  VP-18683 comment 190706 to re-seed it on the staging results side; nobody has
+  answered him. report={registered,0/1} now.
+- M07 "PDF links point to api.vibrant-wellness.com, cannot open with sandbox keys" —
+  presentedForm[].url = `${VIBRANT_API_BASE_URL}/pdf-cache/download/{accession}?style=`
+  (fhir-result.service.ts attachPdfPresentedForm + hl7-to-fhir.mapper), i.e. staging
+  https://api.vibrant-wellness.com/v1/lis/base-report-dev-service/pdf-cache/download/2610016007?style=advanced
+  and prod .../v1/lis/base-report-service/... — same gateway host in BOTH envs; the
+  link is base-report's own endpoint behind base-report's JwtAuthGuard (portal JWT),
+  not the partner gateway. In-pod probe 10-07: no token → 401; CM VIBRANT_API_TOKEN
+  (prod-signed) → 401; staging HS256 dev token → 500 "report might not be ready yet"
+  (PDF not built in base-report-dev pdf-cache for 2610016007 even though
+  getReportStatusListV2 says Final 1/1). So: (a) partner API keys can never open the
+  link, sandbox OR prod — product gap, no partner-key PDF path exists in emr-v2
+  (no proxy route); (b) on staging even an internal token gets 500 → report team.
+  Not verified: whether the sandbox FHIR body for 2554400 carries Observations now
+  that Yekai seeded 296 lis.test_result rows (FHIR needs an RS256 50687 token; the
+  pod restarted 21h ago so the integrator's calls are not in the logs).
+- M08 (not raised by them): redraw_needed exception present (VP-18683 done 10-05,
+  emr-v2 #462→staging/#463→main, LIS-Report #1007 prod: real redraws now surface).
+- M03 (not raised): two staging billing_issue exceptions — staging issue system noise.
+- Jira: VP-18683 (Yekai, Done) is the only ticket for this seed work; QH-7500 twin.
+  Atlassian claude.ai MCP returns 403 "app is not installed" today; vibrant MCP works.
+- Ops note (Yekai, same comment): Jenkins copies AKS default/lis-emr-v2-config into
+  ns emr-v2 + on-prem on every deploy and ignores k8s/environments/staging/
+  kustomization.yaml → staging CM edits must go into the `default` ns copy.
+- Draft reply (English, Leo's voice) in drafts/SANDBOX-SEED-W2W-reply-20261007.md.
 
 ## Failures
 - My first explanation said "in_transit 在 prod 也不存在" without qualifying that it
