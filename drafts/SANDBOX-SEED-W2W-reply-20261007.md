@@ -1,8 +1,6 @@
-# Drafts 2026-10-07 (v4 — only our own items: M06 and the M07 PDF generation are the report team's, left out)
+# Drafts 2026-10-07 (v5 — integrator reply covers only what we change in code; kit (shipping) and M06 / M07 PDF build (report team) are their owners' to answer)
 
 ## 1. Reply to the integrator (English, via Chris)
-
-Yes, `kit` will be filled on these orders. Sandbox orders do not go through shipping on their own, so the shipping records are being added for them; we will tell you when they are in.
 
 M02: `kit.status` has three values: `not_shipped`, `shipped`, `delivered`. There is no `in_transit`. Use M01 for the shipped case and drop M02.
 
