@@ -1,21 +1,26 @@
-# Drafts 2026-10-07 (v2, after VP-18714 shipped to sandbox)
+# Drafts 2026-10-07 (v3 — Leo: kit is to be filled by seeding shipping data, not declared null)
 
 ## 1. Reply to the integrator (English, via Chris)
 
-Sandbox orders never pass through our shipping service, so `kit` is null on every sandbox order; only `status` is populated there. We are checking whether a sandbox shipping feed can be set up and will tell you if that changes.
+Yes, `kit` will be filled on these orders. Sandbox orders do not go through shipping on their own, so the shipping records are being added for them; we will tell you when they are in.
 
-M02: `kit.status` has three values in production: `not_shipped`, `shipped`, `delivered`. There is no `in_transit`. Use M01 for the shipped case and drop M02.
+M02: `kit.status` has three values: `not_shipped`, `shipped`, `delivered`. There is no `in_transit`. Use M01 for the shipped case and drop M02.
 
-M09/M10: a carrier delivery exception is not a separate value in the payload. Production returns `status` `kit_shipped` (outbound) or `sample_in_transit` (return), `kit.status` `shipped` and the tracking number; the exception itself is only visible on the carrier's tracking page.
+M09/M10: a delivery exception is not a separate value in the payload. You get `status` `kit_shipped` (M09) or `sample_in_transit` (M10), `kit.status` `shipped` and the tracking number; the exception itself is only visible on the carrier's tracking page.
 
 M06: not re-seeded yet. We will confirm when it is.
 
-M07: the PDF link now opens with your sandbox key. `presentedForm[].url` points at `https://api-sandbox.vibrant-america.com/v1/report/fhir/{accession}/pdf?style=advanced|classic`, same token as the FHIR call; production uses the same path on `api.vibrant-america.com`. The PDF for M07 itself is not generated on sandbox yet, so the link returns 503 until it is; the FHIR response already carries the full result set for that order.
+M07: the PDF link now opens with your sandbox key. `presentedForm[].url` points at `https://api-sandbox.vibrant-america.com/v1/report/fhir/{accession}/pdf?style=advanced|classic`, same token as the FHIR call. The PDF for M07 itself is not generated on sandbox yet, so the link returns 503 until it is.
 
-## 2. Slack to Chris (shipping only)
+## 2. Slack to Chris (shipping)
 
-@Chris 10/5 問 shipping 的那件還沒回：integrator 要 sandbox 單的 kit 區塊（kit.status / carrier / trackingNumber / shippedAt / deliveredAt），這些資料只有 shipping 有，emr-v2 做不出來。需要 shipping 回兩件事之一：
-- 可以：staging 的 shipping service 開給 AKS staging 用，並替 2610016001–2610016011 這 11 筆放 PO / tracking 資料
-- 不行：我就回 integrator 說 kit 只在 production 有值
+@Chris 10/5 請 shipping 做的那件要追一下：integrator 要 sandbox 這 11 筆的 kit 區塊（kit.status / carrier / trackingNumber / shippedAt / deliveredAt），資料只有 shipping 有，要請 shipping 替這 11 筆造假的出貨紀錄，並把 staging 的 shipping service 開給 AKS staging 用。我拿到 host/port 就把 staging 的 emr-v2 接上。
 
-哪一邊都好，但要有答案才能回他們。
+每筆要放的狀態（accession 2610016001–2610016011 依序 M01–M11）：
+- M01、M11：outbound LAB_SHIPPED_KIT，有 tracking 與 pickup time
+- M02：拿掉（沒有 in_transit 這個狀態）
+- M03、M06、M07、M08：outbound PATIENT_RECEIVED_KIT
+- M04：outbound PATIENT_RECEIVED_KIT，return SAMPLE_SHIPPED_BACK
+- M05：return LAB_RECEIVED
+- M09：outbound DELIVERY_EXCEPTION
+- M10：outbound PATIENT_RECEIVED_KIT，return DELIVERY_EXCEPTION
