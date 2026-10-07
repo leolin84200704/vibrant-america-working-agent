@@ -1,4 +1,4 @@
-# Drafts 2026-10-07 (v3 — Leo: kit is to be filled by seeding shipping data, not declared null)
+# Drafts 2026-10-07 (v4 — only our own items: M06 and the M07 PDF generation are the report team's, left out)
 
 ## 1. Reply to the integrator (English, via Chris)
 
@@ -8,9 +8,7 @@ M02: `kit.status` has three values: `not_shipped`, `shipped`, `delivered`. There
 
 M09/M10: a delivery exception is not a separate value in the payload. You get `status` `kit_shipped` (M09) or `sample_in_transit` (M10), `kit.status` `shipped` and the tracking number; the exception itself is only visible on the carrier's tracking page.
 
-M06: not re-seeded yet. We will confirm when it is.
-
-M07: the PDF link now opens with your sandbox key. `presentedForm[].url` points at `https://api-sandbox.vibrant-america.com/v1/report/fhir/{accession}/pdf?style=advanced|classic`, same token as the FHIR call. The PDF for M07 itself is not generated on sandbox yet, so the link returns 503 until it is.
+M07: the PDF link now opens with your sandbox key. `presentedForm[].url` points at `https://api-sandbox.vibrant-america.com/v1/report/fhir/{accession}/pdf?style=advanced|classic`, same token as the FHIR call.
 
 ## 2. Slack to Chris (shipping)
 
