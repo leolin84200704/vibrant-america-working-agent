@@ -156,6 +156,25 @@ Feasibility (lookup derivation on staging = core fallback ladder + report servic
   has only kustomization.yaml and Jenkins ignores it (Yekai 10-06) -> cluster CM edit is the durable
   record; k8s/base/configmap.yaml could document the two keys in a later PR.
 
+### [2026-10-08 12:05 PT] M06/M07 list fixed — staging core data, not emr-v2 code (Leo: 「先修M06 07」)
+- Diagnosis: list status comes from core order_info.order_report_status only (order-list.derivation.ts
+  deriveListStatus: report_ready/amended/delivered -> report_available; report_pending AND received ->
+  analyzing). That is by design (VP-18030 PM thread: no per-row upstream fan-out). In prod the flag
+  is written by the report pipeline (LIS-Report Kafka personalized_report_ready -> core); prod 14 d:
+  report_pending 1339 / report_ready 738 / report_delivered 352, all paired with kit_lab_received.
+  Yekai seeded the staging report service directly, so core stayed report_not_ready on M06/M07
+  (staging core readback 18:50Z: all 11 report_not_ready; M05-M07 kit_lab_received +
+  sample_received_time 2026-10-08T00:25Z set by him).
+- Fix (staging core lis_core_v7 on lisportalprod2-testdb, via core staging pod Prisma, prisma client
+  at /node_modules not /app/node_modules): UPDATE bounded to order_id + customer_id 50687 +
+  order_report_status='report_not_ready': 11405502 (M06) -> report_pending, 11405503 (M07) ->
+  report_ready. Affected 1+1; readback both; reverse audit of customer 50687 non-not_ready rows:
+  0 before, exactly these 2 after. Rollback: set both back to report_not_ready.
+- Consumer-layer readback (emr-v2 staging list + lookup, in-pod): 11/11 list == lookup now
+  (M06 analyzing, M07 report_available). Table otherwise unchanged from 11:40.
+- Still open: M10 (shipping re-seed, Leo already asked Fangyuan). Scripts: scratchpad
+  core-readback.js / core-fix-m06-m07.js / w2w-list-lookup.js (session-local).
+
 ## Decisions Made
 - Leo sent the reply himself (below). Our part: run the 11-row list/lookup table once
   the data is in and post it.
