@@ -1,13 +1,9 @@
-# VP-17827 - Reply to Prospera (Follow That Patient), round 2: intake used provider ID, ORC-17 not read
+# VP-17827 - Reply to Prospera (Follow That Patient), round 2: intake used provider ID; ORC-17 now used
 
-> Draft v1, 2026-10-08. Thread: "Including Practice ID in Vibrant order messages". Replies to Tom's 10-08 mail
-> (confirmed both points; asked whether intake chose the practice from the provider ID, from what date billing uses
-> ORC-17, and whether the trial orders will be re-billed).
-> Leo's voice. Not sent. Evidence (raw HL7 of all 9 archived orders, read from the on-prem prod pod) is in
-> `storage/short_term_memory/VP-17827.md` (2026-10-08 section).
-> Before sending: decide whether to state a go-live date. Internal target only: Xiaoye put VP-17827 in Team Yekai
-> Sprint 31 today, due 2026-10-23, no comment. The date and the re-billing belong to Keith, so the draft hands
-> both to him instead of promising.
+> Final draft, 2026-10-08 (supersedes v1 of the same day). Thread: "Including Practice ID in Vibrant order messages".
+> Replies to Tom's 10-08 mail. Leo's voice. Not sent.
+> Our side: fix merged to staging and verified (PR #468); production release is PR #469 (Leo merges). The go-live
+> date and the re-billing of the five orders belong to Keith, so the draft hands both to him instead of promising.
 
 ---
 
@@ -20,7 +16,7 @@ Hi Tom,
 
 Thanks for confirming both.
 
-Yes. Our intake currently takes the location from the provider ID and does not read ORC-17. We are changing it to use ORC-17.
+Yes. Our intake took the location from the provider ID and did not read ORC-17. That is fixed on our side: from our next production release, the order is booked to the location in ORC-17, and an order whose ORC-17 is a location the provider is not set up at is held rather than booked elsewhere.
 
 Orders from provider 43262 that we booked to 2930 while ORC-17 said otherwise:
 
@@ -34,7 +30,7 @@ Orders from provider 43262 that we booked to 2930 while ORC-17 said otherwise:
 
 Orders from providers set up at a single location (FTP3-4, FTP3-8, FTP13-6) were booked to the location in ORC-17.
 
-Keith, over to you on the go-live date and on re-billing the five orders above.
+Keith, over to you on the release date and on re-billing the five orders above.
 
 Thanks,
 Leo
