@@ -535,3 +535,24 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 - 「請你直接造假數據(改db)」：staging core DB 可以由 agent 直接寫（WHERE 綁 id 清單 + customer、反查、rollback 記錄），但一旦發現某個 staging 元件接著 prod（GRPC_ISSUE_ADDR）就停手交給擁有者，不要「反正是 staging」。
 - VP-18464「A, 然後 commit + PR」：三個選項給他選，選了就 commit + PR，一個 head；「merged to main, 請檢查」事後查是**沒有** merge——回報事實（OPEN、main 未動、0 行新 log），不替他找「為什麼沒生效」。Leo 的 Jira comment 190017（09-30，`leo@appserver04:~$ kubectl get pods -n lis`）其實早就告訴我 on-prem 可以從我們這邊進去——「需要 Ray」的前提是我沒讀 comment。
 - Release 節奏延續：#457 / #459 / #461 三張 staging → main 的 release PR 都由 Leo 在數小時內 merge；VP-18673 已上 prod 兩天但 Jira 仍 Dev In Progress（Done 與交付脫鉤，10-02 cross-review 第 2 條再現）。
+
+## Leo 10-06 → 10-08 的決定與打回（VP-18655 / VP-18460 / VP-18347 / VP-18464 / VP-18730 / VP-18749 / VP-17827 / SANDBOX-SEED / VP-18714 / LBS-1825 / LBS-1828 / HL7-TRIAGE / PO-270）
+- VP-18655「看完先按你的建議手動做」：「手動」指的是 schema 那一步（Portal-Calendar DB 不是 Prisma-managed → Gate 3）；之後「prod 要跑DDL, depoly完成後測試」= 一句話授權 prod DDL，merge 後立刻跑、再做唯讀 prod 驗證；「mark ticket done」= agent 自己 transition（Task 型 transition 15）。整張票從讀到 Done 一個工作日。
+- VP-18460「發comment, 記得切」：這張票的進度 comment 不用再問；batch 4-6 照 24 h 節奏自己排（session-only one-shot cron 一批一批接力，沒 session 時下個 instance 直接從 STM 跑）。
+- VP-18347「D 刪掉，B 放在 comment 裡面 @Fangyuan Yang，然後把 Caller 2 相關的(只要是 trans/trans-v2) 並且沒有用的都刪掉」：**流程休眠就不等流量證明，現在把沒用的 proxy 路徑全刪**；界線由 agent 自己畫（產品路由 `/utility/shipSkinCare` 不動）。Jira 兩條路都掛時「done the ticket」→ Leo 自己轉 Done、comment 之後補。
+- VP-18464 四句：「2，不要 trailer，重開 PR」（trailer 理論是錯的——真因是死的 required check——代價一張多餘的 PR 和一次多餘的 approval；**答應「一個 approval 我就 merge」前先用 throwaway PR 試 ruleset**）；「B 先上，也要做 A（Yekai approve）」= hotfix 先上、正解開 PR 等 review；「#24 merged. 請測試」= 測試不等於上 prod——本地 boot + 叢集內一次性 pod 驗完回報，等他說；「要，直接做，並且要 create ticket」= prod rollout 自己做，但要有一張票（VP-18730）當紀錄；-st redis NOAUTH 的 follow-up「選 2 不拆票」留在 VP-18730 描述。
+- VP-18749「開票先修，定義先用原來的」：驗 Done 的票時發現相鄰缺陷 → 開新票（Bug，Relates 原票）、現在修、已出貨的定義不改。
+- VP-17827 "These two are the same problem: change customer-level resolution to practice-level"：訂錯 clinic 的 5 張單不是 vendor 專用 patch 的理由，是做真正的改法（practice 進 resolve key）；「先直接做這件事」= 實作到可 review、**不 commit 不 push** 停下；「開pr」= 進 staging 的 PR（emr-v2 沒 stage_test）。
+- SANDBOX-SEED 三句：「go」（config 改動，4-part 給過才動）、「先修M06 07」（staging core 的資料修，WHERE 綁 id + customer + 原值、反查、rollback）、「先不用」（硬化 PR 不開，CM 重建再說）。**「記我的口吻」**：Leo 自己改寫我給 Yekai 的草稿並要我記住差異——動詞用更白的（「建立」不是「造」）、規則說成通用的（所有假資料，不只報告）、說「我這次已經補好」而不說「不用動」（陳述自己做了什麼，不指揮對方下一步）；英文欄位名/值原樣留在中文裡、冒號後接兩個值、不問候、不粗體。
+- VP-18714「(只針對我的)先把link改好，確認在staging 可以連上」+「要開ticket assign 給我」：整合商的五點裡只處理我方 code 的那一點，先修 staging 可驗，票開在 Leo 名下；整合商回覆四刀後的規則見 emr-integration 10-08（只回我方擁有的項目）。
+- LBS-1828「未來只要符合 ticket 要求就可以直接訂直接留 comment, 不用 double check」：手動約 consult 這一類，ask 明確就直接 prod 寫入 + Jira comment + Done，不再為 slot/報告/會寄 email 暫停。VP-18704 那次更早：一句「2603306653 這個訂單需要手動約」+「create ticket + 約 + comment @MingXi + dev complete」就是整張票的全部指示。
+- HL7-TRIAGE：要 LangGraph 版、用 claude.ai 登入不用 API key、寄到他信箱；先並行跑不切換。
+- PO-270：MCP 第一次讀 JSM 票就把它 Open → Under review、changelog 掛 Leo 的名——這種「沒按按鈕卻動了狀態」的副作用要主動講。
+- Release 節奏：#882 02:50Z、#885/#685/#193 18:11Z、#467 18:12Z（10-07）、#901/#903 19:46Z（10-08）全在數小時內 merge；VP-18714 上 prod 一天仍 Dev In Progress、VP-18464 反過來在部署前就 Dev Complete——Done 與交付脫鉤兩個方向都有。
+
+## 前提被 code-search 推翻、驗證規格已成常態、例行類別的結案權下放、工具鏈吃掉的回合（cross-ticket review 2026-10-08；證據 VP-18664 / VP-18665 / VP-18666 / VP-18655 / VP-18347 / LBS-1825 / LBS-1828）
+1. **三張票的前提被推翻，推翻方式都是「把 code-search 的結論追到 entrypoint」**：VP-18347 兩個前提（billing 是活的 caller、trans v1 已拿掉 shipSkinCare）都錯，靠讀到 call site 被註解與 controller 現行路由才翻；VP-18666 的「staging FHIR 讀 dev 報告庫」反轉（10-06 已記）；VP-18665 的 method 名猜錯。factory 已收 #93「a reference in source is not a caller」與 #92（generated stub）。**對 agent 的具體要求：ticket 描述裡的「X 在呼叫 Y」在 Step 1 一律當假設，列出 entrypoint → 路徑 → 證據三欄再動手**。
+2. **驗證規格穩定**：七個結案全部有部署後的 live 證據（in-pod 探針 + DB readback + consumer layer + Postmark/Datadog），沒有一個靠 mock 或 build 狀態；VP-18655 還做到「prod 只讀、不寫測試資料」。這條不需要再提醒，只需要在 closeout 檢查有沒有。
+3. **例行類別的結案權正在下放**：staging self-merge（10-03）→ Task 轉 Done（10-05）→ **手動約 consult 直接訂 + comment + Done（10-08）**；相對地 prod DDL、prod config、prod rollout 仍每次一句授權（「prod 要跑DDL」「go」「要，直接做」）。規律：**可逆或範圍綁死的例行操作 agent 直接做；不可逆或跨 team 的仍逐次授權**——Step 4 暫停前先分類，不要對例行類別再問。
+4. **工具鏈吃掉的回合是這七張票最大的共同成本**：Jira 三條路輪流掛（connector 403 / VPN ENETUNREACH / LBS 看不到）、GitHub push 500、CodeQL 不能重跑、ruleset 盲點、ACR push 說謊、worktree 依賴不同、zsh 切字、再加 dream 自己的 frontmatter 清空。每一條都有已知的 fallback（patterns 10-08 的「Jira 工具階梯」「ACR」「worktree」「zsh」各條）；**新規則：遇到工具失敗先查 patterns 的 fallback 再重試，重試不超過兩次就換路**。下次 cross-review 看這條有沒有降低回合數。
+- 下次 cross-review 門檻：再 5 張結案（marker 2026-10-08）。

@@ -17,6 +17,7 @@ links:
 - INCIDENT-20260908-grpc-dead-node-ip
 - INCIDENT-20260910-emr-v2-di-crashloop
 - LIS-7882
+- PO-270
 - QH-1130
 - QH-1159
 - QH-1591
@@ -56,10 +57,14 @@ links:
 - VP-18303
 - VP-18320
 - VP-18342
+- VP-18347
 - VP-18400
 - VP-18406
 - VP-18463
+- VP-18464
+- VP-18474
 - VP-18480
+- VP-18673
 - failures
 - repo-catalog
 - repos

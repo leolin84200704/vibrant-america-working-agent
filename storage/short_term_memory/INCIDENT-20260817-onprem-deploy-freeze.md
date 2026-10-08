@@ -34,6 +34,7 @@ links:
 - INCIDENT-20260908-grpc-dead-node-ip
 - INCIDENT-20260910-emr-v2-di-crashloop
 - LIS-7882
+- PO-270
 - QH-1130
 - QH-1159
 - QH-1591
@@ -77,19 +78,24 @@ links:
 - VP-18303
 - VP-18320
 - VP-18342
+- VP-18347
 - VP-18400
 - VP-18406
 - VP-18462
 - VP-18463
+- VP-18464
+- VP-18474
 - VP-18480
 - VP-18485
+- VP-18655
 - VP-18673
+- VP-18749
 - VP-9299
 - business-model
 - failures
 - repo-catalog
 - repos
-score: 0.1613
+score: 0.1636
 ---
 
 # INCIDENT 2026-08-17 — on-prem emr-v2 deploy freeze

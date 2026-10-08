@@ -27,6 +27,7 @@ links:
 - INCIDENT-20260908-grpc-dead-node-ip
 - INCIDENT-20260910-emr-v2-di-crashloop
 - LIS-7882
+- PO-270
 - QH-1104
 - QH-1130
 - QH-1159
@@ -88,16 +89,19 @@ links:
 - VP-18463
 - VP-18464
 - VP-18466
+- VP-18474
 - VP-18480
 - VP-18485
+- VP-18655
 - VP-18673
+- VP-18749
 - VP-9299
 - business-model
 - business-model-deep
 - failures
 - repo-catalog
 - repos
-score: 0.7662
+score: 0.7501
 ---
 
 # Summary

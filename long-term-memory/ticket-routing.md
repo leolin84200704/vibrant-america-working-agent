@@ -3,11 +3,12 @@ id: ticket-routing
 type: ltm
 category: pm_patterns
 status: active
-score: 0.1126
+score: 0.1213
 base_weight: 0.7
 created: 2026-04-22
 updated: 2026-09-24
 links:
+- SANDBOX-SEED-W2W-20261005
 - rules
 tags:
 - routing
@@ -15,11 +16,6 @@ tags:
 - pm
 summary: Ticket keyword to repo/module routing table
 ---
-
-
-
-
-
 
 # Ticket → Repo Routing
 
@@ -171,3 +167,19 @@ summary: Ticket keyword to repo/module routing table
 - **"cloud-proxy caller / appserver04 capture / kubectl logs --tail=-1 / ingress log 2.5 天 / PR #22 request-log middleware / billing service:lis-order / 2026-11-05"** → STM `VP-18464`（blocked）+ `patterns.md` / `repos.md` 2026-10-06。
 - **"兩個來源吻合但都錯 / 同源 / positive control 要只在 staging 存在的資料"** → `patterns.md` 2026-10-06 第一條 + factory inbox proposal `2026-10-06-agreement-between-sources-sharing-an-upstream.md`。
 - **"chargeIndicator T 403 Authentication fails / allSharedPaymentMethods ownership guard / charging #367 / Get Healthy platform 1001 / #464"** → STM `VP-18034`（10-06 bugfix 進 staging，待 work session 補 STM）。
+
+## 2026-10-08 新增路由（dream；VP-18655 / VP-18347 / VP-18464 / VP-18730 / VP-18474 / VP-18749 / VP-18704→LBS-1825 / LBS-1828 / VP-17827 / VP-18714 / NEXTECH / SANDBOX-SEED / PO-270 / HL7-TRIAGE）
+- **"clinician credentials / Portal-Calendar DB / MySQL 5.5 DDL / update-clinician 會清 availability / Unimod ClinicialDetail"** → STM `VP-18655`（Done 10-07；FE VP-18656/18657）+ `repos.md` 2026-10-08。
+- **"skin care proxy / sendSkinPlacePatientOrders / shipSkinCare / billing sendSkinCareKit 死碼 / Fangyuan patch 70612 / skin_care_ship_history"** → STM `VP-18347`（Done 10-07）+ journal `2026-10-07-vp18347` + `repos.md` 2026-10-08。
+- **"cloud-local-proxy 部署 / ACR latest 沒動 / Node 22 / uuid ESM / -st NOAUTH 8 秒 / cloudlocalpremerge-cibuild / Harness / Ray bypass / VP-18730"** → STM `VP-18464`（Dev Complete；30 天窗口到 2026-11-06）+ `patterns.md` / `repos.md` 2026-10-08。
+- **"手動約 consult / Emaline Brown / 六個月 / LBS-1825 / LBS-1828 / event 14275 14347 / Pearl Tin / Cleo Tetzloff / 以後直接訂"** → STM `VP-18704`（= Jira LBS-1825）/ `LBS-1828` + `emr-integration.md` 2026-10-08 + `leo-working-rules.md` 10-06→10-08。
+- **"active_event_id null / va_schedule 死了 / v2_event_accession_claim / findPatient / consultationEligible 定義不變"** → STM `VP-18749`（#903 main 10-08 19:47Z）+ `VP-18406`。
+- **"trans 還在打 core v1 HTTP / login_via_session / LOG_IN_VIA_SESSION / create_patientv2_token / VP-18156 10-31 / 10-14 兩週零"** → STM `VP-18474`（#901 main 10-08 19:46Z）。
+- **"Nextech 訂單是空的 / OBR-7 14 位 / isICD9 / NxMsg1 / 2646314 / ATCA 沒付款方式"** → STM `NEXTECH-onboarding` + `emr-integration.md` 2026-10-08。
+- **"Prospera practice ID / ORC-17 / Tom Porter / 43262 訂錯 clinic / practice_not_found / ORDER_PRACTICE_ID_FIELD_MAP / emr-v2 PR #468 / 7266 VAREQUISTION471"** → STM `VP-17827` + `emr-integration.md` 2026-10-08。
+- **"FHIR PDF link / presentedForm / /v1/report/fhir/{acc}/pdf / 404 report status / M07"** → STM `VP-18714`（prod live c15bb82；Jira Dev In Progress）。
+- **"sandbox kit block / GRPC_SHIPPING_CLOUD_HOST staging / lis-shipping-service-staging-grpc / M06 M07 order_report_status / Leo 給 Yekai 的話 / M10 re-seed"** → STM `SANDBOX-SEED-W2W-20261005` + `emr-integration.md` 2026-10-08。
+- **"blood-draw-maps / draw site 500 / be-location / phleb-system-production / zymebalanz 8019 / PO-268 PO-270"** → STM `PO-270` + `repos.md` 2026-10-08。
+- **"hl7 triage LangGraph / run_graph.sh / claude -p node / triage 沒寄信"** → STM `HL7-TRIAGE-LANGGRAPH`（PR #54）。
+- **"frontmatter 只剩 jira_status / reconcile 把 frontmatter 吃掉 / mapping values are not allowed / lenient parse"** → `patterns.md` 2026-10-08 第一條 + dream log 2026-10-08 + PR `fix/dream/frontmatter-lenient-parse`。
+- **"trans batch 3 batch 4 in-cluster / accounting charging sample order / batch 5 interactive-report / 12 www keys"** → STM `VP-18460`。

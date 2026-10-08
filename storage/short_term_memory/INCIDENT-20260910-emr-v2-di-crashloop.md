@@ -4,7 +4,7 @@ type: stm
 category: technical
 status: resolved
 follow_up: factory PRs
-score: 0.4303
+score: 0.4254
 base_weight: 0.9
 created: 2026-09-10
 updated: '2026-09-11'
@@ -16,6 +16,7 @@ links:
 - INCIDENT-20260817-onprem-deploy-freeze
 - INCIDENT-20260908-grpc-dead-node-ip
 - LIS-7882
+- PO-270
 - QH-1104
 - QH-1130
 - QH-1159
@@ -75,14 +76,18 @@ links:
 - VP-18347
 - VP-18400
 - VP-18406
+- VP-18460
 - VP-18461
 - VP-18462
 - VP-18463
 - VP-18464
 - VP-18466
+- VP-18474
 - VP-18480
 - VP-18485
+- VP-18655
 - VP-18673
+- VP-18749
 - VP-9299
 - business-model
 - business-model-deep

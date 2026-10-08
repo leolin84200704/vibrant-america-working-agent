@@ -3,11 +3,12 @@ id: SANDBOX-SEED-W2W-20261005
 type: stm
 category: pm_patterns
 status: active
-score: 0.0846
+score: 0.105
 base_weight: 0.7
 created: 2026-10-05
 updated: 2026-10-08
-links: []
+links:
+- ticket-routing
 relations:
   unblocked_by: []
   blocks: []
@@ -17,13 +18,15 @@ relations:
   - VP-18595
   - VP-18596
   - VP-18714
-unblock_when: 'M10 re-seed by Fangyuan (outbound delivered + return DELIVERY_EXCEPTION) then re-run lookup
-  for 2554403. Older items: (1) DONE on shipping''s side 2026-10-08 (staging svc lis-shipping-service-staging-grpc:63142
-  seeded for all 11) → Leo approves setting GRPC_SHIPPING_CLOUD_HOST/PORT on the staging ConfigMap, then
-  re-run m-list.js; (2) report team (Yekai) re-seeds M06 preliminary on the TRUE staging report service
-  + builds the M07 PDF in base-report-dev pdf-cache; (3) Leo decides the partner PDF download path (presentedForm
-  url = base-report pdf-cache, rejects API keys) and whether a delivery-exception signal should exist
-  in the payload (M09/M10); test = the 11-row list/lookup table'
+unblock_when: 'M10 re-seed by Fangyuan (outbound delivered + return DELIVERY_EXCEPTION)
+  then re-run lookup for 2554403. Older items: (1) DONE on shipping''s side 2026-10-08
+  (staging svc lis-shipping-service-staging-grpc:63142 seeded for all 11) → Leo approves
+  setting GRPC_SHIPPING_CLOUD_HOST/PORT on the staging ConfigMap, then re-run m-list.js;
+  (2) report team (Yekai) re-seeds M06 preliminary on the TRUE staging report service
+  + builds the M07 PDF in base-report-dev pdf-cache; (3) Leo decides the partner PDF
+  download path (presentedForm url = base-report pdf-cache, rejects API keys) and
+  whether a delivery-exception signal should exist in the payload (M09/M10); test
+  = the 11-row list/lookup table'
 tags:
 - sandbox
 - w2w
@@ -35,10 +38,10 @@ tags:
 - leo-reply-style
 - vp-18683
 - pdf-presentedform
-summary: Integrator (via Chris Wu, with Yekai Liu) asked us to seed 11 sandbox orders (samples 2554394–2554404,
-  customer 50687) into target GET /orders states. Recipe per order (core order_kit_status / sample_received_time
-  / report service) drafted; kit block impossible in sandbox (no shipping). Leo's final reply recorded
-  verbatim.
+summary: Integrator (via Chris Wu, with Yekai Liu) asked us to seed 11 sandbox orders
+  (samples 2554394–2554404, customer 50687) into target GET /orders states. Recipe
+  per order (core order_kit_status / sample_received_time / report service) drafted;
+  kit block impossible in sandbox (no shipping). Leo's final reply recorded verbatim.
 ---
 
 # SANDBOX-SEED-W2W-20261005 - Work Loop Record

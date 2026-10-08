@@ -3,6 +3,8 @@ date: 2026-10-07
 ticket: VP-18347
 type: journal
 tags: [vp-18347, trans-optimization, cloud-local-proxy, skin-care, dead-code, worktree-hooks]
+distilled: true
+distilled_on: 2026-10-08
 ---
 
 # VP-18347 resume: the "last two callers" were one dormant flow and one dead method

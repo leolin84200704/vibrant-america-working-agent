@@ -3,7 +3,7 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 1.7696
+score: 1.8068
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-09-24
@@ -28,6 +28,7 @@ links:
 - LBS-1784
 - LBS-1785
 - LBS-1799
+- LBS-1828
 - LIS-7716
 - NEXTECH-onboarding
 - PH-847
@@ -136,6 +137,8 @@ links:
 - VP-18664
 - VP-18665
 - VP-18666
+- VP-18704
+- VP-18714
 - fhir-api
 tags:
 - emr
@@ -2202,3 +2205,34 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 - **kit block（kit.status / carrier / trackingNumber / shippedAt / deliveredAt）在 sandbox 做不出來**：資料只在 shipping（FedEx label + scans），sandbox 單從沒進過 shipping，staging 也沒有 shipping service → 11 筆全 null。`in_transit` 不存在於 shipping 的 8 值 kit_status；FedEx Track API 有（IT/AR/DP/OD），而且 LIS-transformer `getFedx` 與 LIS-Shipping `kitTrack` 本來就直接打 apis.fedex.com/track（consul shipping secret FEDEX_PRODUCTION_API_KEY/SECRET）——emr-v2 直接接 FedEx 是**未決**選項，Leo 先叫 Chris 把 M02 拿掉。講限制時要說清楚是**哪個系統的詞彙**（「我們」包含 transformer）。
 - staging core v1 的 DB 真身：deployment `lis-core-staging`（ns default，NodePort 30282）的 configmap `lis-core-staging-config` DATABASE_URL → **lisportalprod2-testdb.mysql.database.azure.com / lis_core_v7**（user lis_core_emr），不是 on-prem .11 的 lis_core_v7。寫法：進 core staging pod 用 `/app/node_modules/@prisma/client` 跑 raw SQL（DATABASE_URL 來自 pod env，自己不碰憑證）。表：`sample`(sample_id, accession_id, order_id, sample_received_time)、`order_info`(order_id, customer_id, order_kit_status, order_report_status, order_status, order_cancel_time)；`sample_data` 是 shipping 的。10-05 21:22Z 改了 7 列（WHERE 綁 order_id + customer 50687 + 明確清單；反查 0 筆外溢；rollback 記在 STM）。
 - **staging base-report 的 `GRPC_ISSUE_ADDR` = lis-issue-system-service.issue:30071 = prod issue system**（staging 的 :30072 存在但沒接）——在 staging 對 sample 2554401 造 redraw issue 會寫進 prod（真病人的 sample id）。沒做；M07（產報告）/ M08（redraw）交給 report team 先重指。shipping 側的 ask（staging shipping 暴露給 AKS + 11 筆 PO/tracking）Leo 10-05 15:05 PT 已送 Chris；fallback = emr-v2 sandbox 合成 kit block（staging-only flag，未決）。
+
+## 【蒸餾 2026-10-08】Nextech 第一筆訂單是空的（OBR-7 14 位）、Prospera 書面確認 ORC-17 = practice id 且 5/9 訂錯 clinic、手動約 consult 第三四次、FHIR PDF 改由 emr-v2 供應、sandbox kit block 上線、clinician credentials（NEXTECH / VP-17827 / VP-18704→LBS-1825 / LBS-1828 / VP-18714 / SANDBOX-SEED / VP-18655 / VP-18749 / PO-270）
+### Nextech 第一筆測試單（hl7_file_input 7251，10-02）被「成功」下成空單
+- 路由全對（NPI 1215931902 → customer 28981 / clinic 20834，patient 3290335 "Demo Patient"），**sample 2646314 / accession 2610026191 / order 11492640 下單了但 `orderItems = []`、`test_input = ''`、0 tube**，四個錯誤欄位全 NULL——09-25 以來 v2 唯一一筆空單。真因：**OBR-7 = `20261002115705`（14 位，帶秒）**，`ObrParserService.isICD9` 的 regex 只收 `yyyyMMddHHmm` 12 位 → 丟 `Invalid sampleCollectionTime format`，`parser.service.ts` 的 OBR 迴圈**逐 OBR catch 後繼續**（Java 755-757 同款 swallow），兩個 OBR 都被丟掉、errorCodes 空、照常組單。OBR-4 的 `VAREQUISTION36` / `VAREQUISTION106` 本身都在 `package_price_mapping`。Java `ParseHL7.isICD9` 用 `LocalDateTime.parse(..., "yyyyMMddHHmm")` 一樣會炸——繼承行為，不是 v2 回歸。處理 pod zvwwx 的 log 不在 Datadog（只有 vmss000000 那台會送）→ 結論靠 code + 本地重現。
+- 重送注意：**MSH-10 dedup**（`findExistingSampleId(controlId)`）——同 `NxMsg1` 重送會直接短路到 2646314 什麼都不下；要 Nextech 換新的 control id（最好 placer number 也換）。次要：customer 28981 沒有付款方式 → `patientPayLater` / `billing_issue`，ATCA 的收費方式要在上線前決定。未決：作廢空單 2646314 / 11492640（prod write，Leo 決定）；`isICD9` 放寬（14 → 截 12）vs 要 vendor 送 12 位。
+- 空單的偵測缺口：「四個錯誤欄位都 NULL + parse_finished=1」看起來是成功——以後 triage 要加一條 `orderItems = []` 的檢查（HL7-TRIAGE-LANGGRAPH 可放）。
+### FOLLOWTHATPATIENT / Prospera：practice id 的書面確認與 5/9 訂錯 clinic（VP-17827 復活）
+- **Tom Porter（Prospera，10-08）書面確認**：MSH-6 與 ORC-17 永遠是「下單地點」的 Vibrant Practice ID，每個 location 都有、值跟著 location 不跟 provider；ORC-12 是該 provider 在該 practice 的 provider id；**下一版起沒有合法 location 的訂單在送出前就被拒**（PM 的「沒有 practice id」case 1 對這家不會發生）。Tom 問的 (b) 何時起用 ORC-17 計費、(c) 試單是否重開帳 → Keith（PM / ops），不是我們答。
+- **on-prem pod 讀了 9 筆 archive 的 raw HL7**（`/EMR_storage/HL7Message_prod/FOLLOWTHATPATIENT/Prod/Order/archive/`）：每一筆 MSH-6 == ORC-17；**5/9 訂錯 clinic，全是 provider 43262（Anna Emanuel，掛在 2930/8003/36290/144510 四個 clinic）**——`resolveOrderingIntegration` 取 FULL_INTEGRATION 優先、再 newest `updated_at`，2930 永遠贏；單一 location 的 provider（6263 Shah → 8003、38677 Perkins → 142676）永遠對。MSH-4 是 vendor 自己的 org 編號（3、13），對我們沒用；08-21 的判斷再確認。
+- **Leo：訂錯 clinic 和 VP-17827 是同一個問題——把 customer-level 的 resolve 改成 practice-level**，不做 FTP 專用的 patch。設計（已實作，emr-v2 PR #468 → staging）：per-vendor 欄位表 `{ FOLLOWTHATPATIENT: 'ORC.17' }` + env `ORDER_PRACTICE_ID_FIELD_MAP`（JSON，蓋在預設上；不在表裡的 vendor = 今天的行為）；`fetchById/fetchByNpi(id, practiceId?)` → `resolveOrderingIntegration` 多一個 `clinic_id === practiceId` 過濾（`ehr_integrations` 本來就是 (customer_id, clinic_id) 一 provider 一 practice 一列，不需要新表、不需要 VP-16164）；provider 有 LIVE row 但沒有該 practice → `practice_not_found=<ORC-12.1>@<practice>` 寫進 last_error + customer_not_found 欄，走 VP-17120 的 retry/rescan 路（之後補 provider 到該 practice 會自動重下）；欄位有值但不可用（空/非數字）→ 當沒有 + warn；成功 → `[practice-id] vendor=.. provider=.. practice=.. -> customer .. clinic ..` log。PH-917 membership gate 變成一致性檢查、MSH-4 advisory cascade 不動。prod 驗證 = 部署後第一筆 FTP 單 core `sample.clinic_id == ORC-17`。
+- **7266（10-06，`VAREQUISTION471`）不是路由問題**：`obr-parser.service.ts` 把 `VAREQU*` 走**全域** `emrCodeToPackagePriceMap`（303 筆，無 customer/clinic key），prod catalog 根本沒有 471（118 有）→ vendor 送了不存在的 requisition code → Order team / vendor；retry_num 0、parse_finished 0。它也沒出現在任何 DailyJob triage（10-01..10-07 的 triage 全部 BLOCKED）。
+- 其他：vendor 44 有 33 筆 ehr_integrations（32 ordering_enabled、20 clinic、30 customer；06-22 那批 9 個帳號在 lis_emr 沒有名字、502816/523148 沒 NPI），清單在 `reference/followthatpatient-practice-ids-20261007.csv`；給 Tom/Keith 的草稿 `drafts/VP-17827-prospera-practice-id-reply-2026100{7,8}.md`。Jira：Xiaoye 10-08 把 VP-17827 從 Dev Blocked → Inactive → Dev To Do，due 10-23，Sprint 31；Sherry/Junjie 的 fallback 決定仍沒記錄。
+### 手動約 Clinical Consult：第三、四次（VP-18704 = Jira **LBS-1825**；LBS-1828）
+- 配方不變（LBS-1799 → emr-integration 09-24）：HS256 用 transv2 `secretOrKeyProd` 鑄 clinic-user token（prod pods 沒有 JWT_SECRET_PROD key，`getProductionSecret()` 退回 secretOrKeyProd；值單引號包且含 `=`，不要用 `=` split）→ `getProviderAvailability(provider_id = clinician calendar_owner_id, practice 150105)` 預檢 → `generateZoomLinkForProvider` 取 `pmiUrl` → `createEventByPatient`（creator 是 provider 的 patient-role calendar，practice 150105）→ Gate 7：`v2_event` / `v2_event_participant` / `v2_event_accession_claim` / audit log `claimed`、反查唯一、`isAccessionClaimable(accession_id:)` claimable=false、`getEventByEventId(eventId:)`、Postmark tag `calendar_prod` 兩封 Sent。
+- 固定 id：**Emaline Brown = calendar 30791、owner/customer_id 46607、legacy clinician_id 20、tz America/Los_Angeles、min_notice 1440 分、max_advance 28 天、唯一 option「Provider Consult - 30 Minutes SELECT TESTS ONLY」**；Zoom PMI `https://vibrant-wellness.zoom.us/j/3750252507`。legacy calendar base 是 `https://api.vibrant-wellness.com/v1/portal/calendar/`（不是 api.vibrant-america.com），transv2 鑄的 token 那邊也收。
+- **provider 寫的時鐘時間，用 clinician 的公開 availability 解時區，不用地址**（Cleo Tetzloff 有 CA/FL/IL 三地資料，只有 PT 同時對上「1:30 Tue / 4:00 Wed」兩個 slot）；「earliest slot」只信 live `getProviderAvailability`（`v2_schedule.weekday` 從 row 推不出來，staff `createEvent` 繞過驗證）。
+- 兩筆：LBS-1825（accession 2603306653，Cleo Tetzloff/33172，`order_service_time` 2026-03-30 → 09-30 過窗；event **14275** 10-13 20:30Z；之前 event 12934 09-04 已由 Brooke 完成、reset；staff 134402 做了三次 `resetEventAccession` no-op）、LBS-1828（accession 2307280472，PEARL TIN LAc/24076 自己的檢體，`order_service_time` **2023-07-29**（force fetch order），report 還 pending；event **14347** 10-14 23:00Z；staff 134400/134399 做過 5 次 `released_by_reset` no-op）。audit log 的 no-op reset = clinical team 在升級前先試過了。
+- **Leo 10-08 新規則：這一類（符合 ticket 要求的手動約 consult）直接訂、直接留 comment、轉 Done，不用 double check**（原本的三個 flag：報告未出、slot 超過 due date、會寄真 email——都不再是暫停理由）。VP-18704 是在連 LBS 不能開票時開在 VP，之後被搬到 LBS-1825（issue id 108459 不變）。
+### FHIR presentedForm 的 PDF 改由 emr-v2 供應（VP-18714，prod live 10-07）
+- 原鏈結 `${VIBRANT_API_BASE_URL}/pdf-cache/download/{acc}?style=` 是 base-report 自己的 endpoint、後面是 portal JWT guard → partner API key 在 sandbox 和 prod **都** 401（product gap，不是 sandbox 問題）。改成 `https://{x-forwarded-host|host}/v1/report/fhir/{acc}/pdf?style=advanced|classic`，由 emr-v2 `GET fhir/DiagnosticReport/:id/pdf` 供應：FhirAccessGuard + isAuthorizedForSample + **同一套 withhold 規則**（enrichFromReportService + applyOrderCancellation 跑在 shell 上，只在 presentedForm 存活且 status final/corrected/preliminary 時供應）；bytes 用 VP-18673 的 env-signed admin token 向 base-report 拿（arraybuffer、90 s、`%PDF-` magic）；denied → 404（訊息同 DiagnosticReport 的「no accessible」）、未就緒 → 404 "(report status: X)"、上游非 PDF（含 base-report 的 500 "not ready"）→ 503。ingress `lis-emr-v2-fhir-short-ingress` 的 rewrite 原樣吃到子路徑。
+- 驗證：api-sandbox 用 QA beta client（50661）own accession 2607296024 → 200 application/pdf 7.5 MB / 7.1 MB，registered → 404 "(report status: registered)"，W2W 2610016007 → 404 denied；prod 只驗到 401 envelope（沒有 prod partner token）。**M07 端到端仍缺**：Yekai 要在 base-report-dev pdf-cache 建 2610016007 的 PDF（內部 token 也 500 "not ready"），且要 W2W 的 50687 sandbox client 重試。
+### sandbox 11 筆 W2W 的 kit block 上線、list 狀態要靠 core 的 order_report_status（SANDBOX-SEED 10-08）
+- shipping（Fangyuan）已在 **staging shipping**（`lis-shipping-service-staging-grpc:63142`，與 prod 不同 store）seed 11 筆假 FedEx（po_create 10-08、pickup 10-01、tracking 9925543940xx）；emr-v2 staging CM 補上 `GRPC_SHIPPING_CLOUD_*` 後 11/11 都有 kit block（carrier FedEx、shippedAt 2026-10-01T17:20Z、delivered 的 deliveredAt 10-03T16:02Z）。**M10 被 seed 成 outbound DELIVERY_EXCEPTION → lookup 說 kit_shipped，不是 Leo 跟整合商講的 sample_in_transit**（要 outbound delivered + return DELIVERY_EXCEPTION 才對；Leo 已請 Fangyuan 重 seed）。
+- **GET /orders list 的 status 只看 core `order_info.order_report_status`**（`order-list.derivation.ts deriveListStatus`：report_ready/amended/delivered → report_available；report_pending + received → analyzing）——設計如此（VP-18030：list 不逐 row fan-out）。prod 這個 flag 由 report pipeline（LIS-Report Kafka `personalized_report_ready` → core）寫；Yekai 直接 seed staging report service，core 停在 report_not_ready → M06/M07 list 與 lookup 不一致。修法 = staging core `order_info` 綁 order_id + customer 50687 + `report_not_ready` 的 UPDATE（11405502 → report_pending、11405503 → report_ready，反查 50687 非 not_ready 恰 2 筆）。**Leo 給 Yekai 的規則（原話）**：「以後在 staging 建立假資料的時候，core 的 order_info.order_report_status要一起設，不然 GET /orders 的 list 看不到：有 preliminary 設 report_pending，final 出來設 report_ready。M06/M07 這兩筆我這次已經補好」。
+- 其他 staging 假象：2554405 / 2554408（11 筆之外的新 W2W 單）list=kit_delivered（staging core 預設把每張單標 kit_patient_received_kit）vs lookup=placed/not_shipped（shipping 沒 row）——prod 上 shipping 一定有 row，不用 seed。mintlify「kit 在 sandbox 永遠 null」要撤回（docs repo 是 api-product 的 → 只能草稿請求）；`in_transit` 不在 shipping 的 8 值詞彙、emr-v2 只出 not_shipped/shipped/delivered、Confluence 2485977089 v27 也沒有。
+- 整合商回覆的所有權規則（Leo 四刀）：**只回我們自己擁有 code/契約的項目**（M02 沒有 in_transit、M09/M10 payload 沒有 exception 值只有 tracking 頁、M07 新 link 可用 sandbox key 開）；別的 team 的交付——即使是「還沒好」或「會通知你」——都不寫，給 owner 另寫 @ 一句（Chris/shipping 的 note 由 Leo 決定要不要送）。
+### 其他
+- **VP-18655（Done 10-07）**：clinicians.credentials（BE）交付；Unimod 輸入在 VP-18656、portal 顯示「{Name}, {Credentials}」在 VP-18657；9 位 clinician 的初始值 Clinical 在 release 後自己填（PH-936 列了值但不做資料 migration）。
+- **VP-18749（10-08 開）**：`consultationEligible` 維持六個月窗口唯一（沒有 ALREADY_BOOKED），「已約」狀態靠 row 的 `active_event_id`，而它從 2026-05 起一直是 null（讀死掉的 `va_schedule.sample_event`）→ 改讀 `v2_event_accession_claim`；Select Related Test modal 本來就用 transv2 `accessionClaimStatuses`（VP-18050）所以沒受影響；prod 部署後第一次 findPatient 就會看到 4,115 筆 claim。
+- **PO-270（10-08，Portal Oncall）**：「draw site 搜尋 500」有兩套互不相干的系統——VA Portal 的 Preferred Draw Sites（Trans，VP-18313 已退役）vs 公開 blood-draw-maps（on-prem be-location，活著）；先看截圖的 URL。be-location 10-08 16:50–17:07Z 30/30 201、~1 s；今天的 500 最可能又是 PO-268 那類 gRPC 上游 ECONNRESET / 冷啟動；沒有 log 不要再 Cannot Reproduce；frontend 寫死的 `zymebalanz.com:8019` 是潛伏缺陷（第一個 hasSchedules=true 的 draw site 會把整頁帶去 /500）。
+- **VP-18034 的修正（#464）10-06 21:24Z 經 #465 上 prod**（c15bb82 含它）；Get Healthy（platform 1001）是否重試未確認。

@@ -3,7 +3,7 @@ id: FHIR-ONDEMAND-RESULT
 type: stm
 category: emr_integration
 status: done
-score: 0.0738
+score: 0.0706
 base_weight: 1.0
 created: 2026-07-02
 updated: 2026-07-05
@@ -26,6 +26,7 @@ links:
 - LBS-1784
 - LBS-1785
 - LBS-1799
+- LBS-1828
 - LIS-7716
 - NEXTECH-onboarding
 - PH-847
@@ -127,6 +128,8 @@ links:
 - VP-18664
 - VP-18665
 - VP-18666
+- VP-18704
+- VP-18714
 - emr-integration
 - fhir-api
 tags:

@@ -30,6 +30,7 @@ links:
 - LBS-1784
 - LBS-1785
 - LBS-1799
+- LBS-1828
 - LIS-7716
 - NEXTECH-onboarding
 - PH-847
@@ -124,9 +125,11 @@ links:
 - VP-18664
 - VP-18665
 - VP-18666
+- VP-18704
+- VP-18714
 - emr-integration
 - fhir-api
-score: 0.4644
+score: 0.4449
 ---
 
 # HL7FAIL-20260903 — Everspan customer_not_found (Mary Jo Allen)

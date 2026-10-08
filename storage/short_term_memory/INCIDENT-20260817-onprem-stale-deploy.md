@@ -26,6 +26,7 @@ links:
 - LBS-1784
 - LBS-1785
 - LBS-1799
+- LBS-1828
 - LIS-7716
 - NEXTECH-onboarding
 - PH-847
@@ -121,6 +122,8 @@ links:
 - VP-18664
 - VP-18665
 - VP-18666
+- VP-18704
+- VP-18714
 - emr-integration
 - fhir-api
 tags:
@@ -137,7 +140,7 @@ summary: 'Leo''s manual result publish for samples 2602947/2602948 (cust 4953 MD
   13.15 days = started 2026-08-04 18:28Z, so its baked Prisma client predates the
   2026-08-14 enum. Every main merge since 2026-08-04 11:14 PDT is absent from on-prem,
   which still OWNS 536 of 1036 LIVE result-enabled integrations.'
-score: 0.2839
+score: 0.272
 ---
 
 # INCIDENT-20260817 — emr-v2 on-prem prod deploy drift (13 days)

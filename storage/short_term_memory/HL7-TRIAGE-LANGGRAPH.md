@@ -3,7 +3,7 @@ id: HL7-TRIAGE-LANGGRAPH
 type: stm
 category: process
 status: active
-score: 0.00
+score: 0.0725
 base_weight: 0.6
 created: 2026-10-07
 updated: 2026-10-07
@@ -11,11 +11,18 @@ links: []
 relations:
   unblocked_by: []
   blocks: []
-  sibling: [HL7FAIL-20260729-PLESSEN]
-unblock_when: ""
-tags: [hl7-triage, langgraph, dailyjob, automation]
-summary: "LangGraph port of the hl7_file_input daily triage: deterministic nodes + one claude -p narrative node + email; parallel-run phase"
+  sibling:
+  - HL7FAIL-20260729-PLESSEN
+unblock_when: ''
+tags:
+- hl7-triage
+- langgraph
+- dailyjob
+- automation
+summary: 'LangGraph port of the hl7_file_input daily triage: deterministic nodes +
+  one claude -p narrative node + email; parallel-run phase'
 ---
+
 # HL7-TRIAGE-LANGGRAPH - Work Loop Record
 
 ## Ticket Analysis
