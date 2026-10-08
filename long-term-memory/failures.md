@@ -7,7 +7,7 @@ score: 1.723
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-10-06
+updated: 2026-10-08
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -142,6 +142,8 @@ links:
 - VP-18665
 - VP-18666
 - VP-18673
+- VP-18704
+- VP-18714
 - VP-18749
 - VP-9299
 - business-model
@@ -157,24 +159,24 @@ tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 122 entries across STM
+summary: Auto-aggregated failure index from 126 entries across STM
 ---
 
 # Failure Index
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-10-06 — total 122 entries
+> Last updated: 2026-10-08 — total 126 entries
 
 ## Themes
 
-- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 33 entries
+- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 34 entries
+- [Other / uncategorized](#other) — 22 entries
 - [Build / TypeScript / Tooling](#build-tooling) — 20 entries
-- [Other / uncategorized](#other) — 20 entries
 - [Deploy / commit / push coordination](#deploy-coordination) — 14 entries
 - [DB / migration / backfill](#db-migration) — 9 entries
+- [Error handling / throw vs log](#error-handling) — 6 entries
 - [Scope / requirement / PM communication](#scope-communication) — 5 entries
-- [Error handling / throw vs log](#error-handling) — 5 entries
 - [Redis / cache / pending list](#redis-cache) — 4 entries
 - [Auth / permission / role](#auth-permission) — 4 entries
 - [gRPC / network / timeout](#grpc-network) — 4 entries
@@ -576,6 +578,13 @@ force a trigger.
   service talks to; one GUT5 W2W probe would have shown it. Posted comment 190459 to
   Xiaoye on that basis -> needs a correction.
 
+### **[[VP-18704]]**
+
+- `mcp__vibrant__mysql_query` (lisportalprod) has no `lis_core_v7`; use `mcp__vibrant__lisportal_mysql_query` (lisportalprod2, read-only). `sample` has `accession_id`, not `barcode`.
+- Legacy calendar service base is `https://api.vibrant-wellness.com/v1/portal/calendar/` (CLOUD_SERVICE_BASE_URL), not api.vibrant-america.com; the minted transv2 token is accepted there too.
+- `isAccessionClaimable` argument is `accession_id`, not `accessionId`.
+- zsh: `--include=*.ts` globs must be quoted; `echo =====` fails (`=` path expansion).
+
 ### **[[VP-16251]]** — `2026-04-21 21:50` — **
 
 1. sftp_ordering_path = null（script 未設定）
@@ -649,6 +658,134 @@ Picked `lock.release()` from redlock@5 docs while installing redlock@4. The two 
 **修法**：事後 deleteMany ids 2306/2309/2312，保留 2303。21 distinct customers / 21 oc rows ✓。
 
 **Preventable**：是。pre-check 階段應該偵測 PAIRS 內重複 customer_id + 對 INSERT 邏輯 dedupe by customer。
+
+---
+
+## Other / uncategorized <a id='other'></a>
+
+### **[[INCIDENT-20260528]]** — `2026-05-28` — 把 hang pod log 燒掉了
+
+Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`、**舊 pod (`6cc4674b87-ccgbf`) 的 log 隨 pod GC 永久消失**。/var/log/pods 對應目錄 mtime 還在但 log file 已清。所以「哪個 folder 是 5/27 真正 hang 元凶」**現場證據燒掉了**。後來 21:45 tick log 出來的 id=260 反而是 transient = 不是同一個 hang。
+
+預防：destructive ops (rollout restart / pod delete) 前必須 `kubectl logs <pod> > /tmp/preserve.log` + `kubectl describe pod <pod> > /tmp/preserve_describe.txt`。已寫進 user memory feedback。
+
+### **[[PH-847]]** — `2026-09-11` — Dream closeout audit — PASS (PM-owned ticket)
+
+- PH-847 Done 09-10 13:13 PDT; assignee Xiaoye (PM). Implementation shipped under VP-18080 (order half, Leo) and VP-18066 (envelope), both audited PASS on 2026-09-03. Nothing further owed by this STM.
+
+### **[[PO-256]]**
+
+- az CLI MFA expired — could not inspect RBAC Container App directly; bounded diagnosis at the coresamples→container-app hop via error strings and timing.
+
+### **[[TICKET-WATCH-20260930]]** — `2026-09-30 16:10` — Trial run 1: both claude -p attempts died with `401 Authentication Failed`. Cause: the runner's Jira pre-flight did `set -a; source .env`, exporting the empty `ANTHROPIC_API_KEY=` / `ANTHROPIC_BASE_URL=` lines into the claude process, which then bypassed the keychain login. Fix: read only the three JIRA_* values with grep/cut, export nothing. The failure-report path worked as designed (report file + notification produced).
+
+
+
+### **[[VP-16934]]** — `2026-06-09` — #157 部署後 staging dry-run 驗證通過
+
+- endpoint no-auth → 401（route live + guard）。
+- 簽 JWT(staging JWT_SECRET, HS256, payload 需 userId + 未過期；JwtStrategy 不檢 issuer) 打 dry-run（`scripts/_vp16934-staging-test.js`）：
+  - 假 provider → `201 {rejected, customer_not_found}`（auth/dryrun/富化都跑）。
+  - 缺 testCodes → `400`。
+  - **真客戶 5794 → `201 {rejected, unrecognized_test_codes:[VACP1001]}`** = customer 解析成功 + 代碼分類有跑（VACP1001 是假 code 才被擋）。
+- **結論：order intake 在 staging dry-run 全程跑通**（auth/gating/validation/customer 查詢/代碼分類）。差「完整成功單(sampleId:-1)」需對 staging 客戶有效的真 test code。
+- staging order_intake 留了 2 筆 VP16934-TEST-* rejected 測試列（無害，可清）。
+
+### **[[VP-17283]]**
+
+(none yet)
+
+### **[[VP-17714]]**
+
+（none yet）
+
+### **[[VP-17748]]**
+
+(none yet)
+
+### **[[VP-17765]]**
+
+(none this run)
+
+### **[[VP-17827]]**
+
+None this session.
+
+### **[[VP-18030]]**
+
+- 2026-08-31: `echo ===` and a commit -m containing backtick-quoted `to`
+  both got mangled by zsh (=== → "== not found"; `to` command-substituted to
+  empty inside double quotes). One stray non-English word also slipped into
+  a commit message body. Fixed by amend before push. Rules: heredoc
+  (`git commit -F - <<'MSG'`) for any commit message with punctuation;
+  grep -P '[^\x00-\x7F]' the message and changed files before commit.
+
+### **[[VP-18342]]**
+
+- ~40 minutes spent searching for "ways2wellness" in logs/DB/Jira before Leo pasted the
+  actual error: the partner's own clinic has no integration, and the sandbox tenant is
+  customer 50687 — the customer name never appears in any log line. Ask for the raw error
+  text / requestId first when a partner reports an API error.
+- vibrant MCP `create_jira_issue` -> 403 on POST /issue; `list_sentry_projects` -> NoneType error.
+
+### **[[VP-18344]]**
+
+(none yet)
+
+### **[[VP-18402]]** — `2026-09-25 16:15` — PR opened
+
+PR Vibrant-America/lis-backend-emr-v2#435 -> `staging`, head `ddba71a`. Added before opening (so the
+head stays fixed per the one-PR-one-head rule): two explicit no-op tests for Leo's question — a
+provider with only non-LIVE rows, and a customer with no integration at all — asserting the OUTCOME
+(nothing written, no transaction opened) rather than just the `where` clause, so they hold if the
+query is rewritten. Suite now 12 tests; full run 85 suites / 1222 assertions.
+
+### **[[VP-18402]]** — `2026-09-28` — Closed — transitioned to Done
+
+Leo: "沒關係不需要做，把已經做完的轉done(不要轉別人的ticket)". Remaining items (end-to-end success
+path, kill switch, finding the real ConfigMap apply source) explicitly dropped.
+VP-18402 Dev In Progress -> **Done** (transition id 15).
+NOT transitioned, on the "don't touch other people's tickets" instruction: VP-18403 (FE, Siyun
+Liang), PH-917 (Xiaoye Li), QH-7271 (QA, unassigned). QH-7275 is assigned to me but is a QA Task
+and QA has not run — moving it would falsely signal it was tested, so it was left in To Do.
+
+### **[[VP-18655]]**
+
+- First staging ALTER attempt used `ALGORITHM=INSTANT, LOCK=NONE` -> error 1221; INSTANT must stand alone.
+- Linter cannot tell per-env sections apart inside one file -> split into two files.
+
+### **[[VP-18714]]**
+
+- First create_jira_issue 400: VP Bug requires customfield_10082 (Portal Affected System/Page),
+  10487 Impact, 10489 Detection Method, 10492 Environment and duedate; VP Task needs only
+  summary. Fetch create_fields (writes a 140 KB file; parse with python) before creating a Bug.
+
+### **[[LBS-1541]]** — **
+
+(none yet)
+
+### **[[VP-16766]]** — `2026-05-27` — **
+
+
+
+### **[[VP-17120]]** — `2026-07-02 23:05` — **
+
+- emr-v2 generateSampleID NEVER worked: proto field is `sampleId` (camelCase in proto) but client reads `response.sample_id` with keepCase:true → undefined → `|| '0'` → always 0 since the VP-16463 port. Pre-5/28 nonzero patientPayLater ids were written by Java EMR-Backend.
+- sendOrder with sampleId=0 self-assigns a correct id (70/74 zero-id orders succeeded). The stuck rows are occasional sendOrder failures on that path.
+- coresamples v2 GenerateSampleID sequence is ~311k STALE: live probes returned ids 2277991-2278000, ALL existing patient samples in lis_core_v7.sample. A field-name-only fix would inject colliding ids → order path must NOT consume this RPC until their sequence is repaired (needs a coresamples-team ticket).
+- Fix on branch: finalizer skips pre-generation (sends 0 explicitly), client reads correct field + rejects invalid, [RETRY-EXHAUSTED] loud log, decrement floored. 21/21 targeted tests pass, build clean.
+
+### **[[VP-16521]]** — `2026-05-28 17:52` — **
+
+- **症狀**：merge in-progress 時 `git stash push` → MERGE_HEAD 消失，stash pop 報 `event.service.ts: needs merge`
+- **修法**：`git merge origin/stage_test --no-commit --no-ff` 重觸發 merge state，再 `git checkout stash@{0} -- src/calendar/models/event/event.service.ts` 把 stash 內的 resolved 版本拉回，最後 `git stash drop`
+- **教訓**：merge in-progress 時禁用 `git stash`；要保存 in-flight diff 改用 `git diff > /tmp/wip.patch` + 該 file 個別 checkout
+- **更好做法**：根本不該為了 "比較 pre-merge lint baseline" 中斷 merge state — 直接看 origin/feature 上的 ESLint baseline 即可，或先 commit 中間態再分析
+
+### **[[VP-17217]]** — **
+
+- 首次 build TS2322：provider 陣列 union 型別 → 加 `Provider[]` 顯式型別修正。
+- spec 原以 class token 注入 → 改 inbound token 才能解析。
 
 ---
 
@@ -1010,123 +1147,6 @@ Production NestFactory crash at startup: `TypeError: redlock_1.default is not a 
 
 ---
 
-## Other / uncategorized <a id='other'></a>
-
-### **[[INCIDENT-20260528]]** — `2026-05-28` — 把 hang pod log 燒掉了
-
-Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`、**舊 pod (`6cc4674b87-ccgbf`) 的 log 隨 pod GC 永久消失**。/var/log/pods 對應目錄 mtime 還在但 log file 已清。所以「哪個 folder 是 5/27 真正 hang 元凶」**現場證據燒掉了**。後來 21:45 tick log 出來的 id=260 反而是 transient = 不是同一個 hang。
-
-預防：destructive ops (rollout restart / pod delete) 前必須 `kubectl logs <pod> > /tmp/preserve.log` + `kubectl describe pod <pod> > /tmp/preserve_describe.txt`。已寫進 user memory feedback。
-
-### **[[PH-847]]** — `2026-09-11` — Dream closeout audit — PASS (PM-owned ticket)
-
-- PH-847 Done 09-10 13:13 PDT; assignee Xiaoye (PM). Implementation shipped under VP-18080 (order half, Leo) and VP-18066 (envelope), both audited PASS on 2026-09-03. Nothing further owed by this STM.
-
-### **[[PO-256]]**
-
-- az CLI MFA expired — could not inspect RBAC Container App directly; bounded diagnosis at the coresamples→container-app hop via error strings and timing.
-
-### **[[TICKET-WATCH-20260930]]** — `2026-09-30 16:10` — Trial run 1: both claude -p attempts died with `401 Authentication Failed`. Cause: the runner's Jira pre-flight did `set -a; source .env`, exporting the empty `ANTHROPIC_API_KEY=` / `ANTHROPIC_BASE_URL=` lines into the claude process, which then bypassed the keychain login. Fix: read only the three JIRA_* values with grep/cut, export nothing. The failure-report path worked as designed (report file + notification produced).
-
-
-
-### **[[VP-16934]]** — `2026-06-09` — #157 部署後 staging dry-run 驗證通過
-
-- endpoint no-auth → 401（route live + guard）。
-- 簽 JWT(staging JWT_SECRET, HS256, payload 需 userId + 未過期；JwtStrategy 不檢 issuer) 打 dry-run（`scripts/_vp16934-staging-test.js`）：
-  - 假 provider → `201 {rejected, customer_not_found}`（auth/dryrun/富化都跑）。
-  - 缺 testCodes → `400`。
-  - **真客戶 5794 → `201 {rejected, unrecognized_test_codes:[VACP1001]}`** = customer 解析成功 + 代碼分類有跑（VACP1001 是假 code 才被擋）。
-- **結論：order intake 在 staging dry-run 全程跑通**（auth/gating/validation/customer 查詢/代碼分類）。差「完整成功單(sampleId:-1)」需對 staging 客戶有效的真 test code。
-- staging order_intake 留了 2 筆 VP16934-TEST-* rejected 測試列（無害，可清）。
-
-### **[[VP-17283]]**
-
-(none yet)
-
-### **[[VP-17714]]**
-
-（none yet）
-
-### **[[VP-17748]]**
-
-(none yet)
-
-### **[[VP-17765]]**
-
-(none this run)
-
-### **[[VP-17827]]**
-
-None this session.
-
-### **[[VP-18030]]**
-
-- 2026-08-31: `echo ===` and a commit -m containing backtick-quoted `to`
-  both got mangled by zsh (=== → "== not found"; `to` command-substituted to
-  empty inside double quotes). One stray non-English word also slipped into
-  a commit message body. Fixed by amend before push. Rules: heredoc
-  (`git commit -F - <<'MSG'`) for any commit message with punctuation;
-  grep -P '[^\x00-\x7F]' the message and changed files before commit.
-
-### **[[VP-18342]]**
-
-- ~40 minutes spent searching for "ways2wellness" in logs/DB/Jira before Leo pasted the
-  actual error: the partner's own clinic has no integration, and the sandbox tenant is
-  customer 50687 — the customer name never appears in any log line. Ask for the raw error
-  text / requestId first when a partner reports an API error.
-- vibrant MCP `create_jira_issue` -> 403 on POST /issue; `list_sentry_projects` -> NoneType error.
-
-### **[[VP-18344]]**
-
-(none yet)
-
-### **[[VP-18402]]** — `2026-09-25 16:15` — PR opened
-
-PR Vibrant-America/lis-backend-emr-v2#435 -> `staging`, head `ddba71a`. Added before opening (so the
-head stays fixed per the one-PR-one-head rule): two explicit no-op tests for Leo's question — a
-provider with only non-LIVE rows, and a customer with no integration at all — asserting the OUTCOME
-(nothing written, no transaction opened) rather than just the `where` clause, so they hold if the
-query is rewritten. Suite now 12 tests; full run 85 suites / 1222 assertions.
-
-### **[[VP-18402]]** — `2026-09-28` — Closed — transitioned to Done
-
-Leo: "沒關係不需要做，把已經做完的轉done(不要轉別人的ticket)". Remaining items (end-to-end success
-path, kill switch, finding the real ConfigMap apply source) explicitly dropped.
-VP-18402 Dev In Progress -> **Done** (transition id 15).
-NOT transitioned, on the "don't touch other people's tickets" instruction: VP-18403 (FE, Siyun
-Liang), PH-917 (Xiaoye Li), QH-7271 (QA, unassigned). QH-7275 is assigned to me but is a QA Task
-and QA has not run — moving it would falsely signal it was tested, so it was left in To Do.
-
-### **[[LBS-1541]]** — **
-
-(none yet)
-
-### **[[VP-16766]]** — `2026-05-27` — **
-
-
-
-### **[[VP-17120]]** — `2026-07-02 23:05` — **
-
-- emr-v2 generateSampleID NEVER worked: proto field is `sampleId` (camelCase in proto) but client reads `response.sample_id` with keepCase:true → undefined → `|| '0'` → always 0 since the VP-16463 port. Pre-5/28 nonzero patientPayLater ids were written by Java EMR-Backend.
-- sendOrder with sampleId=0 self-assigns a correct id (70/74 zero-id orders succeeded). The stuck rows are occasional sendOrder failures on that path.
-- coresamples v2 GenerateSampleID sequence is ~311k STALE: live probes returned ids 2277991-2278000, ALL existing patient samples in lis_core_v7.sample. A field-name-only fix would inject colliding ids → order path must NOT consume this RPC until their sequence is repaired (needs a coresamples-team ticket).
-- Fix on branch: finalizer skips pre-generation (sends 0 explicitly), client reads correct field + rejects invalid, [RETRY-EXHAUSTED] loud log, decrement floored. 21/21 targeted tests pass, build clean.
-
-### **[[VP-16521]]** — `2026-05-28 17:52` — **
-
-- **症狀**：merge in-progress 時 `git stash push` → MERGE_HEAD 消失，stash pop 報 `event.service.ts: needs merge`
-- **修法**：`git merge origin/stage_test --no-commit --no-ff` 重觸發 merge state，再 `git checkout stash@{0} -- src/calendar/models/event/event.service.ts` 把 stash 內的 resolved 版本拉回，最後 `git stash drop`
-- **教訓**：merge in-progress 時禁用 `git stash`；要保存 in-flight diff 改用 `git diff > /tmp/wip.patch` + 該 file 個別 checkout
-- **更好做法**：根本不該為了 "比較 pre-merge lint baseline" 中斷 merge state — 直接看 origin/feature 上的 ESLint baseline 即可，或先 commit 中間態再分析
-
-### **[[VP-17217]]** — **
-
-- 首次 build TS2322：provider 陣列 union 型別 → 加 `Provider[]` 顯式型別修正。
-- spec 原以 class token 注入 → 改 inbound token 才能解析。
-
----
-
 ## Deploy / commit / push coordination <a id='deploy-coordination'></a>
 
 ### **[[INCIDENT-20260518]]** — `2026-05-19` — 寫 logging 跟 timeout 但沒先說「現在不用 build」
@@ -1484,55 +1504,12 @@ Root cause: 第一次跑時我用 `tail -50` 截取 output，後段顯示 record
 
 ---
 
-## Scope / requirement / PM communication <a id='scope-communication'></a>
-
-### **[[PH-847]]** — `2026-09-01` — PM accepted — implementation tickets created
-
-- Xiaoye Li (PM, api-product) responded to comment 186020 by creating the
-  implementation tickets same morning; PH-847 flipped Dev In Progress.
-- VP-18080 (Leo) = emr-v2/order half; VP-18081 (clone, Rui Chen) = pricing/
-  quote half; both descriptions open "Agreed as proposed — unify on snake_case
-  as you laid out." QA twin QH-6962.
-- The envelope scope extension (my point 4) was split out as PH-844 →
-  VP-18066 (Leo), QA twin QH-6947 — covers patients/quote/report + the
-  Cloudflare bearer page, target shape = order's envelope.
-- Work continues in VP-18080 / VP-18066 STMs; this file is closed out.
-
-### **[[VP-17497]]** — `2026-07-27` — SERIOUS MISS (Leo): defect known 14 days before external partner hit it
-
-- The exact bug was discovered during VP-17286 E2E (2026-07-13, scope item 7) and recorded ONLY as a "proposed follow-up" STM note — no ticket filed, nobody scheduled it. api-product hit it in sandbox 2026-07-22; fixed 2026-07-27.
-- Leo: "這也是一個嚴重的失誤(需要記下來 into both this agent and general agent)".
-- Recorded: agent memory feedback_defect_found_must_be_ticketed.md + factory lesson PR (process discipline). Rule: a defect surfaced by testing that won't be fixed in the current ticket gets a Jira ticket in the SAME session; the note references the ticket id, never the reverse.
-
-### **[[VP-17544]]** — `2026-08-03` — 用 awk 管線改 config yaml 把兩個檔案寫空
-
-`awk 'NR==FNR{next}1' /dev/null "$f"` 這個組合把所有行都跳過 → 兩個 copy 變 0 行。
-主 repo 原檔完好（gitignored、只有 worktree 的 copy 被毀），改用 python 逐行處理 +
-長度 assert 重建。**教訓：對既有檔案做原地插入時用會驗證的工具，不要湊 awk/sed 單行。**
-
-### **[[VP-17544]]** — `2026-08-03` — pre-commit guard 在 worktree 中必然誤報
-
-`config-yaml-coupling` guard 用 `git rev-parse --show-toplevel` 找兩個 gitignored 的
-ConfigMap 快照，但那兩個檔只存在主 repo 工作目錄 → 在 worktree 裡檔案不存在 →
-`yaml_has_key` 對所有變數都回 false → **連既有的 `env` 都被報缺失**。
-處置：把兩份快照 copy 進 worktree（gitignored，不會進 commit），guard 才真的在檢查
-真實 cluster 狀態。沒有用 `--no-verify`。
-第二次它報 `MY_POD_NAME` 缺失 —— 那是既有變數（7 處使用），只因為我複製了那一行。
-把空值塞進 ConfigMap 會讓 `process.env.MY_POD_NAME ?? null` 從 null 變成 `''`（行為變更），
-所以改成 `markTerminalFailure` 不覆寫 `last_update_pod_name`。
-**教訓：guard 抓到的不一定是新變數，可能只是既有變數的新使用點；用「塞空值進 config」
-去消除警告會偷偷改變 `??` 的語意。**
-
-### **[[VP-17076]]** — `2026-06-23` — **
-
-- Leo 定案：EMR 在 OBR-4 送 `VASC{shortcut_id}`（如 VASC727441），emr-v2 用 `shortcut_id` 比對（唯一），不再用 name。
-- shortcut.service: `parseShortcutCode`(VASC{id}) 取代 normalizeName；resolveShortcut 改 `s.shortcut_id === id`；非 VASC → null（不打 API）。is_practice 過濾移除（id 唯一無碰撞，a219f82 的考量被取代）。expand(tests/groups/bundles) 不變。candidatePairs(winner first + NPI fallback) 不變。
-- live 驗證 144510+40660：VASC727441→Total Baseline(MALE)[376+853]、VASC727440→(FEMALE)[853]、VASC999999→null、非VASC→null。109 tests pass。
-- **3 份 Confluence doc 現已過時**（它們寫 by-name；實際是 VASC{id}）：內部 2506326018 / 外部 2506457090 / 差異清單 2506653698。外部 vendor doc 尤其需改成「OBR-4 填 VASC{shortcut_id}」+ 提供 per-clinic shortcut_id 對照（xlsx）。待 Leo 決定如何對 vendor 呈現再更新。
-
----
-
 ## Error handling / throw vs log <a id='error-handling'></a>
+
+### **[[PO-270]]**
+
+- First probe used GET on POST-only routes and read the 404s as "service decommissioned"; corrected by replaying the real bundle calls with the real body. Lesson: when a bundle shows axios.post, probe with POST and the Origin header before concluding anything about liveness.
+- zsh does not word-split `$m` in `set -- $m`; the first :8019 probe ran curl with empty args and hung the shell 120s. macOS has no `timeout` binary; the kubectl loop silently did nothing. Use `curl -m` and explicit arrays.
 
 ### **[[VP-16987]]** — `2026-06-16 18:40` — — pipeline 設計脆弱點 (連帶發現)
 
@@ -1613,6 +1590,54 @@ PR #837 closed (polluted head + wrong design), branch deleted locally and on ori
 **Replacement: PR Vibrant-America/LIS-transformer#838 -> `stage_test`, branch
 `feature/leo/VP-18404-call`, head `50da97f`**, cut fresh from origin/main, staged by filename.
 Tests 22 suites / 255 assertions green.
+
+---
+
+## Scope / requirement / PM communication <a id='scope-communication'></a>
+
+### **[[PH-847]]** — `2026-09-01` — PM accepted — implementation tickets created
+
+- Xiaoye Li (PM, api-product) responded to comment 186020 by creating the
+  implementation tickets same morning; PH-847 flipped Dev In Progress.
+- VP-18080 (Leo) = emr-v2/order half; VP-18081 (clone, Rui Chen) = pricing/
+  quote half; both descriptions open "Agreed as proposed — unify on snake_case
+  as you laid out." QA twin QH-6962.
+- The envelope scope extension (my point 4) was split out as PH-844 →
+  VP-18066 (Leo), QA twin QH-6947 — covers patients/quote/report + the
+  Cloudflare bearer page, target shape = order's envelope.
+- Work continues in VP-18080 / VP-18066 STMs; this file is closed out.
+
+### **[[VP-17497]]** — `2026-07-27` — SERIOUS MISS (Leo): defect known 14 days before external partner hit it
+
+- The exact bug was discovered during VP-17286 E2E (2026-07-13, scope item 7) and recorded ONLY as a "proposed follow-up" STM note — no ticket filed, nobody scheduled it. api-product hit it in sandbox 2026-07-22; fixed 2026-07-27.
+- Leo: "這也是一個嚴重的失誤(需要記下來 into both this agent and general agent)".
+- Recorded: agent memory feedback_defect_found_must_be_ticketed.md + factory lesson PR (process discipline). Rule: a defect surfaced by testing that won't be fixed in the current ticket gets a Jira ticket in the SAME session; the note references the ticket id, never the reverse.
+
+### **[[VP-17544]]** — `2026-08-03` — 用 awk 管線改 config yaml 把兩個檔案寫空
+
+`awk 'NR==FNR{next}1' /dev/null "$f"` 這個組合把所有行都跳過 → 兩個 copy 變 0 行。
+主 repo 原檔完好（gitignored、只有 worktree 的 copy 被毀），改用 python 逐行處理 +
+長度 assert 重建。**教訓：對既有檔案做原地插入時用會驗證的工具，不要湊 awk/sed 單行。**
+
+### **[[VP-17544]]** — `2026-08-03` — pre-commit guard 在 worktree 中必然誤報
+
+`config-yaml-coupling` guard 用 `git rev-parse --show-toplevel` 找兩個 gitignored 的
+ConfigMap 快照，但那兩個檔只存在主 repo 工作目錄 → 在 worktree 裡檔案不存在 →
+`yaml_has_key` 對所有變數都回 false → **連既有的 `env` 都被報缺失**。
+處置：把兩份快照 copy 進 worktree（gitignored，不會進 commit），guard 才真的在檢查
+真實 cluster 狀態。沒有用 `--no-verify`。
+第二次它報 `MY_POD_NAME` 缺失 —— 那是既有變數（7 處使用），只因為我複製了那一行。
+把空值塞進 ConfigMap 會讓 `process.env.MY_POD_NAME ?? null` 從 null 變成 `''`（行為變更），
+所以改成 `markTerminalFailure` 不覆寫 `last_update_pod_name`。
+**教訓：guard 抓到的不一定是新變數，可能只是既有變數的新使用點；用「塞空值進 config」
+去消除警告會偷偷改變 `??` 的語意。**
+
+### **[[VP-17076]]** — `2026-06-23` — **
+
+- Leo 定案：EMR 在 OBR-4 送 `VASC{shortcut_id}`（如 VASC727441），emr-v2 用 `shortcut_id` 比對（唯一），不再用 name。
+- shortcut.service: `parseShortcutCode`(VASC{id}) 取代 normalizeName；resolveShortcut 改 `s.shortcut_id === id`；非 VASC → null（不打 API）。is_practice 過濾移除（id 唯一無碰撞，a219f82 的考量被取代）。expand(tests/groups/bundles) 不變。candidatePairs(winner first + NPI fallback) 不變。
+- live 驗證 144510+40660：VASC727441→Total Baseline(MALE)[376+853]、VASC727440→(FEMALE)[853]、VASC999999→null、非VASC→null。109 tests pass。
+- **3 份 Confluence doc 現已過時**（它們寫 by-name；實際是 VASC{id}）：內部 2506326018 / 外部 2506457090 / 差異清單 2506653698。外部 vendor doc 尤其需改成「OBR-4 填 VASC{shortcut_id}」+ 提供 per-clinic shortcut_id 對照（xlsx）。待 Leo 決定如何對 vendor 呈現再更新。
 
 ---
 
