@@ -17,7 +17,7 @@ relations:
   - VP-18595
   - VP-18596
   - VP-18714
-unblock_when: (1) DONE on shipping's side 2026-10-08 (staging svc lis-shipping-service-staging-grpc:63142
+unblock_when: M10 re-seed by Fangyuan (outbound delivered + return DELIVERY_EXCEPTION) then re-run lookup for 2554403. Older items: (1) DONE on shipping's side 2026-10-08 (staging svc lis-shipping-service-staging-grpc:63142
   seeded for all 11) → Leo approves setting GRPC_SHIPPING_CLOUD_HOST/PORT on the staging ConfigMap,
   then re-run m-list.js; (2) report team
   (Yekai) re-seeds M06 preliminary on the TRUE staging report service + builds the
@@ -213,6 +213,14 @@ Diff vs my draft (same structure kept: rule -> reason -> values -> what is alrea
   adds 這次 — states what he did, does not direct Yekai's next move. Same rule as the 10-07 partner
   reply: say our facts, do not schedule the other side's work.
 - Keeps the English field/value names inline, colon before the two values, no greeting, no bold.
+
+### [2026-10-08 12:35 PT] Leo sent the Yekai note (「done」); durability PR deferred (「先不用」)
+- Leo confirmed no code change is needed for any of the three items (config / staging core data /
+  shipping re-seed). The optional hardening (grpc.config.ts staging shipping default -> staging svc
+  hostname + document the two keys in k8s/base/configmap.yaml) is NOT to be opened now; revisit only
+  if the staging ConfigMap gets rebuilt and kit goes null again.
+- Remaining: M10 re-seed by Fangyuan -> re-run w2w-list-lookup for 2554403, expect
+  sample_in_transit.
 
 ## Code Changes
 
