@@ -148,14 +148,62 @@ def read_frontmatter(path: Path) -> dict:
         try:
             return yaml.safe_load(block) or {}
         except yaml.YAMLError:
-            return {}
+            # Hand-written frontmatter is not always valid YAML (a plain scalar
+            # with ': ' inside `summary:` / `unblock_when:` is enough). Returning
+            # {} here was catastrophic: reconcile-jira.py and the rescore pass
+            # both write `meta` back, so an unreadable file became a file with
+            # ONE key. 2026-10-08: VP-18714 and LBS-1828 lost their whole
+            # frontmatter that way; SANDBOX-SEED-W2W-20261005 was next in line.
+            print(f"warning: {path}: frontmatter is not valid YAML; using lenient parse",
+                  file=sys.stderr)
+            return _parse_lenient_yaml(block)
     return _parse_flat_yaml(block)
+
+
+def _parse_lenient_yaml(block: str) -> dict:
+    """Entry-by-entry fallback for frontmatter that PyYAML rejects as a whole.
+
+    Each top-level `key:` entry (with its indented continuation lines) is parsed on
+    its own; an entry PyYAML still rejects is kept verbatim as one joined plain
+    string. Lossless for every key, unlike `_parse_flat_yaml`, which drops
+    continuation lines and nested mappings."""
+    entries: list[list[str]] = []
+    cur: list[str] = []
+    for line in block.splitlines():
+        if line and not line[0].isspace() and ":" in line and cur:
+            entries.append(cur)
+            cur = []
+        cur.append(line)
+    if cur:
+        entries.append(cur)
+    meta: dict = {}
+    for ent in entries:
+        text = "\n".join(ent)
+        if yaml is not None:
+            try:
+                parsed = yaml.safe_load(text)
+                if isinstance(parsed, dict):
+                    meta.update(parsed)
+                    continue
+            except yaml.YAMLError:
+                pass
+        key, _, first = ent[0].partition(":")
+        parts = [first.strip()] + [l.strip() for l in ent[1:]]
+        meta[key.strip()] = " ".join(p for p in parts if p)
+    return meta
 
 
 def write_frontmatter(path: Path, meta: dict) -> None:
     content = path.read_text(encoding="utf-8") if path.exists() else ""
     if content.startswith("---\n"):
         end = content.index("\n---", 3)
+        # Guard against the 2026-10-08 failure mode: a caller that could not read
+        # the frontmatter must never be allowed to replace it with a stub.
+        if "id" not in meta and "id:" in content[4:end]:
+            raise ValueError(
+                f"refusing to overwrite frontmatter of {path}: new meta has no 'id' "
+                f"but the file does (read failure upstream?)"
+            )
         # end points at the newline BEFORE the closing '---', so end + 4 lands on the
         # newline that terminates the closing delimiter line. Leaving it in and then
         # writing '---\n' + body re-inserted one blank line on every single write, so

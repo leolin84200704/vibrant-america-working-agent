@@ -89,5 +89,37 @@ for name, initial in cases:
         continue
     results.append(check(name, initial))
 
+# 2026-10-08: frontmatter that PyYAML rejects (': ' inside a plain scalar) used to
+# read as {} and then be written back as a one-key stub. The lenient parse must
+# keep every key, and write_frontmatter must refuse to drop `id`.
+UNPARSEABLE = (
+    "---\nid: Y\ntype: stm\nscore: 0\nlinks:\n- A\nrelations:\n  sibling:\n  - B\n"
+    "unblock_when: first line\n  second: line with colon\n"
+    "summary: Same playbook: backend has no gate, replay the chain.\ntags:\n- t1\n---\n\n" + BODY
+)
+path = pathlib.Path(tempfile.mkdtemp()) / "u.md"
+path.write_text(UNPARSEABLE, encoding="utf-8")
+meta = ms.read_frontmatter(path)
+lenient_ok = (
+    meta.get("id") == "Y"
+    and meta.get("links") == ["A"]
+    and meta.get("relations") == {"sibling": ["B"]}
+    and meta.get("tags") == ["t1"]
+    and meta.get("unblock_when") == "first line second: line with colon"
+    and meta.get("summary", "").startswith("Same playbook: backend")
+)
+meta["score"] = 1
+ms.write_frontmatter(path, meta)
+back = ms.read_frontmatter(path)
+roundtrip_ok = back == meta and "body text" in path.read_text(encoding="utf-8")
+try:
+    ms.write_frontmatter(path, {"jira_status": "Done"})
+    guard_ok = False
+except ValueError:
+    guard_ok = ms.read_frontmatter(path).get("id") == "Y"
+ok = lenient_ok and roundtrip_ok and guard_ok
+print(f"{'PASS' if ok else 'FAIL'} unparseable frontmatter: lenient={lenient_ok} roundtrip={roundtrip_ok} guard={guard_ok}")
+results.append(ok)
+
 print(f"\n{sum(results)}/{len(results)} passed")
 sys.exit(0 if all(results) else 1)

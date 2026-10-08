@@ -79,12 +79,17 @@ def main() -> int:
     token = base64.b64encode(f"{env['JIRA_EMAIL']}:{env['JIRA_API_TOKEN']}".encode()).decode()
     auth_header = f"Basic {token}"
 
-    completed, recorded, unreachable, in_sync = [], [], [], 0
+    completed, recorded, unreachable, skipped, in_sync = [], [], [], [], 0
 
     for f in sorted(STM_DIR.glob("*.md")):
         if f.name.startswith("_"):
             continue
         meta = scoring.read_frontmatter(f)
+        if "id" not in meta:
+            # An unreadable frontmatter must not be written back as a stub
+            # (2026-10-08: two STM files were reduced to `jira_status:` only).
+            skipped.append(f.name)
+            continue
         file_id = str(meta.get("id", f.stem))
         if not TICKET_RE.match(file_id):
             continue  # INCIDENT-*, HL7-TRIAGE-*, etc. have no Jira counterpart
@@ -128,6 +133,9 @@ def main() -> int:
     if unreachable:
         print(f"not found / no access in Jira: {len(unreachable)}")
         print(f"  {', '.join(unreachable)}")
+    if skipped:
+        print(f"skipped (frontmatter unreadable, no `id`): {len(skipped)}")
+        print(f"  {', '.join(skipped)}")
     if args.apply and completed:
         print("NOTE: run scripts/memory_scoring.py to rebuild indexes after this.")
     return 0
