@@ -2,7 +2,7 @@
 id: SANDBOX-SEED-W2W-20261005
 type: stm
 category: pm_patterns
-status: waiting
+status: active
 score: 0.0846
 base_weight: 0.7
 created: 2026-10-05
@@ -118,6 +118,43 @@ Feasibility (lookup derivation on staging = core fallback ladder + report servic
   lis-emr-v2-config in BOTH ns default (Jenkins source copy) and ns emr-v2 (what the pod reads now),
   then `kubectl -n emr-v2 rollout restart deploy/lis-emr-v2-deployment-staging`, then re-run the
   11-row list/lookup and retract the mintlify "kit is always null in sandbox" line.
+
+### [2026-10-08 11:40 PT] DONE: staging emr-v2 wired to staging shipping; kit block live on all 11 (Leo: 「go」)
+- Pre-check: prod deployment lis-emr-v2-deployment-prod consumes `lis-emr-v2-config-prod`; staging
+  consumes `lis-emr-v2-config` (ns emr-v2). Key sets of ns default vs ns emr-v2 copies differ only by
+  SENTRY_DSN/SENTRY_ENVIRONMENT. Backups: scratchpad cm-{default,emr-v2}-before.yaml (session-local).
+- 18:27Z `kubectl patch --type=merge` added GRPC_SHIPPING_CLOUD_HOST=
+  lis-shipping-service-staging-grpc.shipping.svc.cluster.local + GRPC_SHIPPING_CLOUD_PORT=63142 to
+  `lis-emr-v2-config` in ns default (142->144) and ns emr-v2 (144->146). `rollout restart` -> pod
+  5c7bf9f48d-hww5v (same image 8a0efc0); startup log "shippingCloud gRPC client created: ...:63142"
+  (on-prem `shipping` client still skipped, as designed). Rollback = remove the two keys + restart.
+- Verification (in-pod node, HS256 token customer 50687 from pod JWT_SECRET, list perPage=100 ->
+  53 rows -> lookup per W2W placerId; script scratchpad/w2w-list-lookup.js):
+  | M | sample | list | lookup | kit.status | tracking | lab | report | exceptions |
+  | M01 | 2554394 | kit_shipped | kit_shipped | shipped | 992554394001 | - | registered | - |
+  | M02 | 2554395 | kit_shipped | kit_shipped | shipped | 992554395001 | - | registered | - |
+  | M03 | 2554396 | kit_delivered | kit_delivered | delivered 10-03 | 992554396001 | - | registered | billing_issue x2 (staging issue noise) |
+  | M04 | 2554397 | sample_in_transit | sample_in_transit | delivered | 992554397001 | - | registered | - |
+  | M05 | 2554398 | sample_received | sample_received | delivered | 992554398001 | true | registered | - |
+  | M06 | 2554399 | sample_received | analyzing | delivered | 992554399001 | true | preliminary 0/1 | - |
+  | M07 | 2554400 | sample_received | report_available | delivered | 992554400001 | true | final 1/1 | - |
+  | M08 | 2554401 | kit_delivered | kit_delivered | delivered | 992554401001 | - | registered | redraw_needed |
+  | M09 | 2554402 | kit_shipped | kit_shipped | shipped | 992554402001 | - | registered | - |
+  | M10 | 2554403 | kit_shipped | kit_shipped | shipped | 992554403001 | - | registered | - |
+  | M11 | 2554404 | kit_shipped | kit_shipped | shipped | 992554404001 | - | registered | - |
+  All kit blocks carry carrier FedEx, shippedAt 2026-10-01T17:20Z; delivered ones deliveredAt 2026-10-03T16:02Z.
+- Deviations: (1) M10 answers kit_shipped, not the sample_in_transit Leo told the integrator on
+  10-05 -> shipping seeded it as OUTBOUND DELIVERY_EXCEPTION (fix is on shipping: outbound delivered +
+  return DELIVERY_EXCEPTION). Core's kit_sample_shipped_back no longer matters now that the shipping
+  tier answers. (2) M06/M07 list=sample_received vs lookup=analyzing/report_available: pre-existing,
+  list reads only core order_report_status, lookup consults the report service (VP-18589 10-05 note).
+  (3) Two newer W2W rows outside the 11 (2554405, 2554408): list=kit_delivered (staging core default
+  flag) vs lookup=placed/kit not_shipped (shipping has no record) -> staging artifact of "core marks
+  every order kit_patient_received_kit"; on prod shipping always has the row. Not ours to seed.
+- Mintlify "kit is always null in sandbox" line: docs repo is api-product's (not in our org,
+  VP-17497/17517 notes) -> retraction is a draft ask, not an edit. Repo side: k8s/environments/staging
+  has only kustomization.yaml and Jenkins ignores it (Yekai 10-06) -> cluster CM edit is the durable
+  record; k8s/base/configmap.yaml could document the two keys in a later PR.
 
 ## Decisions Made
 - Leo sent the reply himself (below). Our part: run the 11-row list/lookup table once
