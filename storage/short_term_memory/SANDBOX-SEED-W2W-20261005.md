@@ -102,6 +102,23 @@ Feasibility (lookup derivation on staging = core fallback ladder + report servic
   vocabulary (8 values) has no in-transit state and emr-v2 emits only not_shipped/shipped/delivered
   (order-status.dto.ts KitDisplayStatus); Confluence 2485977089 v27 does not list it either.
 
+### [2026-10-08 11:25 PT] Chris asks "re-send, or re-call and kits is not null?" -> answer: still null, ours to fix
+- Slack thread: Yekai confirmed M06 analyzing / M07 report_available (with report) / M08 kit_delivered +
+  open redraw_needed on the report side; Fangyuan Yang (shipping) said the dummy shipping statuses are in
+  ("应该可以了", 10-07 18:59) -> matches the 10-08 AM probe (11 kit blocks on
+  lis-shipping-service-staging-grpc:63142, svc still present 18:25Z).
+- Live state 18:25Z: staging pod 768487c9dc-kmcxn (image 8a0efc0, 24 h old) startup log
+  "shipping gRPC client skipped (no host configured)" + "shippingCloud gRPC client skipped";
+  lis-emr-v2-config has no GRPC_SHIPPING_* key in ns default NOR ns emr-v2; pod env has none.
+  Deployment consumes the CM via envFrom configMapRef (whole CM) -> adding keys needs a pod restart.
+  grpc.config.ts staging default host = '' -> kit null regardless of what shipping seeded.
+- So re-calling changes nothing and re-sending is pointless; the missing step is our ConfigMap.
+  Fix (needs Leo's go, config gate): add GRPC_SHIPPING_CLOUD_HOST=
+  lis-shipping-service-staging-grpc.shipping.svc.cluster.local + GRPC_SHIPPING_CLOUD_PORT=63142 to
+  lis-emr-v2-config in BOTH ns default (Jenkins source copy) and ns emr-v2 (what the pod reads now),
+  then `kubectl -n emr-v2 rollout restart deploy/lis-emr-v2-deployment-staging`, then re-run the
+  11-row list/lookup and retract the mintlify "kit is always null in sandbox" line.
+
 ## Decisions Made
 - Leo sent the reply himself (below). Our part: run the 11-row list/lookup table once
   the data is in and post it.
