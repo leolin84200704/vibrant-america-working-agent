@@ -6,7 +6,7 @@ status: waiting
 score: 0.0846
 base_weight: 0.7
 created: 2026-10-05
-updated: 2026-10-07
+updated: 2026-10-08
 links: []
 relations:
   unblocked_by: []
@@ -17,9 +17,9 @@ relations:
   - VP-18595
   - VP-18596
   - VP-18714
-unblock_when: (1) shipping team answers Chris whether a staging shipping service can
-  be exposed to AKS staging and seeded for accessions 2610016001-2610016011 → set
-  GRPC_SHIPPING_HOST/PORT on staging ConfigMap and re-run m-list.js; (2) report team
+unblock_when: (1) DONE on shipping's side 2026-10-08 (staging svc lis-shipping-service-staging-grpc:63142
+  seeded for all 11) → Leo approves setting GRPC_SHIPPING_CLOUD_HOST/PORT on the staging ConfigMap,
+  then re-run m-list.js; (2) report team
   (Yekai) re-seeds M06 preliminary on the TRUE staging report service + builds the
   M07 PDF in base-report-dev pdf-cache; (3) Leo decides the partner PDF download path
   (presentedForm url = base-report pdf-cache, rejects API keys) and whether a
@@ -73,6 +73,34 @@ Feasibility (lookup derivation on staging = core fallback ladder + report servic
 - Core writes happen via core's `processShippingStatusUpdate` (KIT_STATUS_FLAG_MAP) —
   something on staging already emits PATIENT_RECEIVED_KIT; core/report data is
   Yekai's side, emr-v2 does not touch those DBs.
+
+### [2026-10-08 PT] CORRECTION: a staging shipping service EXISTS on AKS and the 11 kit blocks are already seeded
+- Memory since 09-30 said "no staging shipping service exists" — wrong. We only probed the on-prem
+  ports and the prod cloud svc name. `kubectl -n shipping get svc` shows
+  `lis-shipping-service-staging-grpc.shipping.svc.cluster.local:63142` (ClusterIP, 349 d old;
+  deployment lis-shipping-deployment-staging, LIS-Shipping yamls/cloud-staging.yml, NODE_ENV=dev,
+  LIS_CORE_GRPC_URL = lis-core-staging-grpc-service). Three rollouts in the last 23 h (rs 854cf8696d /
+  5c94f8684 / 65b8cb8fd9, image lis-shipping-staging:48758cf3).
+- Read-only probe from the staging emr-v2 pod (scripts/probes/shipping-kit-status-probe.js with
+  GRPC_SHIPPING_CLOUD_HOST overridden): all 11 W2W samples answer, po_create 2026-10-08T00:16:09Z,
+  pickup 2026-10-01T17:20Z, tracking 9925543940xx (fake FedEx). Outbound: 2554394/2554395/2554404
+  LAB_SHIPPED_KIT; 2554396-2554401 PATIENT_RECEIVED_KIT; 2554402 + 2554403 DELIVERY_EXCEPTION.
+  Return: 2554397 SAMPLE_SHIPPED_BACK; 2554398/2554399/2554400 LAB_RECEIVED; rest READY_FOR_RETURN.
+  Prod ids (2597500 / 2598251) answer "no send_out" on staging and staging ids answer prod data on the
+  prod svc -> the two services serve different stores. GetTrackingDetails also works on staging
+  (carrier FEDEX, 992554396001 delivery_time 2026-10-03T16:02Z "Delivered").
+- Deviation from the 10-07 draft: M10 (2554403) was seeded as OUTBOUND DELIVERY_EXCEPTION, not
+  return -> lookup will say kit_shipped, not the sample_in_transit Leo told the integrator.
+  M06/M07 return LAB_RECEIVED (harmless: report tier wins).
+- What is still missing is OURS: emr-v2 staging ConfigMap lis-emr-v2-config has no GRPC_SHIPPING_*
+  keys, pod env has none, grpc.config.ts leaves the staging host empty -> kit still null in sandbox.
+  Fix = set GRPC_SHIPPING_CLOUD_HOST=lis-shipping-service-staging-grpc.shipping.svc.cluster.local
+  (+ GRPC_SHIPPING_CLOUD_PORT=63142) on staging, then re-run the 11-row list/lookup table. Needs
+  Leo's go (lis-prod-change-gate: config change) and the mintlify line "kit is always null in
+  sandbox" must be retracted afterwards.
+- Doc-vs-shipping gap that remains: mintlify kit.status enum lists `in_transit`; shipping's
+  vocabulary (8 values) has no in-transit state and emr-v2 emits only not_shipped/shipped/delivered
+  (order-status.dto.ts KitDisplayStatus); Confluence 2485977089 v27 does not list it either.
 
 ## Decisions Made
 - Leo sent the reply himself (below). Our part: run the 11-row list/lookup table once
