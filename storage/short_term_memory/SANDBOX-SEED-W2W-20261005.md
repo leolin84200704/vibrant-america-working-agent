@@ -202,6 +202,18 @@ How it differs from my draft (style to reuse when drafting PM-facing text for hi
 - Took the correction 「M06 已經回Analyzing 不用動了」 in his own words.
 - Field names / values in English inline, everything else Chinese, no bold, no code.
 
+### [2026-10-08 12:20 PT] Leo's note to Yekai — VERBATIM (Leo: 「記我的口吻」)
+```
+@Yekai Liu 以後在 staging 建立假資料的時候，core 的 order_info.order_report_status要一起設，不然 GET /orders 的 list 看不到：有 preliminary 設 report_pending，final 出來設 report_ready。M06/M07 這兩筆我這次已經補好
+```
+Diff vs my draft (same structure kept: rule -> reason -> values -> what is already done):
+- 「之後在 staging 造報告資料」 -> 「以後在 staging 建立假資料的時候」: plainer verb (建立 not 造), and the
+  rule is stated for ALL fake data, not only report data — he generalises the rule, I scoped it.
+- 「我已經補好了，不用動」 -> 「我這次已經補好」: drops the instruction to the other person (不用動) and
+  adds 這次 — states what he did, does not direct Yekai's next move. Same rule as the 10-07 partner
+  reply: say our facts, do not schedule the other side's work.
+- Keeps the English field/value names inline, colon before the two values, no greeting, no bold.
+
 ## Code Changes
 
 ### [2026-10-05 14:22 PT] Staging core DB seed (Leo: 「請你直接造假數據(改db)」)
