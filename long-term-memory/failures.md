@@ -7,7 +7,7 @@ score: 1.723
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-10-08
+updated: 2026-10-09
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -166,7 +166,7 @@ summary: Auto-aggregated failure index from 126 entries across STM
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-10-08 — total 126 entries
+> Last updated: 2026-10-09 — total 126 entries
 
 ## Themes
 
@@ -691,10 +691,6 @@ Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`
 - **結論：order intake 在 staging dry-run 全程跑通**（auth/gating/validation/customer 查詢/代碼分類）。差「完整成功單(sampleId:-1)」需對 staging 客戶有效的真 test code。
 - staging order_intake 留了 2 筆 VP16934-TEST-* rejected 測試列（無害，可清）。
 
-### **[[VP-17283]]**
-
-(none yet)
-
 ### **[[VP-17714]]**
 
 （none yet）
@@ -759,6 +755,10 @@ and QA has not run — moving it would falsely signal it was tested, so it was l
 - First create_jira_issue 400: VP Bug requires customfield_10082 (Portal Affected System/Page),
   10487 Impact, 10489 Detection Method, 10492 Environment and duedate; VP Task needs only
   summary. Fetch create_fields (writes a 140 KB file; parse with python) before creating a Bug.
+
+### **[[VP-17283]]** — **
+
+(none yet)
 
 ### **[[LBS-1541]]** — **
 
