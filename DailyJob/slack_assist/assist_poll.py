@@ -314,15 +314,15 @@ def main() -> int:
         else:
             where = c.get("permalink") or c.get("web_link") or c.get("subject", "")
             dm = (f"[assist] {it['class']} {c.get('author') or c.get('sender')} — {where}\n"
-                  f"診斷：{it['diagnosis']}\n證據：{it['evidence']}\n"
-                  + (f"待你決定：{it['needs_decision']}\n" if it["needs_decision"] else "")
-                  + f"草稿：\n> {it['draft']}")
+                  f"Diagnosis: {it['diagnosis']}\nEvidence: {it['evidence']}\n"
+                  + (f"Needs your decision: {it['needs_decision']}\n" if it["needs_decision"] else "")
+                  + f"Draft:\n> {it['draft']}")
             if c["source"] == "mail" and gtoken and it.get("draft_html"):
                 try:
                     entry["outlook_draft_id"] = mail_create_reply_draft(gtoken, c["message_id"], it["draft_html"])
-                    dm += "\nOutlook Drafts 已放草稿"
+                    dm += "\nOutlook draft created in Drafts"
                 except Exception as exc:  # noqa: BLE001
-                    dm += f"\n(Outlook 草稿建立失敗: {exc!r})"
+                    dm += f"\n(Outlook draft failed: {exc!r})"
             if slack_token:
                 try:
                     entry["dm_ts"] = slack_dm_leo(slack_token, dm)
