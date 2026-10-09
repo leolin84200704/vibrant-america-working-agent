@@ -62,3 +62,6 @@ DailyJob/result_fail/launchd_*.log
 # Worktrees for automation-change work — the main checkout must stay on main.
 # See CLAUDE.md > Git 規則.
 .git-worktrees/
+DailyJob/slack_assist/ledger.json
+DailyJob/slack_assist/log_*.md
+DailyJob/slack_assist/diffs_*.md
