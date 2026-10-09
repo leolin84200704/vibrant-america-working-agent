@@ -16,6 +16,13 @@ export CLAUDE_CODE_DISABLE_AUTO_MEMORY=1
 # (Leo directive 2026-08-18).
 TRIAGE_MODEL="${TRIAGE_MODEL:-fable}"
 
+# Mail the day's report (or a BLOCKED / no-report alert) to Leo. Shares the
+# SMTP transport + .env credentials with the ticket_watch mailer; exits 2 and
+# posts a notification until REPORT_SMTP_* are set. Never fails the run.
+send_mail() {
+    python3 "${LOG_DIR}/send_triage_mail.py" --date "$(date +%Y-%m-%d)" >> "$LOG_FILE" 2>&1 || true
+}
+
 # Wait up to 60s for network
 for i in $(seq 1 30); do
     if curl -sS --max-time 3 -o /dev/null https://api.anthropic.com/; then
@@ -78,6 +85,7 @@ if ! db_reachable; then
 - **No DB queries were run. This is NOT a "no failed records" result** — re-run manually after reconnecting the VPN.
 EOF
     osascript -e 'display notification "VPN down — HL7 triage skipped (reconnect failed, needs interactive login)" with title "LIS Code Agent" sound name "Basso"' >/dev/null 2>&1 || true
+    send_mail
     exit 1
 fi
 echo "[$(date)] Pre-flight OK: ${DB_HOST}:3306 reachable" >> "$LOG_FILE"
@@ -118,5 +126,9 @@ done
 if [[ $SUCCESS -eq 0 ]]; then
     echo "[$(date)] FAILED after $MAX_ATTEMPTS attempts" >> "$LOG_FILE"
     osascript -e 'display notification "HL7 Triage failed after retries" with title "LIS Code Agent" sound name "Basso"' >/dev/null 2>&1 || true
+    send_mail
     exit 1
 fi
+
+echo "[$(date)] Triage finished, mailing report" >> "$LOG_FILE"
+send_mail
