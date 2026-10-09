@@ -3,7 +3,7 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 1.8068
+score: 1.8191
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-09-24
@@ -139,6 +139,7 @@ links:
 - VP-18666
 - VP-18704
 - VP-18714
+- VP-18755
 - fhir-api
 tags:
 - emr
@@ -2236,3 +2237,12 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 - **VP-18749（10-08 開）**：`consultationEligible` 維持六個月窗口唯一（沒有 ALREADY_BOOKED），「已約」狀態靠 row 的 `active_event_id`，而它從 2026-05 起一直是 null（讀死掉的 `va_schedule.sample_event`）→ 改讀 `v2_event_accession_claim`；Select Related Test modal 本來就用 transv2 `accessionClaimStatuses`（VP-18050）所以沒受影響；prod 部署後第一次 findPatient 就會看到 4,115 筆 claim。
 - **PO-270（10-08，Portal Oncall）**：「draw site 搜尋 500」有兩套互不相干的系統——VA Portal 的 Preferred Draw Sites（Trans，VP-18313 已退役）vs 公開 blood-draw-maps（on-prem be-location，活著）；先看截圖的 URL。be-location 10-08 16:50–17:07Z 30/30 201、~1 s；今天的 500 最可能又是 PO-268 那類 gRPC 上游 ECONNRESET / 冷啟動；沒有 log 不要再 Cannot Reproduce；frontend 寫死的 `zymebalanz.com:8019` 是潛伏缺陷（第一個 hasSchedules=true 的 draw site 會把整頁帶去 /500）。
 - **VP-18034 的修正（#464）10-06 21:24Z 經 #465 上 prod**（c15bb82 含它）；Get Healthy（platform 1001）是否重試未確認。
+
+## 【蒸餾 2026-10-09】practice-level resolve 三個入口全上 prod（VP-17827 Done、VP-18755 Done）、Prospera 回信已送、onboarding 政策結論、prod 驗收仍欠第一張 FTP 單
+- **三個入口都改成 (customer, clinic) 選列**：HL7 order（VP-17827 #468/#469，prod 73e3459 10-08 22:32Z；per-vendor 欄位表 `{FOLLOWTHATPATIENT:'ORC.17'}`）、API order intake（VP-18755：token 的 clinic 當 practice，provider 在該 clinic 沒 ordering row → 422 `provider_scope_mismatch`）、result push（VP-18755：偏好順序 **(customer, sample 的 order clinic) → customer-only → clinic-level '-1'**；fan-out 的 dedupe 語意不變只重排；sample 的 clinic 來自 core `order.clinic_id`，**不是** `getSampleRelevantInfo.clinic_ids`——那是 customer 的 clinic 清單）。舊行為的危險：Next Health 43262 四列同 vendor 同 path，dedupe 留下的是 recency 贏家，它的 `msh06_receiving_facility` 是 clinic id → MSH-6 可能錯。prod 今天只有一個 multi-practice provider（43262 Anna Emanuel @ FOLLOWTHATPATIENT，2930/8003/36290/144510），blast radius 就是它。
+- **prod 唯讀驗證（10-09 00:10Z，536ad11）**：sample 2645721（Next Health，2930）preview：v2 clinicIds=[2930,8003,36290,144510]、v1 order clinic 2930、vendor FOLLOWTHATPATIENT、folder `/Prod/FollowThatPatient/Results/`、MSH-6 = 2930；Datadog 同時間 `[prepareResultGenerationData] sample=2645721 ✓ integration vendor=FOLLOWTHATPATIENT`。
+- **staging replay（VP-17827，10-08 20:15Z）**：4769 真列 134410 + decoy 134409（FULL_INTEGRATION、最新）→ T1 ORC-17=134410 選 134410（practice filter 贏過 type-rank/recency）；T2 ORC-17=777001 → `practice_not_found=4769@777001` 寫進 last_error + customer_not_found，retry_num 2→1，不下單——retryable 路徑端到端確認。fixture 用 id + customer + clinic + requested_by 刪、反查 0；rows 的 retry_num 歸零避免 20:30Z rescan 燒掉最後一次 retry 觸發 Slack。
+- **VP-17827 的 prod 驗收還欠**：release 後（10-08 22:32Z）到 10-09 19:30Z **沒有任何 FOLLOWTHATPATIENT 訂單進來**（Datadog emr-v2 prod 無 `[practice-id]` 行；上一張 FTP 單是 10-06）。Leo 10-08 15:45 PDT 指示不等第一張單直接 Done；guard ticket（provider 在未入表 vendor 下長出第二個 LIVE ordering row 就 alert）**不開、不要再提**。**任何 session 看到 `hl7_file_input` 出現 FOLLOWTHATPATIENT 新列（received_time > 2026-10-08 22:32Z）**：on-prem prod pod `kubectl logs … -c lis-emr-v2 | grep practice-id` 要有 `practice=<ORC-17> -> customer <ORC-12> clinic <ORC-17>`、`order_input.clinic_id == ORC-17`（raw 在 `/EMR_storage/HL7Message_prod/FOLLOWTHATPATIENT/Prod/Order/archive/`）、core sample.clinic_id 同值；若落成 `practice_not_found` = 該 provider 沒有那個 practice 的 row → add-provider playbook（mirror practice peer）+ 設 retry_num。daily hl7_fail triage：`customer_not_found` 值長得像 `<id>@<id>` 就是 practice_not_found。
+- **Onboarding 政策（Leo 10-08 結論）**：一個 provider 在同一 vendor 下有第二個 practice 時，要嘛 vendor 送 practice id（進欄位表），要嘛每個 practice 一個獨立 provider 帳號（Shah/Egler 模式）；ORC-17 只改 FOLLOWTHATPATIENT 的選列，新失敗模式 practice_not_found 歷史 0 張單會踩到；「一致性」= match 本身 + Tom 說的 4 個 practice == 我們 4 列。
+- **給 Tom（Prospera）的回信 10-08 已由 Leo 送出**（他的改動：「from our next production release (within this week)」、「Keith, please help with re-billing the five orders above」）：(a) 是，下一版起用 ORC-17、沒有合法 location 的單會被 hold；五張訂錯 clinic 的單列出；日期與 re-billing 交 Keith。草稿 `drafts/VP-17827-prospera-practice-id-reply-20261008.md`。Jira 結案 comment 191223（英文：what was wrong / change / vendor coverage / staging verification / prod acceptance / not in scope）由「把ticket 做完」授權直接發。
+- **VP-18714 Jira 10-08 21:17Z 才 Done**（prod 10-07 就 live；Leo 10-07 的「done」沒有變成 transition）；prod 只驗到 401 envelope，200 PDF + 真 FHIR body 的 link host 仍沒在 prod 驗過（沒有 prod partner token）——有人拿到 partner 報告時補一次。

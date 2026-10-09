@@ -183,3 +183,12 @@ summary: Ticket keyword to repo/module routing table
 - **"hl7 triage LangGraph / run_graph.sh / claude -p node / triage 沒寄信"** → STM `HL7-TRIAGE-LANGGRAPH`（PR #54）。
 - **"frontmatter 只剩 jira_status / reconcile 把 frontmatter 吃掉 / mapping values are not allowed / lenient parse"** → `patterns.md` 2026-10-08 第一條 + dream log 2026-10-08 + PR `fix/dream/frontmatter-lenient-parse`。
 - **"trans batch 3 batch 4 in-cluster / accounting charging sample order / batch 5 interactive-report / 12 www keys"** → STM `VP-18460`。
+
+## 2026-10-09 新增路由（dream；VP-18755 / VP-17827 / VP-18460 / VP-18462 / VP-18463 / VP-18474 / VP-18714）
+- **"result push 選錯 clinic / MSH-6 是 customer 的 clinic / clinicIds 是 customer 清單 / resolveSampleClinicId / provider_scope_mismatch / [practice] log"** → STM `VP-18755`（Done；prod 536ad11）+ `emr-integration.md` 2026-10-09。
+- **"FOLLOWTHATPATIENT 第一張單驗收 / [practice-id] / practice_not_found `<id>@<id>` / Tom 回信已送 / 不開 guard ticket"** → STM `VP-17827`（Done 10-08；NEXT ACTION 仍開）+ `emr-integration.md` 2026-10-09。
+- **"trans ConfigMap 還有哪些公開 URL / 12 個 www keys / batch 5 6 舊值 rollback / 30 of 42"** → STM `VP-18460`（Done）+ `repos.md` 2026-10-09。
+- **"setting-consumer local-st grpc / proxy_getkit proxy_getresult 刪除 / 10-14 route removal"** → STM `VP-18463`（Dev In Progress，10-14）← `VP-18462`（Done）。
+- **"trans prod `update_status` null / ExceptionsHandler utility controller"** → `patterns.md` 2026-10-09 噪音基線條。
+- **"staging emr-v2 v1 gRPC 打 dev core、v2 打 prod snapshot / mint-admin.py / result/generate 要 admin / 兩個 session 同一 cron"** → `patterns.md` 2026-10-09 + STM `VP-18755` / `VP-18460`。
+- **"deploy run failed 但 commit 已上線 / rollout timeout / 41 秒後的 merge"** → `patterns.md` 2026-10-09 最後一條 + STM `VP-18474`。

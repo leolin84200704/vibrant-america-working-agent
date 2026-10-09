@@ -556,3 +556,20 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 3. **例行類別的結案權正在下放**：staging self-merge（10-03）→ Task 轉 Done（10-05）→ **手動約 consult 直接訂 + comment + Done（10-08）**；相對地 prod DDL、prod config、prod rollout 仍每次一句授權（「prod 要跑DDL」「go」「要，直接做」）。規律：**可逆或範圍綁死的例行操作 agent 直接做；不可逆或跨 team 的仍逐次授權**——Step 4 暫停前先分類，不要對例行類別再問。
 4. **工具鏈吃掉的回合是這七張票最大的共同成本**：Jira 三條路輪流掛（connector 403 / VPN ENETUNREACH / LBS 看不到）、GitHub push 500、CodeQL 不能重跑、ruleset 盲點、ACR push 說謊、worktree 依賴不同、zsh 切字、再加 dream 自己的 frontmatter 清空。每一條都有已知的 fallback（patterns 10-08 的「Jira 工具階梯」「ACR」「worktree」「zsh」各條）；**新規則：遇到工具失敗先查 patterns 的 fallback 再重試，重試不超過兩次就換路**。下次 cross-review 看這條有沒有降低回合數。
 - 下次 cross-review 門檻：再 5 張結案（marker 2026-10-08）。
+
+## Leo 10-08 下午的決定與打回（VP-17827 / VP-18755 / VP-18460 / VP-18462 / VP-18474 / VP-18714）
+- VP-17827「給PR, 把ticket 做完, 給我回Tom 的郵件」：三件事一句話——release PR（staging → main 由他 merge）、Jira 走完（結案 comment 可直接發、transition 自己做）、對外信最終稿；接著他問「為什麼要 re-bill / 副作用 / 一致性」是在審我的信，不是在審 code。「no guard ticket, close Done」：**驗收還沒到的票他也會關**，條件是 rollback 與驗收步驟寫在 STM 的 NEXT ACTION、daily triage 會接到；被拒的 guard 想法不要再提，除非第二個 multi-practice provider 在未入表的 vendor 下出現。
+- VP-18755「開，然後直接做，有什麼 block 請回報」：讀 code 發現 ticket 沒提到的同類缺口 → 自己開 Task（掛原 epic VP-16163、assignee Leo）、直接做到 staging 驗完、release PR 等他 merge；中途只回報 block。
+- VP-18460「batch 5 / 6 直接切」：24 h 一批的節奏在前四批都乾淨後直接收掉；一次 patch 十個 key、一次 restart、一次探針。
+- VP-18462「這你可以補嗎？如果可以的話直接補」（staging local-st 的三個 key）+「全部照你的建議」（day 8 就 Done、step 4 併進 VP-18463）：**兩週零窗口是我訂的，他看的是「到今天為止零 + 有 rollback」**。
+- VP-18474「901 merged. 如果從9/30到現在都沒流量就可以直接移除(請測試+執行)」：同一型——證據夠就縮短 Done-when；「請測試+執行」= 探針 404 之後才刪 key，刪完再驗 env。
+- VP-18714「makeit done」：Jira 落後 prod 一天時，一句話 = agent 自己 transition（Bug 型也是 transition 15），不發 comment。
+- 工具副作用一條：vibrant MCP 看不到 LBS（404）、claude.ai Atlassian connector 看得到——LBS 類的 Jira 讀寫走 connector。
+
+## Done-when 被證據縮短、scope 在 ticket 之外、選對≠邏輯對、兩個 session 的重疊（cross-ticket review 2026-10-09；證據 VP-17827 / VP-18755 / VP-18474 / VP-18460 / VP-18462 / VP-18714）
+1. **六張裡四張的 Done-when 被 Leo 用「到今天為止的證據 + 有 rollback」縮短**（VP-18474 兩週 → 8 天、VP-18460 24 h 節奏 → 兩批一起、VP-18462 14 天 → day 8、VP-17827 等第一張單 → 不等）。規律：**時間窗是 agent 的保守值，Leo 以證據結案**。做法改成：窗口到一半就主動報「目前零 + rollback 路徑 + 剩餘風險」並問要不要收，而不是等日期；殘餘驗收寫進 STM 的 NEXT ACTION 讓 daily job / 下個 session 接。
+2. **三張票的真正 scope 不在 ticket 上**：VP-18474 四分之三已被 sibling 做掉、VP-17827 的前提被 prod 資料推翻後整個改法不同、VP-18755 是讀 code 後自己開出來的。10-08 review 第 1 條講「ticket 的 'X 呼叫 Y' 是假設」，這次延伸：**ticket 列的 call site 清單、驗收條件、甚至票的存在本身都是假設**——Step 1 先讀 sibling 的結案 comment 與 epic 的其他子票。
+3. **第一版實作在 live 上「選對了」但邏輯是錯的**（VP-18755）——唯一抓到的原因是 log 印了候選集。對 agent：選擇／路由型 code 的 log 必須印輸入集合與 key；live 驗證要包含一個「錯誤答案」的 decoy（VP-17827 10-08 的 decoy row 做法），不是只看結果對不對。
+4. **並行 session 的重疊第一次造成實際重複動作**（兩個 batch 5 cron 同時刻）：之前的重疊只是 commit 落錯分支（09-24）；這次是動作層。共用 STM 是唯一的鎖——排程、長時間 watch、prod 寫入前先 grep STM 最新 section。
+5. 10-08 第 4 條（工具鏈回合）追蹤：這六張裡工具失敗明顯少（Jira 兩條路都通、GitHub 正常）；剩下的是自己的 shell 失誤（awk vs sed 抽 secret、zsh 切字再犯、`rm` 字樣觸發安全檢查）——都已有 patterns 條目，問題是**沒先查**。
+- 下次 cross-review 門檻：再 5 張結案（marker 2026-10-09）。

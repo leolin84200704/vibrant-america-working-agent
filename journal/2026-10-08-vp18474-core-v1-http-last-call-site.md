@@ -2,6 +2,8 @@
 date: 2026-10-08
 slug: vp18474-core-v1-http-last-call-site
 related: [VP-18474, VP-18152, VP-18156, VP-18140, VP-18460, VP-18461]
+distilled: true
+distilled_on: 2026-10-09
 ---
 
 # VP-18474: trans off core v1 HTTP — the ticket was three-quarters done before I opened it

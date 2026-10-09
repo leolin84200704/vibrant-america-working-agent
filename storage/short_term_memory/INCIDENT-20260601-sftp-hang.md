@@ -64,7 +64,9 @@ links:
 - VP-18464
 - VP-18474
 - VP-18480
+- VP-18655
 - VP-18673
+- VP-18749
 - failures
 - repo-catalog
 - repos

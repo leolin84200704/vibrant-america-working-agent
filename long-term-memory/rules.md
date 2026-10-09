@@ -3,7 +3,7 @@ id: rules
 type: ltm
 category: pm_patterns
 status: active
-score: 0.1544
+score: 0.1673
 base_weight: 0.8
 urgency: 3
 created: 2026-05-20
@@ -11,6 +11,7 @@ updated: 2026-05-20
 links:
 - INCIDENT-20260518
 - LBS-1487
+- SANDBOX-SEED-W2W-20261005
 - VP-15460
 - VP-16165
 - VP-16245
@@ -37,9 +38,6 @@ tags:
 - auto-generated
 summary: Auto-aggregated constitution from 34 rule-bearing paragraphs across STM
 ---
-
-
-
 
 # Rules / Constitution
 

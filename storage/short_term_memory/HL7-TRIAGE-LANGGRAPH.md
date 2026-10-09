@@ -3,7 +3,7 @@ id: HL7-TRIAGE-LANGGRAPH
 type: stm
 category: process
 status: active
-score: 0.0725
+score: 0.0702
 base_weight: 0.6
 created: 2026-10-07
 updated: 2026-10-07
