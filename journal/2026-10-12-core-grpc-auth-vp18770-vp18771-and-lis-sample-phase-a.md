@@ -21,3 +21,5 @@ distilled: false
 **Prod verified**: VP-18770 (Core V2 token_check none -> service for every emr-v2 method after 20:53Z; zero fallbacks) and VP-18771 (grpcurl probe: missing_token / ok RS256 identity trans v2; zero real gRPC callers in 14 d — the generateResultHl7 lines are the queue). Both Jira Done with closing comments.
 **VP-18480**: 18 dead routes 404 on prod; Phase A page published (Confluence 2727378970); sized tickets deferred to the trans v1/v2 home decision.
 **VP-18782**: allowlist request serializer, PRs #210 / #211; Jenkins scan needed for the branch status.
+
+**Night close-out**: Leo chose trans v1 as the home for the staff families -> nine sized family tickets VP-18795..VP-18803 under epic VP-18260 with Blocks links to VP-18481 / VP-18482, Confluence page v3 with the keys, VP-18480 Done. VP-18782 merged by Leo (#210 / #211); staging probe + prod Datadog zero-window (0 Authorization lines after 23:54:05Z, 42/42 attribution lines with claims) -> Done. Jenkins `lis-sample` filter now all branches; master/dev builds still need a manual scan.
