@@ -28,6 +28,7 @@
 
 ## Ticket 系統
 - Jira（VP project），經 Atlassian MCP 取用
+- **Jira 的所有寫入（comment、transition、欄位修改）一律走 Atlassian MCP（`mcp__claude_ai_Atlassian__*`），作者才是 Leo 的帳號；`mcp__vibrant__*` 的 Jira 寫入工具是「Jira agent」服務帳號，只能用來讀**（Leo 指令 2026-10-13：VP-18463 comment 192086 以服務帳號貼出後「以後都要用我的帳號」）
 - Jira ticket 的 summary/description 寫英文；給 Leo 的回覆維持繁中；Jira comment 只起草、不直接發
 - Atlassian MCP 每次回應開頭的 transport deprecation banner（HTTP+SSE `/v1/sse` → Streamable HTTP `/v1/mcp`）：**不要轉述**。connector 由 claude.ai 託管，Leo 本機無任何可改的設定，banner 對他不可操作（2026-08-18 已查證並告知）。只有 Atlassian 工具真的開始失敗時才需要提，屆時建議去 claude.ai integrations reconnect
 
