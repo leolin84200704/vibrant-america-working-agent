@@ -408,6 +408,23 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
 - Open items unchanged: void 2609256344; delete ~153 JAG result files on BioInsights /incoming/ and get vendor confirmation; tell devcom
   to stop using NPI 1730269200 and get BioInsights' real practice; Britney to answer the Canvas question.
 
+### [2026-10-13 12:00 PT] Britney replied (18:40Z) -- JAG stays on P2P, no Canvas; wants full separation confirmed. Ground truth for the cleanup plan
+- Britney: ensure none of JAG's info is linked to BioInsights (patient / billing / account); JAG will NOT do Canvas, keeps the existing
+  integration unchanged; reach out to BioInsights directly for the ordering provider -- she suggests portal account 50243 (Travis Bond),
+  verify with BioInsights first; confirm once patient info, billing info and all BioInsights-related info/access are removed from JAG's account.
+- Verified prod (lisportalprod2 ro, lis_re readable today):
+  - lis_re.order_table id 30139923543497260 / sample 2642225 / customer 30248 / clinic 132493 / patient 3286031: total 570 customerPay,
+    is_canceled NULL, note "Post Order fail", source EMR. (Same `id` also appears on an unrelated sample 2642226 customer 17909 -- id is
+    not unique; ignore, not ours.)
+  - lis_charging.transactions 447178: sample 2642225, amount 570, status "1", charge_type testorder, created 09-25 18:30:12Z. customer
+    30248 has customer_payment_method NULL. Status semantics unknown to me -> billing team to confirm whether money moved.
+  - lis_emr.emr_sample 6618 (sample 2642225, BIOINSIGHTS, V00000417): result_received 0, result_sent 0 -> no result ever produced.
+  - BioInsights SFTP /incoming/: **200** JAG result .hl7 files (Jul 16, Aug 99, Sep 38, Oct 47; latest 2610076669.hl7 2026-10-13 01:31)
+    -- double delivery ran until the row was retired today. /outgoing/archive/ holds the 3 devcom test files + vibrant_test.txt.
+  - lis_core_v7: customer 50243 = Travis Bond MD, NPI 1467734558, clinic 153491 "Bioinsights", signed up 2026-04-27, order_placement_allowed=1.
+    customer 30248 = David LeMay MD, NPI 1730269200, clinics 132492 (David LeMay_NPI) + 132493 (JAG Holdings Group, LLC).
+    No ehr_integrations row exists for 50243.
+
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
 2. Scope unclear: orders inbound only, results outbound only, or bidirectional? Which practices/clinics? (drives ehr_integrations rows — order gate is ehr_integrations LIVE+ordering per VP-16968 cutover)
