@@ -89,7 +89,7 @@ Housekeeping: purge the 220 dead-lettered messages on `storage-info-updates` (al
 
 ## 7. Open items
 
-- `enableShutdownHooks()` in trans `main.ts` — separate PR, staging first (changes shutdown ordering for every module).
+- ~~`enableShutdownHooks()` in trans `main.ts`~~ Done on stage_test 2026-10-13 as three PRs: #921 node as PID 1 (`CMD ["node","--enable-source-maps","dist/src/main"]`), #922 explicit bounded shutdown (`installBoundedShutdown`, 10 s deadline, root Prisma pools disconnected), #924 comment correction. Measured: SIGTERM → clean close in 3 s, exit 0. Finding: `enableShutdownHooks()` alone hangs when node is PID 1 because Nest re-raises the signal and PID 1 ignores default-disposition signals. `Aborted_clients` on MySQL is not a usable metric for Prisma (its `$disconnect()` drops the socket without COM_QUIT). Main twin still to open after the soak; check `lis-trans-config` has `NODE_ENV` before that (the npm script never set it on Linux).
 - Secret layout for prod vs st (shared `lis-trans-secret`).
 - LIS-Sample consumer kill-switch PR (step 6.3) — owner to be decided.
 - Main twin PR `feature/leo/VP-18481` (e2b4601) after the staging soak.
