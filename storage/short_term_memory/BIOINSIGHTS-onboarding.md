@@ -210,7 +210,7 @@ score: 1.056
 - NEXT ACTION on vendor reply: review ingested sample rows in hl7_file_input + raw files in /BIOINSIGHTS/Prod/Order/; if direction reversed, UPDATE mapping.server_folder + swap vendor ordering/result paths + mkdir archive under the other folder; then define practice scope -> ehr_integrations INSERTs (gated) -> flip is_public=1 at go-live.
 
 ### [2026-07-27] Practice scope arrived + ehr_integrations INSERTED — first BioInsights practice live
-- Email (Serdar thread): Office = JAG Holdings Group, LLC, Provider 30248, Practice 132493. Payton @ Canvas Medical CC'd to continue integration (BioInsights appears to ride on Canvas Medical's EMR platform).
+- **[CORRECTED 2026-10-13]** The JAG details did NOT come from Serdar or any BioInsights thread. They came from **Britney Little (Vibrant Wellness CAM)** on 2026-07-27 13:16 UTC in a separate Zendesk thread "[Vibrant Wellness] Re: Integration" (00WRYM-60YK0) about **Canvas Medical** wanting an HTTP(S) integration, with Payton Smith @ canvasmedical.com CC'd. Original (wrong) note: Office = JAG Holdings Group, LLC, Provider 30248, Practice 132493, "BioInsights appears to ride on Canvas Medical's EMR platform" -- that assumption was never verified and is false. The BioInsights thread (Kristine Legaspi -> BioInsights, May 2026 onward) never names JAG, Canvas or Payton. The ehr_integrations row below attached a Canvas-request practice to the BioInsights vendor.
 - 30248 = JAGHP (VP-16987 quarterly CSV client). Identity verified via existing prod row: (30248,132493) already had POWER2PRACTICE RESULT_ONLY LIVE (vendor 4, NPI 1730269200, msh06=30248, /public/, onprem).
 - **INSERTED `ehr_integrations` id=cms3icsz700010xlgywfuj8do** (prisma create in guarded tx, dry-run first, in-tx verify + reverse-audit clean): vendor 46 BIOINSIGHTS, FULL_INTEGRATION, LIVE, o1/r1/s1, use_vendor_sftp_config=1 (host+key from vendor row), msh06=**132493** (Practice ID convention), sftp_result_path=/incoming/, ordering via folder mapping /outgoing/ (id=281), report_option=CLASSIC (followed sibling), kit_delivery_option=NO_DELIVERY + kits_options=2 (no-oc fallback — vendor kit behavior UNCONFIRMED), pipeline_location=**cloud**, NPI borrowed from sibling, requested_by=BIOINSIGHTS-onboarding.
 - **DOUBLE RESULT DELIVERY flag**: both rows LIVE+result_enabled=1 -> results for 30248 now push to BOTH P2P /public/ AND BioInsights /incoming/. Leo to decide: retire P2P row (REJECTED per removal playbook) or keep during transition.
@@ -361,6 +361,26 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
   after 10-02; order 2609256344 void status still unverifiable from here (lis_re no SELECT).
 - Answer to "who mentioned JAG first": Serdar (BioInsights) 2026-07-27 email gave Office JAG Holdings Group, LLC / Provider 30248 /
   Practice 132493; we then told devcom on 09-18 to use 1730269200 because it is the only NPI on that integration row.
+
+### [2026-10-13 12:30 PT] ROOT CAUSE FOUND in Outlook: JAG was never a BioInsights practice -- cross-thread mix-up on our side
+- Two threads were conflated on 07-27: (1) BioInsights SFTP thread "Integration with Vibrant Wellness" (Kristine/Mingxi/Serdar, May-July,
+  no practice ever named); (2) Zendesk "[Vibrant Wellness] Re: Integration" where Britney asked 07-23/24 about Canvas Medical using HTTP(S)
+  and on 07-27 sent "Integration Details: JAG Holdings Group, LLC / Provider 30248 / Practice 132493", CC Payton Smith @ Canvas Medical.
+- Leo's 07-27 reply in thread (2) described the BioInsights SFTP setup as JAG's integration; the 07-29 Zendesk follow-up still called it
+  "the Canvas integration" and asked about replacing P2P (unanswered). Canvas Medical never emailed us (0 mails from canvasmedical.com).
+- First mention of JAG inside the BioInsights thread is ours (Keith 09-15, Leo 09-18 NPI instruction) -> devcom test orders carry JAG's NPI.
+  Britney's "I see that you all mentioned them first" is correct.
+- Thread state (Outlook): Leo 10-01 only "Looping @Mingxi"; Mingxi 10-01 asked BioInsights to confirm the test order; Britney follow-ups
+  10-02/05/07 ("Why was Jag Mapping information provided?"), Kristina Banister (Dir. Sales) escalated 10-07, Zhenhe forwarded Mingxi's text
+  to Kristina 10-07, Britney re-sent Mingxi's question to BioInsights 10-12 and 10-13, then 10-13 18:09 asked Leo directly. The 10-01 draft
+  reply to JAG ("mapping BioInsights gave us") was NOT sent and was factually wrong -- do not reuse it.
+- Deliverable: Outlook reply-all draft on Britney's 10-13 email (To Leo/Keith/Kristina), id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABhzr73gAA,
+  mirrored in drafts/BIOINSIGHTS-britney-jag-origin-reply-20261013-draft.md. Not sent.
+- Prod still unchanged: BioInsights row cms3icsz700010xlgywfuj8do LIVE, ordering_enabled=1, customer 30248. The draft says we are removing
+  JAG from the connection -> that change (ordering_enabled=0 / retire row) must be done via lis-prod-change-gate before sending, or reworded.
+  Order 2609256344 void status still unknown (no lis_re access).
+- Lesson (for dream): an "integration details" email must be matched to the thread/vendor it arrived in, not to whichever onboarding is
+  in flight that week. Memory recorded "Serdar thread" for an email Serdar never sent; the L4 check on 10-01 verified the DB row, not the email.
 
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
