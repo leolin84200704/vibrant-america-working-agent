@@ -34,14 +34,17 @@ Phase B 只搬第 2 種：讓 trans 也有這整套後台機器，**但先關著
 - 程式進了 trans 的 staging（PR #920），staging 那台 pod 正常起來，開關全關。
 - staging 的 ConfigMap 已加上需要的設定（四個資料庫位址、Redis、Service Bus 連線字串、開關 = false）。四個資料庫都連得上。
 - staging 的資料庫已經建好「我更新了」紙條的那張表（`storage_event_outbox`），之前 staging 沒有這張表。
+- Tianhao 已經把 staging 的信箱、公佈欄、測試訂閱都建好了，我用指令核對過，設定跟 prod 一樣。
+- staging 的開關已經打開。我丟了五種假紙條進去測：新架子、同一張丟兩次、太舊的一張、pod 死掉時丟進去的一張、收信員拿到紙條還沒處理完就死掉的一張。五種結果都對：該寫資料庫的有寫、不該重複的沒重複、太舊的直接丟掉、pod 復活後沒漏掉任何一張，信箱裡沒有卡住或退信的紙條。
 - 發現一件事：trans 只會印「警告」跟「錯誤」兩種 log，搬過來的程式印的「正常進度」訊息在 trans 上看不到。所以之後驗證不能看 log，要看資料庫跟信箱的數字。
 
 ## 五、下一步要什麼
 
 | 誰 | 要做什麼 | 為什麼 |
 |---|---|---|
-| Tianhao 或 Alex | 在 Service Bus 建 staging 用的信箱 `storage-info-updates-staging`、公佈欄 `storage-data-updates-staging`（建的時候就要勾「重複偵測 24 小時」，之後改不了）、再加一個測試用的訂閱 | 我的帳號只能收發信，不能蓋信箱 |
-| 我 | 信箱建好後：staging 開開關，用腳本丟幾張假紙條（新架子、同一張丟兩次、太舊的一張、丟一半把 pod 砍掉），看資料庫跟公佈欄是不是都對 | 這就是票上說的「在 staging 用真的 queue 跑起來」 |
+| ~~Tianhao 或 Alex~~ 已完成 | 在 Service Bus 建 staging 用的信箱 `storage-info-updates-staging`、公佈欄 `storage-data-updates-staging`（建的時候就要勾「重複偵測 24 小時」，之後改不了）、再加一個測試用的訂閱 | 我的帳號只能收發信，不能蓋信箱 |
+| ~~我~~ 已完成 | 信箱建好後：staging 開開關，用腳本丟幾張假紙條（新架子、同一張丟兩次、太舊的一張、丟一半把 pod 砍掉），看資料庫跟公佈欄是不是都對 | 這就是票上說的「在 staging 用真的 queue 跑起來」 |
+| 我 | 讓 staging 跑一個禮拜，每週看一次信箱跟資料庫的數字 | 票上寫的 Done 條件已經達到，接下來是看它穩不穩 |
 | 我 | 做另一支小 PR，讓 trans 在被關掉時會把信箱連線好好關上（`enableShutdownHooks`） | 現在 trans 關機時不會通知各模組收尾，信箱的「我正在處理」狀態要等 1 分鐘才自動解開 |
 | Leo | 決定 trans 上要不要把「收信員開始工作」「處理了一張紙條」這兩種訊息改成警告等級，讓 log 看得到 | 不改也行，只是驗證要看資料庫 |
 
