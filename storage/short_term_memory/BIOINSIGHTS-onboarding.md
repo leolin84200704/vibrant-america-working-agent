@@ -11,7 +11,7 @@ unblock_when: 'BioInsights grants account perms (test: sftp key-auth to sftp.bio
   then ls / — currently auth OK but ls/stat/put all fail); waiting on Thomas reply
   to 2026-07-21 email'
 created: 2026-07-21
-updated: 2026-10-02
+updated: 2026-10-13
 links:
 - BETA-E2E-20260729
 - BIOINSIGHTS-SFTP-KEY
@@ -352,6 +352,15 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
 - Leo replied "done" to the 10-01 draft, taken as: the reply to JAG went out. Not stated: whether order 2609256344 was voided,
   whether BioInsights was CC'd, or whether ordering was paused on the BioInsights row. Prod not re-checked. Waiting on JAG for
   the correct provider/practice before any ehr_integrations change.
+
+### [2026-10-13] Britney (Vibrant Wellness CAM, Florida) re-asks on JAG's behalf: how did JAG get associated / how was their NPI used
+- Britney forwarded JAG's 10-01 complaint again (4 screenshots, not in memory) and asks "how they got associated in this integration or
+  how their NPI number was used? I see that you all mentioned them first." = JAG does not accept that the mapping came from BioInsights.
+- Prod re-verified 10-13 (lisportal ro): BioInsights row cms3icsz700010xlgywfuj8do unchanged since 07-27 (30248/132493/1730269200,
+  FULL LIVE, ordering_enabled=1, NO_DELIVERY). Still only 3 BIOINSIGHTS hl7_file_input rows (7126/7154/7196). Ordering was NOT paused
+  after 10-02; order 2609256344 void status still unverifiable from here (lis_re no SELECT).
+- Answer to "who mentioned JAG first": Serdar (BioInsights) 2026-07-27 email gave Office JAG Holdings Group, LLC / Provider 30248 /
+  Practice 132493; we then told devcom on 09-18 to use 1730269200 because it is the only NPI on that integration row.
 
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
