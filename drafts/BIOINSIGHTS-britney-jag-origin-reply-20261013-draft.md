@@ -30,9 +30,7 @@ escalated 10-07. Nobody has answered Britney's 10-07 "Why was Jag mapping inform
 
 ## Open for Leo
 - (a) bracketed sentence: void order 2609256344 + charge -- needs someone with lis_re access.
-- (b) "Removing JAG from the BioInsights connection" = set ordering_enabled=0 (and result_enabled=0) on
-  ehr_integrations cms3icsz700010xlgywfuj8do, or delete the row. Prod change -> lis-prod-change-gate. Not done yet;
-  the draft states it as in progress, so do it before sending or reword.
+- (b) DONE 2026-10-13 18:31Z: ehr_integrations cms3icsz700010xlgywfuj8do LIVE -> REJECTED, flags 0, history 218.
 - (c) whether to answer BioInsights on their thread too (devcom is still testing against JAG's NPI).
 
 ---
@@ -52,9 +50,9 @@ Here is the trail:
   NPI 1730269200 on their test files. Their test order on 25 September ("John Doe", Vitamin D and Gut Zoomer)
   therefore landed in JAG's account, billed to the practice. No kit was shipped.
 
-What we are doing:
+What we have done:
 
-- Removing JAG from the BioInsights connection, so nothing else from BioInsights can reach their account.
+- JAG has been removed from the BioInsights connection as of today, so nothing else from BioInsights can reach their account.
 - [Voiding the 25 September test order and the charge.]
 
 Two things I need from you:

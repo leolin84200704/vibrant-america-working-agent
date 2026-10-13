@@ -382,6 +382,23 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
 - Lesson (for dream): an "integration details" email must be matched to the thread/vendor it arrived in, not to whichever onboarding is
   in flight that week. Memory recorded "Serdar thread" for an email Serdar never sent; the L4 check on 10-01 verified the DB row, not the email.
 
+### [2026-10-13 11:31 PT] PROD CHANGE DONE: BioInsights row for JAG retired (LIVE -> REJECTED) on Leo's instruction
+- `ehr_integrations` cms3icsz700010xlgywfuj8do: status LIVE -> REJECTED, ordering_enabled 1 -> 0, result_enabled 1 -> 0,
+  last_modified_by=Leo, updated_at 2026-10-13 18:31:10Z. `ehr_integration_status_history` id 218 (changed_by BIOINSIGHTS-onboarding,
+  reason records the Canvas-thread mix-up). Single tx via emr-v2 .env DATABASE_URL + mysql2 (lock_wait_timeout=5, FOR UPDATE precheck,
+  in-tx verify, 1-minute scope check), runner in session scratchpad `reject-bioinsights-jag.js`.
+- Why status and not just flags: order side (customer-detail-fetcher `resolveOrderingIntegration`, shortcut.service) gate on
+  status=LIVE AND ordering_enabled; kafka report_finished listener gates on LIVE AND result_enabled; but manual repush
+  `validateEmrIntegration` is LIVE AND (result_enabled OR type RESULT_ONLY/FULL) -> flags alone would not stop a manual repush.
+  REJECTED is the LTM removal-playbook convention (LBS-1833 / VP-18243 same shape). Reversible: set status back to LIVE.
+- Readback through the independent read-only host (lisportalprod2 MCP): row REJECTED/0/0; reverse audit over customer 30248,
+  vendor 46, NPI 1730269200 (effective + customer_npi) finds no other BioInsights row; exactly 1 row updated after 18:25Z.
+- JAG's legit path untouched: P2P row cmjxaqui500i50xfq4zc5yddg still LIVE RESULT_ONLY result_enabled=1 -> results keep going to
+  /public/ as before 07-27. Double delivery to BioInsights /incoming/ is now stopped.
+- Still open: (1) ~153 JAG result .hl7 files already on BioInsights' SFTP /incoming/ (last counted 09-29) -- delete + ask vendor to
+  confirm no copies; (2) void order 2609256344 / $570 (lis_re access needed); (3) send the Britney draft (wording updated to past
+  tense); (4) tell devcom to stop using NPI 1730269200 and get a real practice from BioInsights; (5) Canvas question to Britney.
+
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
 2. Scope unclear: orders inbound only, results outbound only, or bidirectional? Which practices/clinics? (drives ehr_integrations rows — order gate is ehr_integrations LIVE+ordering per VP-16968 cutover)
