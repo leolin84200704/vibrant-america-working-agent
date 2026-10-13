@@ -430,6 +430,13 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
   (our 07-23 probe file, left in place). Listing before/after saved: storage/evidence/BIOINSIGHTS-incoming-cleanup-20261013.txt.
 - Originals remain on our side (result pipeline); nothing of ours lost. Vendor-side copies/backups still need BioInsights' written confirmation.
 
+### [2026-10-13 12:15 PT] STEP 3 drafted: Outlook reply-all draft on the BioInsights thread (Britney's 10-13 13:13Z mail)
+- Draft id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABhzsABAAA; To Britney + Mingxi/Paola/Lisa/Travis/Serdar,
+  CC Olena (devcom), Keith, Kristina. Asks: confirm ordering provider (proposes 50243 Travis Bond / NPI 1467734558) and written
+  confirmation that nothing from /incoming/ was retained. Not sent -- Leo sends.
+- Step 5 closeout to Britney pre-drafted at drafts/BIOINSIGHTS-britney-closeout-20261013-draft.md; blocked on step 2 (order cancel +
+  charge reversal, lis_re / lis_charging -- not in agent write scope).
+
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
 2. Scope unclear: orders inbound only, results outbound only, or bidirectional? Which practices/clinics? (drives ehr_integrations rows — order gate is ehr_integrations LIVE+ordering per VP-16968 cutover)
