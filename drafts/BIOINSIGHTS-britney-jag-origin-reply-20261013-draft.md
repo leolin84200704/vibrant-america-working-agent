@@ -1,6 +1,6 @@
 # Reply to Britney (Vibrant Wellness CAM) -- where the JAG mapping came from, 2026-10-13
 
-Outlook reply-all draft created 2026-10-13 on Britney's 18:09 UTC email (To: Leo, Keith, Kristina Banister). Not sent.
+SENT by Leo 2026-10-13 18:29:48Z (reply-all to Britney's 18:09Z email; To Britney, Keith, Kristina Banister), with the original wording ("Removing JAG..." present tense, bracketed void sentence included).
 
 ## Source of the JAG mapping (verified in Outlook 2026-10-13)
 

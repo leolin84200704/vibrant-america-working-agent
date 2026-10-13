@@ -399,6 +399,15 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
   confirm no copies; (2) void order 2609256344 / $570 (lis_re access needed); (3) send the Britney draft (wording updated to past
   tense); (4) tell devcom to stop using NPI 1730269200 and get a real practice from BioInsights; (5) Canvas question to Britney.
 
+### [2026-10-13 11:35 PT] Britney reply SENT by Leo (18:29:48Z) -- 80 s before the prod row was retired (18:31:10Z)
+- Leo sent the first Outlook draft unchanged (To Britney, Keith, Kristina Banister; internetMessageId
+  <IA2PR22MB5423ECEA8B5408A1D64C3C90F29E2@IA2PR22MB5423.namprd22.prod.outlook.com>). Its "Removing JAG from the BioInsights connection"
+  became true at 18:31:10Z. Bracketed "[Voiding the 25 September test order and the charge.]" went out as-is -> the void is now a
+  commitment to Britney; order 2609256344 still needs someone with lis_re access.
+- Agent's second (past-tense) draft created 18:32Z was a duplicate; deleted from Drafts. Local draft file is the record.
+- Open items unchanged: void 2609256344; delete ~153 JAG result files on BioInsights /incoming/ and get vendor confirmation; tell devcom
+  to stop using NPI 1730269200 and get BioInsights' real practice; Britney to answer the Canvas question.
+
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
 2. Scope unclear: orders inbound only, results outbound only, or bidirectional? Which practices/clinics? (drives ehr_integrations rows — order gate is ehr_integrations LIVE+ordering per VP-16968 cutover)
