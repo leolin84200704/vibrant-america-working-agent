@@ -7,7 +7,7 @@ score: 1.7809
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-10-09
+updated: 2026-10-12
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -163,19 +163,19 @@ tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 126 entries across STM
+summary: Auto-aggregated failure index from 127 entries across STM
 ---
 
 # Failure Index
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-10-09 — total 126 entries
+> Last updated: 2026-10-12 — total 127 entries
 
 ## Themes
 
 - [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 34 entries
-- [Other / uncategorized](#other) — 22 entries
+- [Other / uncategorized](#other) — 23 entries
 - [Build / TypeScript / Tooling](#build-tooling) — 20 entries
 - [Deploy / commit / push coordination](#deploy-coordination) — 14 entries
 - [DB / migration / backfill](#db-migration) — 9 entries
@@ -759,6 +759,10 @@ and QA has not run — moving it would falsely signal it was tested, so it was l
 - First create_jira_issue 400: VP Bug requires customfield_10082 (Portal Affected System/Page),
   10487 Impact, 10489 Detection Method, 10492 Environment and duedate; VP Task needs only
   summary. Fetch create_fields (writes a 140 KB file; parse with python) before creating a Bug.
+
+### **[[VP-18782]]**
+
+- `git cherry-pick -q` is not a flag (usage error) -> the -dev branch was first pushed without the commit; re-ran the cherry-pick and pushed again before opening the PR.
 
 ### **[[VP-17283]]** — **
 
