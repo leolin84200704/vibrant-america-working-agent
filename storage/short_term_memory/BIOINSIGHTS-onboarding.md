@@ -437,8 +437,8 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
 - Step 5 closeout to Britney pre-drafted at drafts/BIOINSIGHTS-britney-closeout-20261013-draft.md; blocked on step 2 (order cancel +
   charge reversal, lis_re / lis_charging -- not in agent write scope).
 
-### [2026-10-13 12:20 PT] STEP 2 handed off: Outlook draft to Mingxi (CC Keith) asking to cancel order 2609256344 / reverse txn 447178
-- Draft id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABhzsABQAA. Agent has no write path into lis_re / lis_charging.
+### [2026-10-13 12:20 PT] STEP 2 handed off: Slack DM SENT to Mingxi (Leo: use Slack instead of email) asking to cancel order 2609256344 / reverse txn 447178
+- Slack DM U02RHM3UQ1L, https://vibrantamerica.slack.com/archives/D08MREH9LA3/p1791917771506739 (sent 2026-10-13 ~19:36Z). The Outlook draft to Mingxi was deleted. Agent has no write path into lis_re / lis_charging.
 - State of the plan: 1 DONE (files deleted), 2 handed off (Mingxi), 3 drafted (BioInsights ask, Outlook), 4 waits on BioInsights reply,
   5 pre-drafted (closeout to Britney), 6 closed (Britney: no Canvas, P2P stays).
 
