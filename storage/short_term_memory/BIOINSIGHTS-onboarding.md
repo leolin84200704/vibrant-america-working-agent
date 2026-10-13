@@ -448,6 +448,10 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
   storage/short_term_memory/INCIDENT-20261013-bioinsights-jag-crossmap.md. Flagged to Leo: the PHI disclosure needs a
   compliance assessment, not only an engineering closeout.
 
+### [2026-10-13 13:10 PT] Leo: BioInsights Outlook draft is with him; Chinese follow-up to Mingxi NOT sent (dropped)
+- Standing rule (Leo): Mingxi in Chinese from now on, short and informal; every outgoing message shown to Leo before sending.
+- Plan state: 1 done, 2 with Mingxi, 3 draft with Leo, 4 waits on BioInsights, 5 pre-drafted, 6 closed.
+
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
 2. Scope unclear: orders inbound only, results outbound only, or bidirectional? Which practices/clinics? (drives ehr_integrations rows — order gate is ehr_integrations LIVE+ordering per VP-16968 cutover)
