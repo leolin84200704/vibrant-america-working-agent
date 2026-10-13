@@ -425,6 +425,11 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
     customer 30248 = David LeMay MD, NPI 1730269200, clinics 132492 (David LeMay_NPI) + 132493 (JAG Holdings Group, LLC).
     No ehr_integrations row exists for 50243.
 
+### [2026-10-13 12:10 PT] STEP 1 DONE: 200 JAG result files deleted from BioInsights SFTP /incoming/ (Leo: "全部都做")
+- Before: 200 .hl7 + vibrant_test.txt. `rm /incoming/*.hl7` -> 200 "Removing" lines, 0 other output. After: 0 .hl7, only vibrant_test.txt
+  (our 07-23 probe file, left in place). Listing before/after saved: storage/evidence/BIOINSIGHTS-incoming-cleanup-20261013.txt.
+- Originals remain on our side (result pipeline); nothing of ours lost. Vendor-side copies/backups still need BioInsights' written confirmation.
+
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
 2. Scope unclear: orders inbound only, results outbound only, or bidirectional? Which practices/clinics? (drives ehr_integrations rows — order gate is ehr_integrations LIVE+ordering per VP-16968 cutover)
