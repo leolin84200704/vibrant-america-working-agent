@@ -3,7 +3,7 @@ id: INCIDENT-20260808-critical-result-tnp
 type: stm
 category: emr_integration
 status: active
-score: 0.2513
+score: 0.2291
 base_weight: 1.0
 created: 2026-08-08
 updated: '2026-08-14'
@@ -27,6 +27,7 @@ links:
 - LBS-1785
 - LBS-1799
 - LBS-1828
+- LBS-1833
 - LIS-7716
 - NEXTECH-onboarding
 - PH-847

@@ -3,7 +3,7 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 1.8191
+score: 1.8315
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-09-24
@@ -29,6 +29,7 @@ links:
 - LBS-1785
 - LBS-1799
 - LBS-1828
+- LBS-1833
 - LIS-7716
 - NEXTECH-onboarding
 - PH-847
@@ -2246,3 +2247,12 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 - **Onboarding 政策（Leo 10-08 結論）**：一個 provider 在同一 vendor 下有第二個 practice 時，要嘛 vendor 送 practice id（進欄位表），要嘛每個 practice 一個獨立 provider 帳號（Shah/Egler 模式）；ORC-17 只改 FOLLOWTHATPATIENT 的選列，新失敗模式 practice_not_found 歷史 0 張單會踩到；「一致性」= match 本身 + Tom 說的 4 個 practice == 我們 4 列。
 - **給 Tom（Prospera）的回信 10-08 已由 Leo 送出**（他的改動：「from our next production release (within this week)」、「Keith, please help with re-billing the five orders above」）：(a) 是，下一版起用 ORC-17、沒有合法 location 的單會被 hold；五張訂錯 clinic 的單列出；日期與 re-billing 交 Keith。草稿 `drafts/VP-17827-prospera-practice-id-reply-20261008.md`。Jira 結案 comment 191223（英文：what was wrong / change / vendor coverage / staging verification / prod acceptance / not in scope）由「把ticket 做完」授權直接發。
 - **VP-18714 Jira 10-08 21:17Z 才 Done**（prod 10-07 就 live；Leo 10-07 的「done」沒有變成 transition）；prod 只驗到 401 envelope，200 PDF + 真 FHIR body 的 link host 仍沒在 prod 驗過（沒有 prod partner token）——有人拿到 partner 報告時補一次。
+
+## 【蒸餾 2026-10-12】Cerbo 同 customer 兩列 LIVE 的 tie-break 把 PERSONALIZED 換成 CLASSIC（LBS-1833）、sftp_archive_path 對 push 是死欄位、VP-16617 bulk audit 的副作用
+- **症狀**：customer 22533（KELLY FELMER GNP）@ clinic 40598（Discovery Health Healing Center，vendor 1 MDHQ/Cerbo，`/dhhc/results/`，msh06 22533）從 2026-05-19 起收到 Classic 而非 Personalized（Mingxi 10-12 報，Sep 9 起 11 筆）。**根因**：兩列 LIVE FULL_INTEGRATION 同目的地——`c0000CMYCWWC500T3A1A86BHS`（2025-10-29 zichen MIGRATION，effective_npi 1487999850 = **Jessica LaPlante** 的 NPI（customer 7163/10335，clinic 15956，她在 15956 另有自己的列），誤鍵；report_option CLASSIC）與 `cmjxar34000k70xfq1l8r48op`（2025-12-16 migration_script_emr_result，NPI 1457540171 = 22533 本人；PERSONALIZED）。listener `kafka-report-finished-listener.service.ts` ~L440-476 `findMany` customer 的 LIVE result rows `orderBy [integration_type desc, updated_at desc]`，再按 `(legacy_emr_service, sftp_result_path)` dedupe 留第一列；兩列 integration_type 同、**updated_at 被 VP-16617 audit（2026-05-14 21:40:37Z）改成完全相同** → MySQL 退回 PK / 插入順序 → `c0000…` 排前 → 每次 push 的 integration_id 都是 CLASSIC 列 → `result-generation.processor.ts getReportOption(integration_id)` 回 '1'。`result-generation.service.ts` L851 的 customer+clinic findFirst 同樣會 tie。
+- **時間線證明**（`result_transmission_records` result_client_id 22533）：2025-11 ~ 2026-03 54 筆 integration_request_id NULL（attribution 前）；04-06 ~ 05-11 11 筆全在 cmjxar（PERSONALIZED，當時它 updated_at 較新）；05-14 audit；05-19 ~ 10-06 58 筆全在 c0000（CLASSIC），cmjxar 05-11 後 0 筆。沒有 ERROR，每筆 GENERATED/TRANSMITTED——**推送成功 ≠ 推對列**。
+- **修法（Leo「ok 那退役classic」→「comment and complete」）**：mis-keyed 的 CLASSIC 列 LIVE → REJECTED（enum 唯一出口；raw SQL 不觸發 reject email）+ status_history + notes（RESOLUTION, internal）+ membership 295 REMOVED，單一 transaction、affectedRows 逐句 assert，像 `deactivateOne()`（VP-18402）那樣留 audit 列；readback 走 MCP read-only host：22533 的 push-side 選列集合 = 只剩 cmjxar；**prod 全表只有這一組 (customer_id, clinic_id, legacy_emr_service, sftp_result_path) 有 >1 LIVE 且 report_option 不同** → 一次性資料修，不是 fleet 問題。不 repush（Cerbo chart 重複不可逆，VP-18288 教訓；requester 要最新 accession 2609286319 再說）。替代方案「把 CLASSIC 列的 report_option 翻成 PERSONALIZED」被否：會留一列帶別人 NPI 的 LIVE 當 22533 的路由身分。
+- **post-verify 還是 forward-looking**：22533 下一次自然 `report_finished` 的 `rtr.integration_request_id` 要是 cmjxar，PDF 大小對 pdf-cache style=advanced（VP-18288 配方）。listener cache ~60 s，不用 restart。daily result_fail triage 看不出報告樣式錯——要人工看一次。Jira comment 191834、Done 23:28Z（LBS workflow Open → Done 直達，transition 61 "Mark as done"，沒有 Dev Complete）。
+- **「退役一列會不會換資料夾」的判斷**（Leo 問的）：push 路徑的目的地輸入只有 `sftp_result_path`、`use_vendor_sftp_config`（+ vendor row）或列自己的 host/user、`legacy_emr_service`、`pipeline_location`（`sftp.service.ts getSftpConfig`：host 來自 vendor 1、remote path 來自 `sftp_result_path`）；`sftp_archive_path` 沒有任何 push-side code 讀（只有 configuration-management 與 vendor listing），兩列唯一差異就是它（`/MDHQ/Prod/dhhc_Input/` vs NULL）→ 退役不影響；live 證據：PERSONALIZED 列自己在 04-05 月送了 11 檔到同一路徑。
+- **教訓**：對 ehr_integrations 做 bulk audit（VP-16617 類）時別碰 `updated_at`，或做完跑一次 sibling-conflict query（同 customer+clinic+destination、>1 LIVE、report_option 不同），否則會靜默翻轉 listener 的 tie-break。候選 follow-up（未開票）：LIS-7716 的 dedupe + unique constraint；dedupe 到 sibling 不同 report_option 時 WARN。`provider_integration_memberships` / `practice_integrations` 是 mirror 表，emr-v2 runtime 不讀（無 prisma model、src 無引用）。
+- **order 側證據**：`order_intake_records` 0（customer / 兩個 id / 兩個 NPI 都 0）、`hl7_file_input` 只有 2025-06-05 一檔（customer_not_found BROOKE YAKEL）——這個整合實質 result-only，退役列不會碰 order 路徑。`order_clients` 1969 = 22533 / 1457540171 / 40598 / dhhc/orders 與 PERSONALIZED 列一致。Zendesk 串只在 Jira 的 "Zendesk Support" tab，MCP 拿不到。

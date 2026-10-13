@@ -192,3 +192,12 @@ summary: Ticket keyword to repo/module routing table
 - **"trans prod `update_status` null / ExceptionsHandler utility controller"** → `patterns.md` 2026-10-09 噪音基線條。
 - **"staging emr-v2 v1 gRPC 打 dev core、v2 打 prod snapshot / mint-admin.py / result/generate 要 admin / 兩個 session 同一 cron"** → `patterns.md` 2026-10-09 + STM `VP-18755` / `VP-18460`。
 - **"deploy run failed 但 commit 已上線 / rollout timeout / 41 秒後的 merge"** → `patterns.md` 2026-10-09 最後一條 + STM `VP-18474`。
+
+## 2026-10-12 新增路由（dream；VP-18770 / VP-18771 / VP-18782 / VP-18480 / LBS-1833 / VP-18796）
+- **"Core gRPC 要 RS256 token / token_check token_class none / CORE_RPC_RS256 / emr-v2 identity 是 trans v2 / grpc-js interceptor / deadline 先起跑"** → STM `VP-18770`（Done 10-12，Jira 被 reopen 到 Dev In Progress）+ `patterns.md` / `repos.md` 2026-10-12。
+- **"emr-v2 gRPC server 沒認證 / APP_GUARD 不跑 RPC / inheritAppConfig / GrpcAuthGuard / AUTH_GRPC_MODE enforce / staging RS256 key 不對 / RpcException UNAUTHENTICATED"** → STM `VP-18771`（Done，同樣被 reopen）+ `patterns.md` 2026-10-12。
+- **"LIS-Sample log 帶 Bearer / raw.body 進 Datadog / pino serializers.req / request-log.serializer / allowlist 不用 redact"** → STM `VP-18782`（Done；prod 19fbb0f5）+ `patterns.md` 2026-10-12。
+- **"LIS-Sample 誰在呼叫哪條路由 / 死路由 / Phase A 頁 2727378970 / 家族票 VP-18795..18803 / home trans v1 / Jenkins lis-sample 名單過濾 / master classic protection / auto-merge 不 fire"** → STM `VP-18480`（Done）+ `repos.md` / `patterns.md` 2026-10-12。
+- **"Cerbo 收到 Classic 不是 Personalized / 同 customer 兩列 LIVE / report_option 不一致 / updated_at tie / PK 順序 / sftp_archive_path 誰在讀 / MCP 不能 UPDATE lis_emr"** → STM `LBS-1833`（Done；post-verify 待下一次推送）+ `emr-integration.md` / `patterns.md` 2026-10-12。
+- **"LIS-Shipping operation-settings / contains_hormones / hormone approved / pns_jwt / SHIPPING_LIS_SAMPLE_MODE / format-patch 給 Leo / VP-18612 不能加 trans RPC / results-grpc getTestsResultsRelatedData"** → STM `VP-18796`（active，等 Leo push dev）+ `repos.md` / `patterns.md` 2026-10-12。
+- **"reconcile 說 local completed 但 Jira 是 Dev In Progress / 同帳號 reopen / sprint 計分"** → `leo-working-rules.md` 2026-10-12。

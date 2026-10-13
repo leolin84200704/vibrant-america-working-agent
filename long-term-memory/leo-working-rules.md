@@ -573,3 +573,20 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 4. **並行 session 的重疊第一次造成實際重複動作**（兩個 batch 5 cron 同時刻）：之前的重疊只是 commit 落錯分支（09-24）；這次是動作層。共用 STM 是唯一的鎖——排程、長時間 watch、prod 寫入前先 grep STM 最新 section。
 5. 10-08 第 4 條（工具鏈回合）追蹤：這六張裡工具失敗明顯少（Jira 兩條路都通、GitHub 正常）；剩下的是自己的 shell 失誤（awk vs sed 抽 secret、zsh 切字再犯、`rm` 字樣觸發安全檢查）——都已有 patterns 條目，問題是**沒先查**。
 - 下次 cross-review 門檻：再 5 張結案（marker 2026-10-09）。
+
+## Leo 10-12 → 10-13 的決定與打回（VP-18770 / VP-18771 / VP-18480 / VP-18782 / LBS-1833 / VP-18796）
+- VP-18770 / VP-18771「全部照你建議的做，不需要等到明天了」：debate 結論一給就動工，兩張票各開 PR 到 staging、agent 自己 merge + 驗、release PR 他 merge（#476 20:46Z，收到 staging 報告後約 2 h）。同一句的「流量一直為0就可以直接拿掉」+ VP-18480「do not wait for day 14」：零流量的東西不用等窗口滿——day 13/14 就刪 18 條路由。**這是第五、六次「窗口被證據縮短」**（10-09 review 第 1 條）。
+- VP-18771 enforce：Leo「ok」= 直接 prod ConfigMap flip + restart（零 caller 要遷）；「Jenkins webhook — leave as is」、「separate OAuth2 client for emr-v2 — not needed」：兩個 side finding 他明確不接，不要再提。
+- **VP-18770 / VP-18771 在 Done 後 8 分鐘（23:37Z）被用同一個帳號轉回 Dev In Progress**（Done → Inactive → Dev To Do → Dev In Progress，各 2 秒；Xiaoye 23:35Z 剛把兩張拉進 Team Yekai Sprint 31 並 rank 上去）。agent session 沒看到，00:25Z 的 enforce comment 還寫「ticket stays Done」。Jira 的 Hung-Fan Lin = Leo = agent 同一帳號 → **reconcile 的「local completed but Jira says X」要讀成「Leo 動過」**，不是 Jira 壞掉；STM 維持 completed，什麼時候再關是 Leo 的 sprint 計分，agent 不自己 transition 回去。work session 在 transition 之後、下一次寫 comment 之前先 `getJiraIssue` 看一眼 status。
+- VP-18480「轉到v1」：家族 home 一句話定案 → 九張票當場開（sizes 在 Confluence §6）、Blocks 連好、頁面 v3；roadmap §5.3 的連結留給 Leo / Yekai。Phase A 頁「Leo reviews first」= Confluence 發布前要過他；人名要 scrub（個人 token 腳本的主人 → "one staff member"、Leo → owner）。
+- VP-18782：side finding → 自己開票（assignee Leo）→ 兩個 PR 他 20 分鐘內 merge；master 還要他手動 scan Jenkins（23:51Z）。**security / log-leak 類的 side finding 當天開票當天修是被接受的節奏**，不要塞進原票。
+- LBS-1833「so set everything to PERSONALIZED?」→ 解釋 retire vs flip 後他問「退役會不會弄壞 result folder」→ 要逐欄位比對 + 誰讀那個欄位 → 「ok 那退役classic」→「comment and complete」：**prod UPDATE 前他要的是「唯一差異欄位 + 那個欄位有沒有人讀 + live 反例」**，不是方案列表；LBS 類 comment 後直接 Done（10-08 LBS-1828 同規則）。
+- VP-18796「用方案A，繼續」+ patch 的「ok」：跟別人的 epic（VP-18612 退役 trans gRPC）衝突時選不打架的方案，不去推翻 10-06 的決定；LIS-Shipping 他自己 push（dev → staging autodeploy），staging shadow / NY-waiver 探針 / prod shadow 一週 / direct 是 agent 的。
+
+## 發現在 ticket 旁邊而不在 ticket 裡、共用 Jira 帳號讓 STM 看不見 Leo、repo 的管線比 code 更會擋交付（cross-ticket review 2026-10-12；證據 VP-18770 / VP-18771 / VP-18782 / VP-18480 / LBS-1833）
+1. **五張裡三張的主要發現在 ticket 的邊上**：VP-18771 的「open question」本身就是答案（guard 從未在 RPC 跑）；VP-18480 的 Phase A 盤點挖出 log 外洩 → VP-18782 同日開同日修；LBS-1833 的根因是五個月前另一張票（VP-16617）的 bulk audit 副作用。10-08 / 10-09 review 講「前提是假設」，這次的延伸：**盤點型工作要預留「side finding → 自開票」的動作**（VP-18782 是正例：18:00Z 發現、23:25Z 修完、00:02Z prod 驗完），不要把它塞進原票的 Lessons 就算了。
+2. **用真材料驗證已成常態，而且每次都抓到東西**：真 RS256 token 抓到 staging key 不一致；真 pino-std-serializers 輸出餵 spec + staging 假 token 探針 + Datadog 分鐘級序列抓到「最後一行 = 最後一個舊 pod」；LBS-1833 readback 走獨立的 MCP read-only host；Core 側 `token_check` none → service 才算 VP-18770 驗過。反面：兩張結案是 forward-looking（LBS-1833 等下一次自然推送、VP-18771 enforce 在零 caller 下開）——這類要在 STM 留 OPEN / NEXT 行，dream 的 closeout 才接得到。
+3. **Jira 帳號共用讓 STM 對 Leo 的 Jira 動作是盲的**：VP-18770 / 18771 Done 後 8 分鐘被同帳號 reopen（Sprint 31 計分），agent 的 STM 與 00:25Z 的 comment 都以為還是 Done。reconcile-jira 的「needs manual review」是唯一訊號——**dream 要把它寫進 digest 而不是只記 log**；work session 在 transition 後、下次 comment 前先讀 status。
+4. **三張票的交付被 repo 管線擋住，不是 code**：LIS-Sample master 的 Jenkins 名單過濾（3 h）、LIS-Sample master 要手動 scan 才 build prod、LIS-Shipping push=false 無 fork → patch 交接。每次都是 Leo 做一個非 code 動作才解。**Step 1 對 30 天沒碰的 repo 先查三件事**：`gh api repos/…/branches/<base>` 的 protection、自己的 push 權限、CI 是 webhook 還是手動 scan——寫進 STM 的 Ticket Analysis。
+5. 10-09 第 1 條追蹤（窗口被證據縮短）：再 +2（VP-18480 day 13、VP-18770/71 不等明天）；10-09 第 4 條（並行 session 重疊）：這次 VP-18796 session 與 dream 同時在跑，dream 不碰 VP-18796.md 正文、只用 git status 看它有沒有被寫——仍是約定不是機制。
+- 下次 cross-review 門檻：再 5 張結案（marker 2026-10-12）。

@@ -3,7 +3,7 @@ id: fhir-api
 type: ltm
 category: emr_integration
 status: active
-score: 1.7696
+score: 1.782
 base_weight: 1.0
 created: 2026-06-06
 updated: 2026-06-06
@@ -29,6 +29,7 @@ links:
 - LBS-1785
 - LBS-1799
 - LBS-1828
+- LBS-1833
 - LIS-7716
 - NEXTECH-onboarding
 - PH-847

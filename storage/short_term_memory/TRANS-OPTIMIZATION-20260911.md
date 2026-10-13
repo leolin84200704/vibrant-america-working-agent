@@ -95,13 +95,17 @@ links:
 - VP-18655
 - VP-18673
 - VP-18749
+- VP-18770
+- VP-18771
+- VP-18782
+- VP-18796
 - VP-9299
 - business-model
 - business-model-deep
 - failures
 - repo-catalog
 - repos
-score: 0.7255
+score: 0.6856
 ---
 
 # Summary

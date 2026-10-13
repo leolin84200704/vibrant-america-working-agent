@@ -3,7 +3,7 @@ id: INCIDENT-20260601-sftp-hang
 type: stm
 category: technical
 status: active
-score: 0.0106
+score: 0.0102
 base_weight: 0.9
 created: 2026-06-01
 updated: 2026-06-01
@@ -67,6 +67,10 @@ links:
 - VP-18655
 - VP-18673
 - VP-18749
+- VP-18770
+- VP-18771
+- VP-18782
+- VP-18796
 - failures
 - repo-catalog
 - repos

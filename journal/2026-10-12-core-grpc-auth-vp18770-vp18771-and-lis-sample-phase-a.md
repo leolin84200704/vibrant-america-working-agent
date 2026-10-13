@@ -3,7 +3,8 @@ date: 2026-10-12
 ticket: VP-18770
 slug: core-grpc-auth-vp18770-vp18771-and-lis-sample-phase-a
 tags: [vp-18770, vp-18771, vp-18480, vp-18782, emr-v2, core-grpc-auth, rs256, grpc-interceptor, grpc-guard, lis-sample, trans-merge]
-distilled: false
+distilled: true
+distilled_on: 2026-10-12
 ---
 # 2026-10-12 VP-18770 + VP-18771 (emr-v2 Core gRPC auth, both directions) + VP-18480 Phase A close-out
 

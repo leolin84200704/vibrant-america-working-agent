@@ -3,7 +3,7 @@ id: NEXTECH-onboarding
 type: stm
 category: emr_integration
 status: active
-score: 1.5202
+score: 1.3861
 base_weight: 1.0
 created: 2026-09-22
 updated: 2026-10-07
@@ -28,6 +28,7 @@ links:
 - LBS-1785
 - LBS-1799
 - LBS-1828
+- LBS-1833
 - LIS-7716
 - PH-847
 - QH-1660
