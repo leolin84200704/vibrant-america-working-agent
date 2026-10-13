@@ -442,6 +442,12 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
 - State of the plan: 1 DONE (files deleted), 2 handed off (Mingxi), 3 drafted (BioInsights ask, Outlook), 4 waits on BioInsights reply,
   5 pre-drafted (closeout to Britney), 6 closed (Britney: no Canvas, P2P stays).
 
+### [2026-10-13 13:00 PT] Retrospective written (Leo: "這是嚴重的錯誤，請你檢討") -> INCIDENT-20261013-bioinsights-jag-crossmap
+- Mingxi is handling the order cancel / charge reversal (Leo: "mingxi 去聯繫了").
+- Full error chain (10 links), impact (200 PHI files, $570, 12-day delay) and 8 candidate rules recorded in
+  storage/short_term_memory/INCIDENT-20261013-bioinsights-jag-crossmap.md. Flagged to Leo: the PHI disclosure needs a
+  compliance assessment, not only an engineering closeout.
+
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
 2. Scope unclear: orders inbound only, results outbound only, or bidirectional? Which practices/clinics? (drives ehr_integrations rows — order gate is ehr_integrations LIVE+ordering per VP-16968 cutover)
