@@ -38,6 +38,25 @@ HL7-NPI-PRACTICE-MATCH cost ~7 turns of the human reverse-engineering the curren
 days, a dedup instruction issued on an incomplete (NPI-centric) model that the agent executed
 without pushing back, and prod data changes made before the vendor-field survey existed.
 
+## Gate 1b — Provenance before any practice/vendor mapping write (INCIDENT-20261013-bioinsights-jag-crossmap)
+Before any `ehr_integrations` INSERT, or any change that binds a customer / clinic / NPI to a vendor, write
+these three lines in the message to the human and in the STM, verbatim from the source, not from memory:
+1. **Source message**: Outlook/Slack/Jira id, sender address, subject, date.
+2. **Sender domain** is the vendor being onboarded or the practice being mapped. Anything else (our CAM,
+   support, another vendor's thread) is not scope for this onboarding -- stop and ask.
+3. **Thread subject and CC match the vendor.** A mismatch is a stop sign, not a puzzle to explain away.
+   If you find yourself writing a bridging hypothesis ("X appears to ride on Y's platform") to make the
+   mail fit the onboarding in flight, that sentence is the evidence you have the wrong mail.
+Then: an unverified mapping never goes `LIVE`, and never gets `result_enabled=1` (result push is PHI
+egress to the vendor). Use `PENDING`/`APPROVED` until the practice or the vendor confirms the relationship
+in writing. Test instructions to a vendor never carry a real customer's NPI; when IN1-2 = C the practice
+is billed, so a test order on a real clinic is a real charge.
+Why: 2026-07-27 an "Integration Details: JAG Holdings" mail from our own CAM, sent in the Canvas Medical
+thread, was registered as BioInsights' practice. 200 JAG patient result files went to BioInsights' SFTP
+over 78 days and a devcom test order charged JAG $570. The STM itself had written "appears to ride on
+Canvas Medical's EMR platform -- unverified" and the row went LIVE anyway. Two later "L4 checks" re-read
+the DB row the agent had written instead of the originating email.
+
 ## Gate 2 — Scope confirmation
 If the ticket scope is ambiguous, run `ticket-requirements-clarify` first and confirm with the human/PM before coding. Prefer the minimal change; widening scope after confirmation is cheap, unwinding an over-built change is not.
 
