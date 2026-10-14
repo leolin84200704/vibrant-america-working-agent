@@ -3,10 +3,9 @@
 Reply-all target: Zhenhe's 2026-10-14 21:26Z "@Leo Canceled" mail (thread To: Leo, Britney, Keith, Kristina, Mingxi).
 Outlook draft created 2026-10-14 (final form, no placeholders).
 
-## For Leo -- DO NOT SEND until item 1 is true
-- Item 1 says the John Doe patient record "has been deactivated". As of 2026-10-14 ~22:00Z it is NOT:
-  coresamplesv2.patient 3286031 (John Doe, customer 30248, created 2026-09-22 from devcom file V00000416) still isActive=1.
-  Agent has no write path; ask Mingxi (Slack, Chinese) to deactivate it first, then send.
+## For Leo -- ready to send
+- Leo 2026-10-14: the John Doe patient record 3286031 stays as is (no deactivation). Item 1 therefore says only that the order was
+  cancelled and the record holds no real patient data; it does not claim the record was removed.
 - Verified 2026-10-14 (lisportalprod2 ro):
   - lis_re.order_table 30139923543497260 / sample 2642225: is_canceled=1.
   - lis_charging.transactions 447178 (charge $570, card ****8527, stax, 09-25) and NEW 1008956 type=refund $570 same card,
@@ -21,9 +20,9 @@ Hi Britney,
 
 Confirming the four items:
 
-1. Patient information: the only patient record that came through the BioInsights connection is the "John Doe" test record.
-   The 25 September order was cancelled on 14 October and the test patient record has been deactivated in JAG's account.
-   No other patient data entered JAG's account from BioInsights.
+1. Patient information: the only record that came through the BioInsights connection is the "John Doe" test record on the
+   25 September order, which contains no real patient data. That order was cancelled on 14 October. No other patient data entered
+   JAG's account from BioInsights.
 2. Billing: the $570 charge was refunded to the card on 14 October. Depending on the card issuer it can take a few business days to show.
 3. BioInsights-related information and access: JAG's office was removed from the BioInsights connection on 13 October. Result files
    for JAG patients that our system had delivered to BioInsights' SFTP folder between 29 July and 13 October were deleted by us on
