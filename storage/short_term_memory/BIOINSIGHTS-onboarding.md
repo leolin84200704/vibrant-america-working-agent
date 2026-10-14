@@ -466,6 +466,16 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
 - Closeout Outlook draft created on Zhenhe's 21:26Z mail (reply-all), final wording, mirrored in
   drafts/BIOINSIGHTS-britney-closeout-20261013-draft.md ; ready for Leo to send (draft recreated 10-14 with the reworded item 1).
 
+### [2026-10-14 15:50 PT] CLOSEOUT SENT by Leo (21:46:03Z) -- JAG side closed. Session handoff state
+- Sent reply-all (To Zhenhe, Britney, Keith, Kristina, Mingxi), internetMessageId
+  <IA2PR22MB54235AEFED082CD2BD0C213CF29D2@IA2PR22MB5423.namprd22.prod.outlook.com>, wording = drafts/BIOINSIGHTS-britney-closeout-20261013-draft.md.
+- Plan: 1 done (200 files deleted 10-13), 2 done (order cancelled, refund txn 1008956 10-14), 3 sent by Leo 10-13 19:09Z, 5 sent 10-14, 6 closed.
+- OPEN, all waiting on BioInsights: (a) reply to the provider-confirmation mail (proposed 50243 Travis Bond / NPI 1467734558);
+  (b) written confirmation nothing retained from /incoming/ -> forward to Britney (promised in closeout item 3).
+  Then step 4: new ehr_integrations row for 50243/153491 via lis-prod-change-gate incl. Gate 1b (provenance: the BioInsights reply
+  itself), then tell devcom to resend with NPI 1467734558 under a NEW file name.
+- Vendor 46 currently has no LIVE integration row; inbound files quarantine as customer_not_found. Patient 3286031 John Doe stays as is (Leo).
+
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
 2. Scope unclear: orders inbound only, results outbound only, or bidirectional? Which practices/clinics? (drives ehr_integrations rows — order gate is ehr_integrations LIVE+ordering per VP-16968 cutover)
