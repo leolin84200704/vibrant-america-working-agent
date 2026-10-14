@@ -104,5 +104,6 @@ was switched off until 10-13.
   Mingxi in short informal Chinese** (Leo, 2026-10-13).
 
 ## Status 2026-10-13
+- R1/R2/R3 are now enforced-by: lis-prod-change-gate Gate 1b (PR #57, merged by Leo 23:55Z, 02f8fe6).
 Row cms3icsz700010xlgywfuj8do REJECTED (18:31:10Z, history 218); 200 files deleted; order cancel + charge
 reversal with Mingxi; BioInsights provider confirmation draft pending Leo; closeout to Britney pre-drafted.
