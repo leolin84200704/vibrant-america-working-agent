@@ -13,3 +13,8 @@ distilled_on: 2026-10-13
 - Leo's words: "告訴我需要Tianhao 怎麼建立service bus的東西" / "Tianhao 建好了，請你核對後繼續" / "開 enableShutdownHooks 的 PR，Jira comment 也發" / "幫我連上Atlassian integration, 發現的問題也要一起解掉" / "以後做完需要我 merge 都要給我 PR".
 - New working rule from Leo: any PR he has to merge must be reported with its URL.
 - Excluded: merging the factory lesson PR myself (CONTRIBUTING: Leo merges); changing Service Bus entity properties (no Contributor role); pushing the LIS-Sample doc fix (no access, patch handed off).
+
+## Evening addendum
+- Leo merged #212 (LIS-Sample docs), #95 (factory lesson), #928 (trans main). Prod trans now on a6b6fae: sample module idle, node PID 1, bounded shutdown verified on one replica (6 s). LIS-Sample prod rolled for the doc change; drainers proven alive via the Redis lock tick.
+- Leo: "ok 轉 dev complete" -> VP-18481 Dev Complete; QA twin QH-7339 still To Do. Confluence page for the design note not yet requested by Leo.
+- Tomorrow: staging legacy cron 09:15 LA first run; prod LIS-Sample first natural outbox row drained by a new pod.
