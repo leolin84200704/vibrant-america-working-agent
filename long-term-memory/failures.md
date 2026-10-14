@@ -7,7 +7,7 @@ score: 1.7954
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-10-12
+updated: 2026-10-13
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -150,6 +150,7 @@ links:
 - VP-18771
 - VP-18782
 - VP-18796
+- VP-18824
 - VP-9299
 - business-model
 - business-model-deep
@@ -164,23 +165,23 @@ tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 127 entries across STM
+summary: Auto-aggregated failure index from 129 entries across STM
 ---
 
 # Failure Index
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-10-12 — total 127 entries
+> Last updated: 2026-10-13 — total 129 entries
 
 ## Themes
 
-- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 34 entries
+- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 35 entries
 - [Other / uncategorized](#other) — 23 entries
 - [Build / TypeScript / Tooling](#build-tooling) — 20 entries
 - [Deploy / commit / push coordination](#deploy-coordination) — 14 entries
 - [DB / migration / backfill](#db-migration) — 9 entries
-- [Error handling / throw vs log](#error-handling) — 6 entries
+- [Error handling / throw vs log](#error-handling) — 7 entries
 - [Scope / requirement / PM communication](#scope-communication) — 5 entries
 - [Redis / cache / pending list](#redis-cache) — 4 entries
 - [Auth / permission / role](#auth-permission) — 4 entries
@@ -590,6 +591,13 @@ force a trigger.
 - `isAccessionClaimable` argument is `accession_id`, not `accessionId`.
 - zsh: `--include=*.ts` globs must be quoted; `echo =====` fails (`=` path expansion).
 
+### **[[VP-18824]]** — `2026-10-13` — Migration UPDATE keyed on a prod-specific id
+
+Wrote `WHERE id = 1 AND code = 'MDHQ'` from the prod row; staging has MDHQ at id 106 so the
+UPDATE silently did nothing there (the apply script's 100% verify caught it, exit 3). Fix: key
+seed/data statements in migrations on the stable business key (`code`), never on an auto id
+copied from one environment.
+
 ### **[[VP-16251]]** — `2026-04-21 21:50` — **
 
 1. sftp_ordering_path = null（script 未設定）
@@ -704,10 +712,6 @@ Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`
 
 (none yet)
 
-### **[[VP-17765]]**
-
-(none this run)
-
 ### **[[VP-17827]]**
 
 None this session.
@@ -764,6 +768,10 @@ and QA has not run — moving it would falsely signal it was tested, so it was l
 ### **[[VP-18782]]**
 
 - `git cherry-pick -q` is not a flag (usage error) -> the -dev branch was first pushed without the commit; re-ran the cherry-pick and pushed again before opening the PR.
+
+### **[[VP-17765]]** — **
+
+(none this run)
 
 ### **[[VP-17283]]** — **
 
@@ -1599,6 +1607,12 @@ PR #837 closed (polluted head + wrong design), branch deleted locally and on ori
 **Replacement: PR Vibrant-America/LIS-transformer#838 -> `stage_test`, branch
 `feature/leo/VP-18404-call`, head `50da97f`**, cut fresh from origin/main, staged by filename.
 Tests 22 suites / 255 assertions green.
+
+### **[[VP-18481]]** — `2026-10-13 13:20` — PR #920 CI failed on `npm ci` - lock file
+
+- Error: `npm ci` "Missing: @nestjs/platform-express@7.6.18 from lock file" (+ its express subtree). Cause: (1) `npm install @azure/service-bus` in the main worktree ran under local npm 11.6, which regenerated package-lock.json and dropped 517 lines of nested entries that the CI runner's npm 10 still requires; (2) cherry-picking that lock diff onto stage_test (whose lock differs from main's) produced a lock inconsistent with stage's package.json. My local `npm ci` passed because npm 11 tolerates what npm 10 rejects -> a local `npm ci` is not evidence for the runner.
+- Fix: restore the base branch's own lock (`git checkout origin/<base> -- package-lock.json`) and add ONLY the new dependency with the runner's npm major: `npx -y npm@10 install <pkg> --package-lock-only --ignore-scripts`; verify with `npx -y npm@10 ci --dry-run --ignore-scripts`. Stage twin: 73b3f3f (+511 lines only); main twin: same treatment. PR comment on #920 updated with the new head SHA (one-PR-one-head rule: pushed before review, comment left).
+- First attempt at the fix silently did nothing: `git checkout origin/stage_test -- file` STAGES the file, and the following `npm install --package-lock-only` (npm 11) rewrote the worktree copy back to the main-style tree, so `git add` + `commit` found index == HEAD ("no changes added") and my PR comment carried the old SHA. Always read the commit output and `git rev-parse HEAD` before quoting a SHA.
 
 ---
 
