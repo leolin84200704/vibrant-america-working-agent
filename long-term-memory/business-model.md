@@ -3,7 +3,7 @@ id: business-model
 type: ltm
 category: technical
 status: active
-score: 0.8242
+score: 0.8353
 base_weight: 0.9
 created: 2026-06-07
 updated: 2026-06-07
@@ -62,6 +62,7 @@ links:
 - VP-18464
 - VP-18474
 - VP-18480
+- VP-18481
 - VP-18485
 - VP-18655
 - VP-18673

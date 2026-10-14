@@ -3,7 +3,7 @@ id: SANDBOX-SEED-W2W-20261005
 type: stm
 category: pm_patterns
 status: active
-score: 0.0996
+score: 0.0963
 base_weight: 0.7
 created: 2026-10-05
 updated: 2026-10-08

@@ -3,7 +3,7 @@ id: repo-catalog
 type: ltm
 category: technical
 status: active
-score: 1.1917
+score: 1.2029
 base_weight: 0.9
 created: 2026-06-07
 updated: 2026-06-07
@@ -92,6 +92,7 @@ links:
 - VP-18466
 - VP-18474
 - VP-18480
+- VP-18481
 - VP-18485
 - VP-18655
 - VP-18673

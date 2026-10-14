@@ -3,7 +3,7 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 1.8315
+score: 1.8562
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-09-24
@@ -20,6 +20,7 @@ links:
 - HL7FAIL-20260903-EVERSPAN
 - INCIDENT-20260808-critical-result-tnp
 - INCIDENT-20260817-onprem-stale-deploy
+- INCIDENT-20261013-bioinsights-jag-crossmap
 - INCIDENT-2604156666
 - LBS-1541
 - LBS-1656
@@ -141,6 +142,7 @@ links:
 - VP-18704
 - VP-18714
 - VP-18755
+- VP-18824
 - fhir-api
 tags:
 - emr
@@ -2256,3 +2258,21 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 - **「退役一列會不會換資料夾」的判斷**（Leo 問的）：push 路徑的目的地輸入只有 `sftp_result_path`、`use_vendor_sftp_config`（+ vendor row）或列自己的 host/user、`legacy_emr_service`、`pipeline_location`（`sftp.service.ts getSftpConfig`：host 來自 vendor 1、remote path 來自 `sftp_result_path`）；`sftp_archive_path` 沒有任何 push-side code 讀（只有 configuration-management 與 vendor listing），兩列唯一差異就是它（`/MDHQ/Prod/dhhc_Input/` vs NULL）→ 退役不影響；live 證據：PERSONALIZED 列自己在 04-05 月送了 11 檔到同一路徑。
 - **教訓**：對 ehr_integrations 做 bulk audit（VP-16617 類）時別碰 `updated_at`，或做完跑一次 sibling-conflict query（同 customer+clinic+destination、>1 LIVE、report_option 不同），否則會靜默翻轉 listener 的 tie-break。候選 follow-up（未開票）：LIS-7716 的 dedupe + unique constraint；dedupe 到 sibling 不同 report_option 時 WARN。`provider_integration_memberships` / `practice_integrations` 是 mirror 表，emr-v2 runtime 不讀（無 prisma model、src 無引用）。
 - **order 側證據**：`order_intake_records` 0（customer / 兩個 id / 兩個 NPI 都 0）、`hl7_file_input` 只有 2025-06-05 一檔（customer_not_found BROOKE YAKEL）——這個整合實質 result-only，退役列不會碰 order 路徑。`order_clients` 1969 = 22533 / 1457540171 / 40598 / dhhc/orders 與 PERSONALIZED 列一致。Zendesk 串只在 Jira 的 "Zendesk Support" tab，MCP 拿不到。
+
+## 【蒸餾 2026-10-13】Cerbo 只吃 .hl7（VP-18824：VP-18194 canary 的答案遲到三週）、BioInsights 列掛的是 JAG——78 天的跨 thread 錯配（INCIDENT-20261013）、退役列不會停掉 vendor 資料夾輪詢
+### Cerbo / MDHQ：results 資料夾只能有 .hl7（VP-18824，Dev Blocked 等 Cerbo 答多 PDF 內嵌）
+- **根因不是 HL7 格式，是我們自己的 canary**：VP-18194 09-25 起在 Maristany Medical（customer 28524 / clinic 127660，Cerbo ID C2558）開 `split_result_pdf_by_report=1`——全表唯一一列——每次推送在 HL7 旁多丟 1–5 個 `{accession}_{SHORT}.pdf`。Cerbo（Anne，ticket 572378）10-13 書面：**只撿 .hl7、/results 不能有散裝 PDF、PDF 要 encode 進 HL7**。HL7 本身 4.7–5.5 MB = 合併 PDF 一直都有內嵌，從來不是問題。
+- **Cerbo 的歸檔動作就是 round-trip 證據**：吃掉的 HL7 會被改名 `{accession}_{YYYYMMDDHHMMSS}.hl7` 搬到 practice 資料夾下的 `archive/`（不在根），字尾 = **他們的匯入時間（US/Eastern）**。09-25 前每檔幾小時內吃掉；之後 14 次推送只有 2 次準時，其餘 12 檔字尾全是 2026-10-13 16:14 EDT = Cerbo support 當天手動清掉。模式吻合「poller 照檔名順序走、碰到第一個非 .hl7 就停」。任何 Cerbo 交付問題先 `listdir /<practice>/results/archive/`（vendor 帳號 = `ehr_vendors` 列，`use_vendor_sftp_config=1`；host 34.199.194.51:2210 筆電可達；`scratchpad/ls_cerbo.py` paramiko listdir_attr only）。
+- **修法 A（prod 資料）+ B（code 不變量）**：A = canary 回滾（`split_result_pdf_by_report=NULL`，17:05 PT，部署前生效）；B = `ehr_vendors.result_folder_hl7_only`（MDHQ=1）在 `resolveReportPdfDelivery` 的單一決策點之上，同時蓋住散裝 per-report PDF、合併 PDF 內嵌、VP-18138 order summary 三條路。為什麼值得做 B：PM 兩次要求開這家、MDHQ vendor 列涵蓋 202 家 practice，一次 vendor 級的資料編輯會讓 202 個 poller 一起卡。C（一個 HL7 內多個 ED OBX）沒做——共用 encoder，Cerbo 對多 PDF OBX 的 parser 行為未知，三個問題（parser 支援、OBR 位置、大小上限）在 comment 192083 請 integration 側問。
+- **不 repush、不清檔**：12 檔 Cerbo 10-13 20:14Z 已吃；clinic 手動上傳過 3 檔可能在 Cerbo 端重複（他們的事）。Leo 跨票規則「以前的不管了」。
+- **還欠的 round-trip**：prod 6aad013 之後 Maristany 的下一筆自然推送要在 Cerbo `archive/` 出現帶字尾的 HL7 且旁邊沒有 .pdf、`result_attachment_records` 沒有新 REPORT_PDF 列。Maristany 走 on-prem pod（log 不在 Datadog——10-14 01:30Z 前 `service:*emr-v2*` 對 `eduardomaristanymdemr` / `REPORT_PDF` 都是 0 筆不是證據），看 `processing_pod_name` 的 RS hash。watcher `scratchpad/vp18824_watch_push.js`（session 內，6 h）。
+- **VP-18194 的 still-gated 3/4 由這張票關掉**；那張票的 retrospective 早寫了「最關鍵的一項在我們這端驗不到」然後 Done——這就是 factory lesson #96（等第三方回答的上線不算完成）的來源。
+
+### BioInsights：vendor 列掛的 practice 從來不是他們的（INCIDENT-20261013-bioinsights-jag-crossmap）
+- **事實修正（覆蓋本檔 07-27 → 09-29 各段對 JAG 的描述）**：JAG Holdings Group（customer 30248 David LeMay MD / clinic 132493 / NPI 1730269200）的「Integration Details」是 **Britney Little（Vibrant Wellness CAM）** 07-27 在另一條 Zendesk thread「[Vibrant Wellness] Re: Integration」（Canvas Medical 想做 HTTP(S)，CC payton.smith@canvasmedical.com）寄的，不是 Serdar、不是 BioInsights thread。BioInsights thread（Kristine → BioInsights，5 月起）從未點名任何 practice；Canvas Medical 從未寄過信（0 封）。agent 07-27 把「那一週等的答案」套在第一封到的 integration details 上，STM 寫成「Serdar 07-27 給的」，之後每一次 L4 驗證都只讀自己寫的 DB 列、沒回頭讀信。
+- **後果（78 天）**：JAG 真病人的 200 個 result .hl7 雙投到 BioInsights 的 `/incoming/`（07-29 → 10-13 01:31Z；PHI 外洩，10-13 全刪，vendor 端留存尚無書面確認）；09-18 叫 devcom 用 JAG 的 NPI 測試 → 09-25 測試單 2609256344（sample 2642225，lis_re.order_table 30139923543497260）$570 customerPay 記在 JAG 頭上（`lis_charging.transactions` 447178，status "1"，撤銷交給 Mingxi）；JAG 10-01 自己發現、10-13 才 containment。
+- **現況**：BioInsights 列 REJECTED/0/0；JAG 的 P2P RESULT_ONLY 列照舊；BioInsights 真正的 ordering provider 候選 = portal 50243 **Travis Bond MD**（NPI 1467734558，clinic 153491 "Bioinsights"，04-27 註冊，尚無 ehr_integrations 列）——Britney 建議、要 BioInsights 自己確認；問 BioInsights 的 Outlook 草稿在 Leo 手上；Britney 要的「JAG 帳戶內所有 BioInsights 相關資訊／存取清乾淨」closeout 草稿 `drafts/BIOINSIGHTS-britney-closeout-20261013-draft.md` 等 step 2（訂單取消 + 退款）。JAG 不做 Canvas、維持現有整合。PHI 揭露需要 compliance 評估，不只是工程結案（已提 Leo）。
+- **規則（R1–R8，R1/R2/R3 已由 lis-prod-change-gate Gate 1b 機制化）**：R1 scope 來源綁 thread——ehr_integrations INSERT 前 STM 要引用來源訊息（Outlook id、sender、subject）且 sender domain 是 vendor 或 practice 本人；R2 未驗證的 mapping 不 LIVE、不 result_enabled=1（result push = PHI 出口），用 PENDING/APPROVED 等 practice 或 vendor 確認；R3 vendor 測試不用真客戶 NPI，IN1-2=C（practice 付費）時絕不；R4 vendor SFTP 上出現不該有的檔先問「這該在這嗎」，不是「vendor 怎麼不收」（09-18 / 09-29 兩次看到 150+ 檔都記成「vendor 沒消費」）；R5 客訴「我帳戶裡有不是我的東西」= 當天可逆停機（ordering_enabled=0 / 離開 LIVE），不要把可逆的 containment 排進「Leo 決定」；R6 「誰告訴我們 X」要回去讀那封訊息，不是讀我們從它寫出來的 DB 列；R7 對外信件正文不留 [placeholder]（10-13 的「[Voiding the 25 September test order and the charge.]」原樣寄出，變成對 Britney 的承諾）；R8 先改 prod 再寄說「已移除」的信（10-13 反了 80 秒）、每封對外訊息寄前給 Leo 看、對 Mingxi 用短的非正式中文。
+- **退役 ehr_integrations 列不會停掉 vendor 資料夾的輪詢**：order fetch 走 `ehr_vendors` / `sftp_folder_mapping`，emr-v2 prod 仍每 15 分鐘連 `sftp.bioinsights.com:2022`（7 天 1,446 行）；10-14 00:45Z 一次 3×handshake timeout 後 01:00Z 起恢復（暫態）。devcom 若再丟測試檔到 `/outgoing/` 還是會被撿、然後在 customer 解析失敗——所以「叫 devcom 停用 JAG NPI」是 containment 的一部分，不是客氣話。
+- **emr_sample 6618（sample 2642225，BIOINSIGHTS，V00000417）result_received 0 / result_sent 0**：測試單從未產生結果，不存在要撤回的 result 檔。`lis_re.order_table.id` 不唯一（同 id 出現在無關的 sample 2642226 / customer 17909），別拿 id 當鍵。
+

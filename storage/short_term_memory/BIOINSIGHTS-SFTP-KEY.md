@@ -18,6 +18,7 @@ links:
 - HL7FAIL-20260903-EVERSPAN
 - INCIDENT-20260808-critical-result-tnp
 - INCIDENT-20260817-onprem-stale-deploy
+- INCIDENT-20261013-bioinsights-jag-crossmap
 - INCIDENT-2604156666
 - LBS-1541
 - LBS-1656
@@ -127,9 +128,10 @@ links:
 - VP-18704
 - VP-18714
 - VP-18755
+- VP-18824
 - emr-integration
 - fhir-api
-score: 0.099
+score: 0.0973
 ---
 
 # BIOINSIGHTS-SFTP-KEY — key-based SFTP auth support

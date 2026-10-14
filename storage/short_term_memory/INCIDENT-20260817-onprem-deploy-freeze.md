@@ -87,6 +87,7 @@ links:
 - VP-18464
 - VP-18474
 - VP-18480
+- VP-18481
 - VP-18485
 - VP-18655
 - VP-18673
@@ -100,7 +101,7 @@ links:
 - failures
 - repo-catalog
 - repos
-score: 0.1525
+score: 0.1493
 ---
 
 # INCIDENT 2026-08-17 — on-prem emr-v2 deploy freeze

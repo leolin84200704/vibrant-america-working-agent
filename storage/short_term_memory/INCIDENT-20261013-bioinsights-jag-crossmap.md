@@ -7,10 +7,99 @@ base_weight: 1.0
 created: 2026-10-13
 updated: '2026-10-13'
 links:
+- BETA-E2E-20260729
+- BIOINSIGHTS-SFTP-KEY
 - BIOINSIGHTS-onboarding
+- FHIR-ONDEMAND-RESULT
 - HL7-NPI-PRACTICE-MATCH-20260820
+- HL7FAIL-20260729-PLESSEN
+- HL7FAIL-20260730-TURNPAUGH
+- HL7FAIL-20260903-EVERSPAN
+- INCIDENT-20260808-critical-result-tnp
+- INCIDENT-20260817-onprem-stale-deploy
+- INCIDENT-2604156666
+- LBS-1762
+- LBS-1773
+- LBS-1784
+- LBS-1785
+- LBS-1799
+- LBS-1828
+- LBS-1833
+- LIS-7716
+- NEXTECH-onboarding
+- PH-847
+- QH-1660
+- QH-2257
+- QH-2577
+- QH-3752
+- QH-4350
+- QH-4352
+- QH-4608
+- QH-5840
+- QUARANTINE-ADMIN-API-GAP-20260924
+- RESULTCHECK-20260819-RCODE-2608186060
+- VEJO-DELETION-20260804
+- VP-16166
+- VP-16934
 - VP-16968
+- VP-16987
+- VP-17344
+- VP-17460
+- VP-17466
+- VP-17475
+- VP-17493
+- VP-17497
+- VP-17499
+- VP-17503
+- VP-17517
+- VP-17524
+- VP-17537
+- VP-17538
+- VP-17539
+- VP-17544
+- VP-17584
+- VP-17589
+- VP-17591
+- VP-17628
+- VP-17631
+- VP-17685
+- VP-17686
+- VP-17691
+- VP-17715
+- VP-17734
+- VP-17748
+- VP-17752
+- VP-17760
+- VP-17810
+- VP-17812
+- VP-17827
+- VP-17914
+- VP-18030
+- VP-18034
+- VP-18055
+- VP-18066
+- VP-18080
+- VP-18085
+- VP-18086
+- VP-18138
+- VP-18185
+- VP-18194
+- VP-18243
+- VP-18270
+- VP-18288
+- VP-18372
+- VP-18402
+- VP-18404
+- VP-18593
+- VP-18664
+- VP-18665
+- VP-18666
+- VP-18704
+- VP-18714
+- VP-18755
+- VP-18824
 - emr-integration
+- fhir-api
 - leo-working-rules
 tags:
 - incident
@@ -20,12 +109,14 @@ tags:
 - practice-mapping
 - retrospective
 summary: 'Retrospective (Leo: "這是嚴重的錯誤，請你檢討"). 07-27 the agent attached JAG Holdings
-  (customer 30248 / clinic 132493, sent by Britney in the Canvas Medical HTTP(S) thread) to the
-  BioInsights SFTP vendor as its practice. Consequences over 78 days: 200 JAG patient result files
-  double-delivered to an unrelated third party SFTP (PHI disclosure); devcom test order V00000417 booked
-  and charged $570 to JAG (customerPay); 12 days between JAG complaint (10-01) and containment (10-13).
-  Memory recorded the source as "Serdar email" which never existed; two L4 checks verified the DB row
-  instead of the originating email. Eight concrete rule changes listed under Lessons.'
+  (customer 30248 / clinic 132493, sent by Britney in the Canvas Medical HTTP(S) thread)
+  to the BioInsights SFTP vendor as its practice. Consequences over 78 days: 200 JAG
+  patient result files double-delivered to an unrelated third party SFTP (PHI disclosure);
+  devcom test order V00000417 booked and charged $570 to JAG (customerPay); 12 days
+  between JAG complaint (10-01) and containment (10-13). Memory recorded the source
+  as "Serdar email" which never existed; two L4 checks verified the DB row instead
+  of the originating email. Eight concrete rule changes listed under Lessons.'
+score: 1.275
 ---
 
 # INCIDENT 2026-10-13: BioInsights vendor row carried JAG's practice for 78 days

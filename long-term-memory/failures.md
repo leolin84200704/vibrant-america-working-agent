@@ -3,7 +3,7 @@ id: failures
 type: ltm
 category: technical
 status: active
-score: 1.7809
+score: 1.7954
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
@@ -136,6 +136,7 @@ links:
 - VP-18466
 - VP-18474
 - VP-18480
+- VP-18481
 - VP-18485
 - VP-18593
 - VP-18655

@@ -201,3 +201,13 @@ summary: Ticket keyword to repo/module routing table
 - **"Cerbo 收到 Classic 不是 Personalized / 同 customer 兩列 LIVE / report_option 不一致 / updated_at tie / PK 順序 / sftp_archive_path 誰在讀 / MCP 不能 UPDATE lis_emr"** → STM `LBS-1833`（Done；post-verify 待下一次推送）+ `emr-integration.md` / `patterns.md` 2026-10-12。
 - **"LIS-Shipping operation-settings / contains_hormones / hormone approved / pns_jwt / SHIPPING_LIS_SAMPLE_MODE / format-patch 給 Leo / VP-18612 不能加 trans RPC / results-grpc getTestsResultsRelatedData"** → STM `VP-18796`（active，等 Leo push dev）+ `repos.md` / `patterns.md` 2026-10-12。
 - **"reconcile 說 local completed 但 Jira 是 Dev In Progress / 同帳號 reopen / sprint 計分"** → `leo-working-rules.md` 2026-10-12。
+
+## 2026-10-13 新增路由（dream；VP-18481 / VP-18824 / VP-18463 / INCIDENT-20261013 / BIOINSIGHTS / VP-18796）
+- **"Phase B / LIS-Sample 三個 DB 進 trans / 6 個 Prisma client / Service Bus outbox / storage-info-updates consumer / SAMPLE_CONSUMERS_ENABLED / legacy import cron / Redlock 互斥 / node PID 1 / enableShutdownHooks 卡 48 秒 / bounded shutdown / npm 10 vs 11 lock"** → STM `VP-18481`（Dev In Progress；stage_test soak 中、prod a6b6fae 全關）+ `patterns.md` / `repos.md` 2026-10-13。
+- **"Cerbo 只收 hl7 / 散裝 PDF 卡 poller / Maristany split_result_pdf_by_report / result_folder_hl7_only / archive 字尾 = 匯入時間 / 多個 PDF 內嵌 HL7 / VP-18194 canary"** → STM `VP-18824`（Dev Blocked 等 Cerbo）+ `emr-integration.md` 2026-10-13；origin STM `VP-18194`。
+- **"/proxy/grpc 刪光 / ProxyController / proxy_getkit proxy_getresult ConfigMap / contracts:gen 快照閘 / main REVIEW_REQUIRED / in-pod node 探針 / findPatientByAccessionID control"** → STM `VP-18463`（Done 10-13）+ `patterns.md` / `repos.md` 2026-10-13。
+- **"JAG 為什麼在 BioInsights / Britney Canvas thread / 200 個 result 檔雙投 / $570 測試單 / PHI 外洩 / Gate 1b 來源訊息 / 誰先提到 JAG / Travis Bond 50243"** → STM `INCIDENT-20261013-bioinsights-jag-crossmap` + `BIOINSIGHTS-onboarding`（10-13 各段）+ `emr-integration.md` 2026-10-13 + `leo-working-rules.md` 10-13。
+- **"LIS-Shipping 改動拿掉 / SHIPPING_LIS_SAMPLE_MODE 移除 / VP-18796 只剩 results 那半 / hand-off 前先問"** → STM `VP-18796` + `repos.md` / `leo-working-rules.md` 2026-10-13。
+- **"PR 要附 URL / Jira 寫入用 Leo 帳號 / Mingxi 用中文 Slack / 對外信先 prod 再寄 / 正文不留 placeholder"** → `leo-working-rules.md` 10-13。
+- **"LIS-Sample 不能 push？"** → 可以（`repos.md` 09-29 條已作廢，10-13 更新段）。
+

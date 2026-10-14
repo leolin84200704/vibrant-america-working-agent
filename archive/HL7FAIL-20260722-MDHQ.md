@@ -1,8 +1,9 @@
 ---
 id: HL7FAIL-20260722-MDHQ
-type: stm
+type: archive
 category: emr_integration
-status: completed
+status: archived
+archived: 2026-10-13
 created: 2026-07-23
 updated: '2026-07-23'
 links:
@@ -141,7 +142,7 @@ summary: 'Two 07-22 hl7_file_input failures (6673 Caroline Xanthakis / 6677 Ange
   retained local file on the next 15-min tick. Samples 2602089/2602090 created, correct
   customer+clinic, no duplicates. No Jira ticket (Leo direct request); requested_by=customer_not_found-fix-20260723.'
 jira_status: none
-score: 0.099
+score: 0.9345
 ---
 
 # HL7FAIL-20260722 — MDHQ customer_not_found x2 (Caroline Xanthakis / Angela Jordan)

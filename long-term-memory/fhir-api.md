@@ -3,7 +3,7 @@ id: fhir-api
 type: ltm
 category: emr_integration
 status: active
-score: 1.782
+score: 1.8068
 base_weight: 1.0
 created: 2026-06-06
 updated: 2026-06-06
@@ -20,6 +20,7 @@ links:
 - HL7FAIL-20260903-EVERSPAN
 - INCIDENT-20260808-critical-result-tnp
 - INCIDENT-20260817-onprem-stale-deploy
+- INCIDENT-20261013-bioinsights-jag-crossmap
 - INCIDENT-2604156666
 - LBS-1541
 - LBS-1656
@@ -142,6 +143,7 @@ links:
 - VP-18704
 - VP-18714
 - VP-18755
+- VP-18824
 - emr-integration
 - repos
 tags:

@@ -2,6 +2,9 @@
 date: 2026-10-13
 ticket: VP-18481
 type: journal
+related: [VP-18481, VP-18480, VP-18796, VP-18797, VP-18801, VP-18802, VP-18482, QH-7339]
+distilled: true
+distilled_on: 2026-10-13
 ---
 # VP-18481 Phase B: staging cutover day
 

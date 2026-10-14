@@ -18,6 +18,7 @@ links:
 - HL7FAIL-20260903-EVERSPAN
 - INCIDENT-20260808-critical-result-tnp
 - INCIDENT-20260817-onprem-deploy-freeze
+- INCIDENT-20261013-bioinsights-jag-crossmap
 - INCIDENT-2604156666
 - LBS-1541
 - LBS-1656
@@ -126,6 +127,7 @@ links:
 - VP-18704
 - VP-18714
 - VP-18755
+- VP-18824
 - emr-integration
 - fhir-api
 tags:
@@ -142,7 +144,7 @@ summary: 'Leo''s manual result publish for samples 2602947/2602948 (cust 4953 MD
   13.15 days = started 2026-08-04 18:28Z, so its baked Prisma client predates the
   2026-08-14 enum. Every main merge since 2026-08-04 11:14 PDT is absent from on-prem,
   which still OWNS 536 of 1036 LIVE result-enabled integrations.'
-score: 0.2417
+score: 0.2374
 ---
 
 # INCIDENT-20260817 — emr-v2 on-prem prod deploy drift (13 days)

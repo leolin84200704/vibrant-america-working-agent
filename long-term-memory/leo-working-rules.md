@@ -3,7 +3,7 @@ id: leo-working-rules
 type: ltm
 category: process
 status: active
-score: 0.1615
+score: 0.1776
 base_weight: 0.9
 urgency: 4
 created: 2026-08-16
@@ -590,3 +590,16 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 4. **三張票的交付被 repo 管線擋住，不是 code**：LIS-Sample master 的 Jenkins 名單過濾（3 h）、LIS-Sample master 要手動 scan 才 build prod、LIS-Shipping push=false 無 fork → patch 交接。每次都是 Leo 做一個非 code 動作才解。**Step 1 對 30 天沒碰的 repo 先查三件事**：`gh api repos/…/branches/<base>` 的 protection、自己的 push 權限、CI 是 webhook 還是手動 scan——寫進 STM 的 Ticket Analysis。
 5. 10-09 第 1 條追蹤（窗口被證據縮短）：再 +2（VP-18480 day 13、VP-18770/71 不等明天）；10-09 第 4 條（並行 session 重疊）：這次 VP-18796 session 與 dream 同時在跑，dream 不碰 VP-18796.md 正文、只用 git status 看它有沒有被寫——仍是約定不是機制。
 - 下次 cross-review 門檻：再 5 張結案（marker 2026-10-12）。
+
+## Leo 10-13 的決定與打回（VP-18481 / VP-18824 / VP-18463 / VP-18796 / BIOINSIGHTS-JAG / VP-18770-71）
+- **「以後做完需要我 merge 都要給我 PR」（VP-18481）**：結案報告點名 factory PR #95 卻沒附連結被打回。規則：任何要 Leo merge 的 PR（main / release / factory lesson）報告裡要帶 **URL 本體**，不只是編號。
+- **「幫我連上Atlassian integration, 發現的問題也要一起解掉」**：Jira 寫入一律走 Atlassian MCP（Leo 帳號）；vibrant MCP 的 Jira 寫入是「Jira agent」服務帳號，只准讀（VP-18463 comment 192086 用錯帳號貼出後定案，已進 CLAUDE.md）。VP-18824 的 comment 192083 同樣是服務帳號貼的——要不要重貼在 Leo 手上。
+- **「告訴我需要Tianhao 怎麼建立service bus的東西」→「Tianhao 建好了，請你核對後繼續」**：agent 沒 Contributor 的 Azure 資源，Leo 的節奏是「給我一份要建什麼的清單 → 別人建 → agent 用 `az … show` 核對後接手」，不是等權限。
+- **「所以 ticket 可以 done 了嗎?」（VP-18481）**：他要的回答是「Jira description 的 Done 條件逐條對 + 哪些交付物只在 drafts 還沒上 Confluence + 可用的 transition 與建議」；QA twin 還在 To Do 時建議 Dev done 讓 QA 關。
+- **「lis-sample 為什麼不能 push?」**：agent 拿 LTM 的舊權限事實回答「沒 access、出 patch」被他當場質疑；live `gh api` 一查 push=true。**權限主張是世界事實，回答前用 API 驗，不用記憶**（已把 repos.md 09-29 那條作廢）。
+- **VP-18824「A 先做，B 也做，C 寫進 comment 請 integration 側問 Cerbo」→「push pr, 直接comment」→「都merge 了，請測試」→「等回覆的時候 ticket 先改成 blocked」**：資料回滾 + code 不變量同一天做完，第三方要答的選項寫進 comment 給 integration 側追；Jira comment 他授權就直接貼不再過稿；release PR 他 merge 後 agent 立刻測 prod；等第三方時 ticket 轉 Dev Blocked（VP workflow 沒有 To Do → Blocked 的邊，要經 In Progress）。
+- **VP-18463「公告明天的今天也直接做了」**：第七次「窗口被證據縮短」（零流量 13 天 + 無人反對 → 提前一天刪）；順手把 VP-18770/18771 從 Sprint 31 的 reopen 轉回 Done（「done」一個字）。main 的 review gate 他自己 merge（#927 23:15Z，收到報告後 5 分鐘）。
+- **VP-18796「直接拿掉這個 shipping 的改動。不做這部分了」**：沒 push 權限的 repo，他寧可砍 scope 也不去要權限——**交付路徑是 hand-off 的話，在 Step 5 動手前先問他要不要花這個權限**，不要先做完再交 patch。
+- **BioInsights / JAG「這是嚴重的錯誤，請你檢討」**：要的是完整的錯誤鏈（每一環本來能擋住的點）+ 影響（PHI、金額、天數）+ 具體規則，不是道歉；他當天就把 R1–R3 做成 Gate 1b（PR #57）。同一事件的其他指令：「全部都做」（清檔、問 vendor、closeout 一次排完）、對 Mingxi 改用 Slack 不用 email、**Mingxi 一律短的非正式中文**、**每封對外訊息寄前給他看**（英文 Slack 沒過稿被打回）。他寄 Britney 的信在 prod 改之前 80 秒出去——agent 的 drafts 要讓「先 prod 再信」的順序明顯（R8）。
+- **VP-18770 / 18771 的 reopen = sprint 計分**（10-12 review 第 3 條的答案）：Xiaoye 拉進 Sprint 31 → Leo 同帳號轉 In Progress → 隔天他叫 agent 轉回 Done。reconcile 的「needs manual review」下次直接問他要不要轉回，不要只記 log。
+
