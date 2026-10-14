@@ -11,7 +11,7 @@ unblock_when: 'BioInsights grants account perms (test: sftp key-auth to sftp.bio
   then ls / — currently auth OK but ls/stat/put all fail); waiting on Thomas reply
   to 2026-07-21 email'
 created: 2026-07-21
-updated: 2026-10-13
+updated: 2026-10-14
 links:
 - BETA-E2E-20260729
 - BIOINSIGHTS-SFTP-KEY
@@ -453,6 +453,18 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
 ### [2026-10-13 13:10 PT] Leo: BioInsights Outlook draft is with him; Chinese follow-up to Mingxi NOT sent (dropped)
 - Standing rule (Leo): Mingxi in Chinese from now on, short and informal; every outgoing message shown to Leo before sending.
 - Plan state: 1 done, 2 with Mingxi, 3 draft with Leo, 4 waits on BioInsights, 5 pre-drafted, 6 closed.
+
+### [2026-10-14 15:00 PT] STEP 2 DONE by Zhenhe/Mingxi: order cancelled + refund issued; BioInsights ask SENT by Leo 10-13; closeout draft ready but gated
+- Leo sent the BioInsights provider-confirmation mail 2026-10-13 19:09Z (To Britney + BioInsights team, CC devcom/Keith/Kristina). No reply
+  from bioinsights.com or devcom yet.
+- Britney 10-14 12:38Z: "We still see this order on the portal". Leo 17:51Z asked Mingxi/Zhenhe for the refund status. Zhenhe 21:16Z:
+  order canceled, refund initiated; 21:26Z "@Leo Canceled".
+- Prod verified: order_table 30139923543497260 is_canceled=1; transactions 1008956 type=refund $570 card ****8527 created 10-14 16:32Z
+  (original 447178 still refunded=0 -- the flow records a refund row, does not flip the flag).
+- GAP: coresamplesv2.patient 3286031 John Doe (customer 30248, created 09-22 by V00000416 before the order ever succeeded) is still
+  isActive=1 -> Britney's item 1 "patient information removed" is not yet true. Needs Mingxi to deactivate; agent has no write path.
+- Closeout Outlook draft created on Zhenhe's 21:26Z mail (reply-all), final wording, mirrored in
+  drafts/BIOINSIGHTS-britney-closeout-20261013-draft.md with the gate: send only after the patient is deactivated.
 
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
