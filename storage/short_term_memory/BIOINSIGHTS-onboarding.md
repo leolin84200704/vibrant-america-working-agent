@@ -492,6 +492,8 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
 - 10-15: Britney reply drafted per Leo (honest to JAG: another clinic downloaded a file, deleted as JAG not their client, NDA in place). Outlook reply-all
   draft on Britney 21:09Z mail, id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABhzvxuwAA. Not sent. NDA existence = Leo's statement, no record in thread/memory.
   Download count still "a file" per Olena's wording; unconfirmed.
+- 10-15: Olena reply drafted in Outlook (reply-all on her 07:50Z mail), id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABhzvxywAA.
+  To Olena/Zhenhe/Mingxi/Keith; owners: Duffy onboarding = Mingxi+Keith, test details = Zhenhe. Requisition line still says "yes" (prod enablement not yet approved by Leo). Not sent.
 
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
