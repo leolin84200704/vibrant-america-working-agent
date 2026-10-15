@@ -486,6 +486,9 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
   (2) requisitions -> order-time Order Summary PDF exists (VP-18138, `ehr_vendors.sftp_order_forms_path`, only vendor 44 enabled), needs a folder on their SFTP;
   (3) clinical catalog details (panel/element/CPT/ref ranges) -> Zhenhe, first asked 10-05, unanswered; (4) provider = Aimee Duffy MD NPI 1528033081 (NOT Travis Bond 50243) -- Vibrant account not yet verified (vibrant MCP down);
   (5) "a person downloaded the file, confirmed deleted" -> one person DID download from /incoming/ (JAG PHI). Britney 10-15 13:28Z asks if a formal notice to JAG is needed, 21:09Z follow-up. Unanswered.
+- Leo correction (10-15): Duffy is NOT in ehr_integrations; do not promise "we will register". New provider = full onboarding (Vibrant provider account,
+  clinic/practice, integration type, kit delivery, billing) owned by Mingxi + Keith -> loop them in, they collect the info. Agent only executes the row after that.
+  Internal note for them: vendor 46 BIOINSIGHTS is still is_public=0, so a portal self-serve integration request may not list it.
 
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
