@@ -136,6 +136,9 @@ links:
 - VP-18714
 - VP-18755
 - VP-18824
+- VP-18832
+- VP-18833
+- VP-18842
 - emr-integration
 - fhir-api
 - repos
@@ -158,7 +161,7 @@ summary: 'New EMR vendor BioInsights — first key-based (non-password) SFTP int
   unaffected; AKS pod egress to bioinsights:2022 OK. 2026-07-21 email sent to Thomas
   (perms + dir layout + sample HL7). STATUS: waiting on vendor reply.'
 jira_status: none
-score: 1.4963
+score: 1.53
 ---
 
 # BioInsights EMR vendor onboarding (SFTP, key-based auth)
@@ -520,6 +523,10 @@ Prevention proposed to Leo (pending approval, automation -> PR):
   partner; diff partner files vs that spec; verify each factual claim; each promised action has a named owner + verified precondition.
 - P2 PreToolUse hook on Outlook draft/send tools: reject bodies with [TBD]/[...]/TODO placeholders (R7 -> enforced).
 - P3 keep partner-facing specs in repo (knowledge/partner-specs/) + a spec-vs-parser gap table; STM "Shared with partner" section per onboarding.
+- 10-15 retro follow-through: P2 hook merged (factory #97, wiring #58; push-guard repo-resolution bug found + fixed factory #98).
+  P1+P3 = PR #59 (skill vendor-email-reply, reference/partner-specs/ + gap-table). Gap table found spec-level errors: IN1-2 "C=Commercial"
+  vs code C=customerPay; spec example codes VAREQUISTION279/VATEST2270 wrong (devcom copied them); XCN comp2 = internal id in spec vs parser last name.
+  HL7_Technical_Reference.docx not located in SharePoint.
 
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
