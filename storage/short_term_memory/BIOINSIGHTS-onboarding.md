@@ -494,6 +494,10 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
   Download count still "a file" per Olena's wording; unconfirmed.
 - 10-15: Olena reply drafted in Outlook (reply-all on her 07:50Z mail), id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABhzvxywAA.
   To Olena/Zhenhe/Mingxi/Keith; owners: Duffy onboarding = Mingxi+Keith, test details = Zhenhe. Requisition line still says "yes" (prod enablement not yet approved by Leo). Not sent.
+- 10-15 Leo's final Olena reply (he sends it himself) vs agent draft: opened with "Thanks for the confirmation." and DROPPED "You are right, those values
+  follow our document" (no conceding line); onboarding owner = Mingxi only (Keith removed); Zhenhe line = "confirm the order detail, and let us know in this
+  thread if there is anything blocking you"; DROPPED the "how many files were downloaded" question -> download count stays "a file" (Britney draft relies on it).
+  Requisition line kept as "yes ... we can ... which folder" -> enabling vendor 46 `sftp_order_forms_path` (currently NULL, verified prod 10-15) is now a commitment once they name a folder.
 
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
