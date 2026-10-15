@@ -499,6 +499,28 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
   thread if there is anything blocking you"; DROPPED the "how many files were downloaded" question -> download count stays "a file" (Britney draft relies on it).
   Requisition line kept as "yes ... we can ... which folder" -> enabling vendor 46 `sftp_order_forms_path` (currently NULL, verified prod 10-15) is now a commitment once they name a folder.
 
+## Retrospective 2026-10-15 (Leo: "這個 ticket 你犯了非常多的錯誤，請檢討")
+Errors on the devcom side of this ticket (JAG cross-map itself is in INCIDENT-20261013-bioinsights-jag-crossmap):
+1. 09-23 / 09-29 field audits judged devcom's file against parser code only. We had sent them UpdatedExampleOrder_Explained.pdf +
+   HL7_Technical_Reference.docx on 09-04; that spec mandates MSH-5/6/12, OBR-11/15, OBR-26 exactly as they sent. We called our own spec "invalid".
+   Root: the shared spec was never recorded in STM, so the audit had no partner-facing reference. Invariant: a partner file is judged against
+   the spec WE gave them; spec-vs-code gaps are ours (OBR-26 vs OBR-19 still open).
+2. 10-15 first answer built from the pasted mail only. Did not read the Outlook thread -> missed requisition ask (open since 10-06),
+   clinical-details ask to Zhenhe (open since 10-05), Britney's two 10-15 mails. Violates core principle 0 (sync with the world first).
+3. Asked Leo "do we generate requisitions?" when VP-18138 (built by this agent, in LTM) answers it, and prod could be read. Questions to Leo
+   only after memory + ground truth come up empty.
+4. Draft promised "we will register Dr. Duffy" without checking ehr_integrations or knowing the onboarding owner (Mingxi/Keith). Same family as
+   INCIDENT R1: we do not promise actions whose preconditions and owner we have not verified.
+5. Put "[TBD]" inside the first outgoing draft -- INCIDENT R7 (written 10-13) re-violated 2 days later. Prose lesson did not hold.
+6. Draw-location and requisition sentences written from partial knowledge: DBS (test-code) dimension omitted; "we can" implied new dev while the
+   feature exists and only vendor 46 enablement is missing. Every claim about our system must be checked (code/prod) before it is written.
+Common root: reference = our own memory/code instead of what the counterparty actually has (their thread, the docs we sent them, prod state).
+Prevention proposed to Leo (pending approval, automation -> PR):
+- P1 vendor-email-reply checklist (skill): read full thread incl. our sent mails -> list unanswered asks w/ date; list docs shared with the
+  partner; diff partner files vs that spec; verify each factual claim; each promised action has a named owner + verified precondition.
+- P2 PreToolUse hook on Outlook draft/send tools: reject bodies with [TBD]/[...]/TODO placeholders (R7 -> enforced).
+- P3 keep partner-facing specs in repo (knowledge/partner-specs/) + a spec-vs-parser gap table; STM "Shared with partner" section per onboarding.
+
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
 2. Scope unclear: orders inbound only, results outbound only, or bidirectional? Which practices/clinics? (drives ehr_integrations rows — order gate is ehr_integrations LIVE+ordering per VP-16968 cutover)
