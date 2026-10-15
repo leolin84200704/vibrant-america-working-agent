@@ -28,9 +28,9 @@
 
 ## Ticket 系統
 - Jira（VP project），經 Atlassian MCP 取用
-- **Jira 的所有寫入（comment、transition、欄位修改）一律走 Atlassian MCP（`mcp__claude_ai_Atlassian__*`），作者才是 Leo 的帳號；`mcp__vibrant__*` 的 Jira 寫入工具是「Jira agent」服務帳號，只能用來讀**（Leo 指令 2026-10-13：VP-18463 comment 192086 以服務帳號貼出後「以後都要用我的帳號」）
+- **Jira 的所有寫入（comment、transition、欄位修改）一律走 Atlassian MCP（`mcp__claude_ai_Atlassian_MCP__*`），作者才是 Leo 的帳號；`mcp__vibrant__*` 的 Jira 寫入工具是「Jira agent」服務帳號，只能用來讀**（Leo 指令 2026-10-13：VP-18463 comment 192086 以服務帳號貼出後「以後都要用我的帳號」）
 - Jira ticket 的 summary/description 寫英文；給 Leo 的回覆維持繁中；Jira comment 只起草、不直接發
-- Atlassian MCP 每次回應開頭的 transport deprecation banner（HTTP+SSE `/v1/sse` → Streamable HTTP `/v1/mcp`）：**不要轉述**。connector 由 claude.ai 託管，Leo 本機無任何可改的設定，banner 對他不可操作（2026-08-18 已查證並告知）。只有 Atlassian 工具真的開始失敗時才需要提，屆時建議去 claude.ai integrations reconnect
+- **Atlassian 一律用新的 connector `mcp__claude_ai_Atlassian_MCP__*`（v2 Streamable HTTP），讀寫都是；舊的 `mcp__claude_ai_Atlassian__*`（v1 SSE）已 deprecate，不要再用**（Leo 指令 2026-10-15：舊 connector 當天開始回 403 "The app is not installed on this instance"，新的正常、身分同為 Leo）。新 connector 的工具名不同（例：`getJiraIssue`、`addOrEditJiraIssueComment`、`transitionJiraIssue`，其他操作用 `discover` 找名字再走 `executeRead`/`executeWrite`）；cloudId 照舊 `373c4f18-fda5-4843-8438-6db1ac2e98f0`。舊 connector 的 SSE deprecation banner 不要轉述；新的若也失敗，才建議 Leo 去 claude.ai integrations reconnect
 
 ## Memory 架構（本 instance 路徑）
 
