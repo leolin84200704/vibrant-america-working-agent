@@ -11,7 +11,7 @@ unblock_when: 'BioInsights grants account perms (test: sftp key-auth to sftp.bio
   then ls / — currently auth OK but ls/stat/put all fail); waiting on Thomas reply
   to 2026-07-21 email'
 created: 2026-07-21
-updated: 2026-10-14
+updated: 2026-10-15
 links:
 - BETA-E2E-20260729
 - BIOINSIGHTS-SFTP-KEY
@@ -475,6 +475,17 @@ Leo 把 agent 草稿改寫成他自己的版本並指示「記住我的語氣」
   Then step 4: new ehr_integrations row for 50243/153491 via lis-prod-change-gate incl. Gate 1b (provenance: the BioInsights reply
   itself), then tell devcom to resend with NPI 1467734558 under a NEW file name.
 - Vendor 46 currently has no LIVE integration row; inbound files quarantine as customer_not_found. Patient 3286031 John Doe stays as is (Leo).
+
+### [2026-10-15 PT] Olena 10-15 reply: our 09-23/09-29 field notes contradicted OUR OWN spec; new provider = Aimee Duffy NPI 1528033081
+- Leo shared `UpdatedExampleOrder_Explained.pdf` + `HL7_Technical_Reference.docx` with devcom on 2026-09-04 (thread mail). That spec (EMR-Backend origin)
+  literally specifies MSH-5 `IN OFFICE` ("Standard for Vibrant"), MSH-6 `LC` ("Always LC"), MSH-12 `2.5`, OBR-11 `N`, OBR-15 `0`, fasting in OBR-26.
+  The 09-23 audit and 09-29 reply flagged all of these as wrong/invalid -> devcom pushed back citing the doc. They are right.
+- Root cause (agent): audits used parser code as the only reference; the spec we handed the partner was never recorded in STM and never diffed.
+  Lesson: before telling a partner a field is wrong, diff their file against the spec WE gave them; spec-vs-code gaps are ours (OBR-26 vs parser OBR-19 is one, harmless today).
+- Open asks from Olena: (1) where "draw location" goes -> no HL7 field; kit delivery is per-integration-row `ehr_integrations.kit_delivery_option` (Zhenhe said same to Prospera 10-12);
+  (2) requisitions -> order-time Order Summary PDF exists (VP-18138, `ehr_vendors.sftp_order_forms_path`, only vendor 44 enabled), needs a folder on their SFTP;
+  (3) clinical catalog details (panel/element/CPT/ref ranges) -> Zhenhe, first asked 10-05, unanswered; (4) provider = Aimee Duffy MD NPI 1528033081 (NOT Travis Bond 50243) -- Vibrant account not yet verified (vibrant MCP down);
+  (5) "a person downloaded the file, confirmed deleted" -> one person DID download from /incoming/ (JAG PHI). Britney 10-15 13:28Z asks if a formal notice to JAG is needed, 21:09Z follow-up. Unanswered.
 
 ## Open items (go-live checklist)
 1. ~~BLOCKER: provision account permissions~~ DONE 2026-07-23 (Serdar). Remaining vendor asks: confirm direction convention (incoming/outgoing semantics) + sample HL7 files.
