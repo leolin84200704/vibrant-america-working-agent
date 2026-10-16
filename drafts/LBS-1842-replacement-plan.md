@@ -24,6 +24,22 @@ wrapper: the replacement is the same downstream call made from trans v1, exposed
 | POST /record-management/transfer-all-orders, transfer-all-patients | Core gRPC `TransferAllOrders` / `TransferAllPatients` | none found in local repos | move with record management | VP-18800 |
 | GET /customers | Shipping gRPC customer search | none found in local repos | drop after org-wide search | VP-18803 |
 
+
+## Where each route goes (2026-10-16)
+
+The VP-18480 family tickets are the replacement vehicle; each one excluded these routes as "dead, removed". They go back in:
+
+| Ticket | Status | Routes to add to scope |
+|---|---|---|
+| VP-18801 Interaction Logs (trans v1) | Dev Complete | `GET /interaction-logs/:id/details`, `POST /interaction-logs/resolution` |
+| VP-18802 Storage (trans v1) | Dev Complete | `POST /storage/records/batch/removal`, `PUT`/`DELETE /storage/racks/samples/tubes/:idx` |
+| VP-18798 Patients remainder | Dev To Do | `hormone-qnr`, `cardio-zoomer-qnr`, `nutriproz-skincare-qnr`, `disclosure-restricted-notif`, `complete-reports`, `GET /patients` |
+| VP-18800 Record Management | Dev To Do | `transfer-all-orders`, `transfer-all-patients` |
+| (new ticket) Notifications + Customers | - | `/notifications` x4, `GET /customers` |
+
+Order: the VP-18801/18802 gap first (in progress on LIS-transformer `feature/leo/LBS-1842-restored-routes`), because those
+families are already ported and VP-18803 would otherwise cut them over without these routes. The rest ride their family ticket.
+
 Per route, in order:
 1. Add the route to trans v1 (same request/response contract; contract snapshot diff in the PR).
 2. Switch the caller (LIS-frontend `samplePageRequest` base URL / vibrant-wellness-portal `PORTAL_NOTIFICATION`) and release.
