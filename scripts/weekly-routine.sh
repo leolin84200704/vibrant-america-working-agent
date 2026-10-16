@@ -7,6 +7,7 @@
 #   4. Capture eval snapshot
 #   5. Capture retrieval test snapshot
 #   6. Compare with the previous week's snapshot, write logs/weekly-YYYY-MM-DD.md
+#      (+ a write-stage quality section from scripts/memory-health.py)
 #
 # Each sub-step is wrapped so one failure doesn't abort the rest.
 # Run manually with: bash scripts/weekly-routine.sh
@@ -34,7 +35,8 @@ DRY RUN: would run weekly self-improvement
     4. python3 scripts/memory_scoring.py
     5. python3 scripts/eval.py --label weekly-$DATE
     6. python3 scripts/test-retrieval.py --label weekly-$DATE
-    7. write $REPORT (diff with previous weekly snapshot)
+    7. python3 scripts/memory-health.py  (write-stage quality section)
+    8. write $REPORT (diff with previous weekly snapshot)
 EOF
     exit 0
 fi
@@ -96,6 +98,12 @@ fi
         python3 scripts/test-retrieval.py 2>&1 | tail -10
         echo '```'
     fi
+    echo
+    echo "## Write-stage quality"
+    echo "Things the nightly dream cannot fix because they are missing at write time."
+    echo '```'
+    python3 scripts/memory-health.py 2>&1
+    echo '```'
     echo
     echo "## Notes (manual addendum)"
     echo "- (leave space for Leo's observations next week)"

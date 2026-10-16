@@ -16,6 +16,12 @@ export CLAUDE_CODE_DISABLE_AUTO_MEMORY=1
 # premium model, every nightly dream silently bills it (same failure class as
 # the jac/gpa incidents fixed 2026-08-15).
 DREAM_MODEL="${DREAM_MODEL:-fable}"
+# When the pinned model is refused for a spend/usage limit, the remaining attempts
+# run on this model instead of burning all three on the same refusal. 2026-10-14
+# 18:30 .. 2026-10-15 12:30: four consecutive firings, twelve attempts, every one
+# "You've hit your monthly spend limit" on fable, and the dream missed two nights
+# while opus/sonnet would have answered. Set to "" to disable the fallback.
+DREAM_FALLBACK_MODEL="${DREAM_FALLBACK_MODEL:-opus}"
 
 DATE=$(date +%Y-%m-%d)
 LOG_DIR="$AGENT_ROOT/logs"
@@ -193,6 +199,7 @@ if [[ "${1:-}" == "--dry" ]]; then
     echo "  Network wait budget: ${DREAM_NETWORK_WAIT_SECONDS:-900}s of wall clock, then defer"
     echo "  Closeout window since: $CLOSEOUT_SINCE"
     echo "  Command: claude -p \"\$(cat scripts/dream.md)\" --model $DREAM_MODEL --allowedTools Read,Write,Edit,Glob,Grep,Bash"
+    echo "  Fallback model on spend/usage-limit refusal: ${DREAM_FALLBACK_MODEL:-(disabled)}"
     exit 0
 fi
 
@@ -300,12 +307,13 @@ default window named in the phases above.
 ATTEMPT=1
 MAX_ATTEMPTS=3
 SUCCESS=0
+RUN_MODEL="$DREAM_MODEL"
 
 while [[ $ATTEMPT -le $MAX_ATTEMPTS ]]; do
-    echo "[$(date)] === Dream attempt $ATTEMPT/$MAX_ATTEMPTS ===" | tee -a "$LOG_FILE"
+    echo "[$(date)] === Dream attempt $ATTEMPT/$MAX_ATTEMPTS (model: $RUN_MODEL) ===" | tee -a "$LOG_FILE"
     TMP=$(mktemp)
     claude -p "$PROMPT" \
-        --model "$DREAM_MODEL" \
+        --model "$RUN_MODEL" \
         --allowedTools "Read,Write,Edit,Glob,Grep,Bash" \
         > "$TMP" 2>&1
     CLAUDE_EXIT=$?
@@ -315,8 +323,18 @@ while [[ $ATTEMPT -le $MAX_ATTEMPTS ]]; do
     # hard failures (crash, command error) pass as success.
     if [[ $CLAUDE_EXIT -eq 0 ]] && ! grep -q "API Error" "$TMP"; then
         SUCCESS=1
+        [[ "$RUN_MODEL" != "$DREAM_MODEL" ]] &&
+            echo "[$(date)] NOTE: this run completed on fallback model $RUN_MODEL (pinned: $DREAM_MODEL)" | tee -a "$LOG_FILE"
         rm -f "$TMP"
         break
+    fi
+
+    # A spend/usage-limit refusal is not transient: retrying the same model in 30s
+    # yields the same line. Switch to the fallback for the remaining attempts.
+    if grep -qiE "spend limit|usage limit|rate limit.*(month|week)" "$TMP" &&
+       [[ -n "$DREAM_FALLBACK_MODEL" && "$RUN_MODEL" != "$DREAM_FALLBACK_MODEL" ]]; then
+        echo "[$(date)] $RUN_MODEL refused for a spend/usage limit — remaining attempts use $DREAM_FALLBACK_MODEL" | tee -a "$LOG_FILE"
+        RUN_MODEL="$DREAM_FALLBACK_MODEL"
     fi
     rm -f "$TMP"
 
