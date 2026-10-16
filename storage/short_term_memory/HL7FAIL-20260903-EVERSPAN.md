@@ -1,5 +1,6 @@
 ---
 id: HL7FAIL-20260903-EVERSPAN
+summary: "LBS-1772 / Everspan (MDHQ) customer_not_found=MARY JO ALLEN — transfer order to Dr. Michael Ahmann by editing pod-local HL7 (no new integration)"
 title: LBS-1772 / Everspan (MDHQ) customer_not_found=MARY JO ALLEN — transfer order
   to Dr. Michael Ahmann by editing pod-local HL7 (no new integration)
 category: emr_integration

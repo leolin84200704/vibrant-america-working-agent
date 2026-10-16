@@ -1,5 +1,6 @@
 ---
 id: INCIDENT-20260908-grpc-dead-node-ip
+summary: "emr-v2 result generation outage — every GRPC_*_CLOUD_HOST / GRPC_V2_*_HOST pointed at a recycled AKS node IP (10.224.0.199); repointed to 10.224.0.10, pods restarted, 58 pushes re-driven"
 title: emr-v2 result generation outage — every GRPC_*_CLOUD_HOST / GRPC_V2_*_HOST
   pointed at a recycled AKS node IP (10.224.0.199); repointed to 10.224.0.10, pods
   restarted, 58 pushes re-driven

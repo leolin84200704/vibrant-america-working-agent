@@ -1,5 +1,6 @@
 ---
 id: TRANS-OPTIMIZATION-20260911
+summary: "Trans v1/v2 optimization program — tracking ticket VP-18276 (related epic VP-17348 / VP-18152)"
 title: Trans v1/v2 optimization program — tracking ticket VP-18276 (related epic VP-17348
   / VP-18152)
 status: active
