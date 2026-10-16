@@ -1,6 +1,8 @@
 ---
 id: INCIDENT-20260908-grpc-dead-node-ip
-summary: "emr-v2 result generation outage — every GRPC_*_CLOUD_HOST / GRPC_V2_*_HOST pointed at a recycled AKS node IP (10.224.0.199); repointed to 10.224.0.10, pods restarted, 58 pushes re-driven"
+summary: emr-v2 result generation outage — every GRPC_*_CLOUD_HOST / GRPC_V2_*_HOST
+  pointed at a recycled AKS node IP (10.224.0.199); repointed to 10.224.0.10, pods
+  restarted, 58 pushes re-driven
 title: emr-v2 result generation outage — every GRPC_*_CLOUD_HOST / GRPC_V2_*_HOST
   pointed at a recycled AKS node IP (10.224.0.199); repointed to 10.224.0.10, pods
   restarted, 58 pushes re-driven
@@ -22,63 +24,8 @@ related:
 - VP-18095
 - INCIDENT-20260518
 - INCIDENT-20260817-onprem-stale-deploy
-links:
-- INCIDENT-20260518
-- INCIDENT-20260601-sftp-hang
-- INCIDENT-20260817-onprem-deploy-freeze
-- INCIDENT-20260910-emr-v2-di-crashloop
-- LIS-7882
-- NEXTECH-onboarding
-- QH-1130
-- QH-1159
-- QH-1591
-- QH-1775
-- QH-211
-- QH-2259
-- QH-862
-- QH-918
-- QH-919
-- TRANS-OPTIMIZATION-20260911
-- VP-16499
-- VP-16513
-- VP-17217
-- VP-17312
-- VP-17422
-- VP-17714
-- VP-17766
-- VP-17825
-- VP-17870
-- VP-18048
-- VP-18303
-- VP-18320
-- VP-18342
-- VP-18344
-- VP-18347
-- VP-18400
-- VP-18406
-- VP-18460
-- VP-18461
-- VP-18463
-- VP-18464
-- VP-18466
-- VP-18474
-- VP-18480
-- VP-18481
-- VP-18482
-- VP-18655
-- VP-18673
-- VP-18749
-- VP-18770
-- VP-18771
-- VP-18782
-- VP-18796
-- VP-18801
-- VP-18802
-- VP-9299
-- failures
-- repo-catalog
-- repos
-score: 0.3575
+links: []
+score: 0.0559
 ---
 
 # INCIDENT 2026-09-08 — result pushes failing: gRPC targets pointed at a dead AKS node IP

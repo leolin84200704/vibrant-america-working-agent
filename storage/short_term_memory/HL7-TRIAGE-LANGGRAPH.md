@@ -7,7 +7,8 @@ score: 0.0574
 base_weight: 0.6
 created: 2026-10-07
 updated: 2026-10-07
-links: []
+links:
+- HL7FAIL-20260729-PLESSEN
 relations:
   unblocked_by: []
   blocks: []

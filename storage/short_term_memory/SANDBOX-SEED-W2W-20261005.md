@@ -3,11 +3,16 @@ id: SANDBOX-SEED-W2W-20261005
 type: stm
 category: pm_patterns
 status: active
-score: 0.0901
+score: 0.0762
 base_weight: 0.7
 created: 2026-10-05
 updated: 2026-10-08
 links:
+- VP-18589
+- VP-18593
+- VP-18595
+- VP-18596
+- VP-18714
 - rules
 - ticket-routing
 relations:

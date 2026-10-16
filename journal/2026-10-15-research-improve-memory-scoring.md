@@ -2,7 +2,8 @@
 date: 2026-10-15
 slug: research-improve-memory-scoring
 related_tickets: [AGENT-IMPROVE-20261015]
-distilled: false
+distilled: true
+distilled_on: 2026-10-15
 ---
 
 # Research + improve pass (first since 2026-05-20): link saturation disabled archiving; dream down on spend limit

@@ -3,7 +3,7 @@ id: leo-working-rules
 type: ltm
 category: process
 status: active
-score: 0.1776
+score: 0.1615
 base_weight: 0.9
 urgency: 4
 created: 2026-08-16
@@ -603,3 +603,23 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 - **BioInsights / JAG「這是嚴重的錯誤，請你檢討」**：要的是完整的錯誤鏈（每一環本來能擋住的點）+ 影響（PHI、金額、天數）+ 具體規則，不是道歉；他當天就把 R1–R3 做成 Gate 1b（PR #57）。同一事件的其他指令：「全部都做」（清檔、問 vendor、closeout 一次排完）、對 Mingxi 改用 Slack 不用 email、**Mingxi 一律短的非正式中文**、**每封對外訊息寄前給他看**（英文 Slack 沒過稿被打回）。他寄 Britney 的信在 prod 改之前 80 秒出去——agent 的 drafts 要讓「先 prod 再信」的順序明顯（R8）。
 - **VP-18770 / 18771 的 reopen = sprint 計分**（10-12 review 第 3 條的答案）：Xiaoye 拉進 Sprint 31 → Leo 同帳號轉 In Progress → 隔天他叫 agent 轉回 Done。reconcile 的「needs manual review」下次直接問他要不要轉回，不要只記 log。
 
+
+## Leo 10-14 → 10-15 的決定與打回（VP-18796 / VP-18801 / VP-18802 / VP-18482 / VP-18824 / VP-18833 / VP-18832 / VP-18842 / LBS-1842 / BIOINSIGHTS / VP-18034）
+- **merge 之後的口令是「測，然後自己轉」**：「#943 approved, test then merge yourself, then test」、「都merged了，請你測試後看能不能done」、「好，測完轉 dev complete」。他 merge main 後 agent 要立刻做 prod 驗證（A/B / 探針），再用 Atlassian MCP（他的帳號）自己轉 Dev Complete；「能不能 done」要回「不能 + 缺什麼」（VP-18482：差一個 business week 的 differ=0、ingress、p95、30 天）。
+- **一個字的核准（「加」、「都要」、「ok 轉」）只在事實攤平之後出現**：prod key 的來源與放哪、哪些 flag 不會被喚醒、staging 寫入會動到什麼——先列清楚，他才一個字放行。
+- **「先做 VP-18802, 我看不懂他被block 的原因」**：Jira 的 blocker 欄 ≠ 真正的前置條件；先把「票文字裡的 precondition」翻成白話與證據缺口，再提 (a)(b) 讓他選（「ok 照你建議 (b)，方案 OK 開始寫」）。
+- **順手發現的既有 bug 只回報不修**：LIS-Sample prod 每天跑三次 legacy import（「先不改其他的」）、optimalhealthcare 從沒被 Cerbo poll（先問 PM、他說「先不關，如果跟這個ticket沒關係就先done」→ Zhenhe 證實 provider 不活躍後「好，關掉」）。例外：發現本身就是這張票範圍內的缺陷（`compressPdf` 吞非 SDK 錯誤 → 在 VP-18832 一起修）。
+- **VP-18796「直接rollout 正式的。但是務必確保正確push並且結束後流量正常」**：replay 等齊當天就可以切 prod，條件是切完要盯流量；「什麼時候可以拿掉?」→ 他要的是日期（soak 到 2026-11-13）；「請你用我的名義貼」；**「可以直接改code 並且push pr」→ push 403 → 20 分鐘內「已經有權限了，請繼續」**：要權限就直接要，不要先做完 patch 交接（對照 10-13 Shipping 他選砍 scope——差別在那半值不值得）。
+- **VP-18824 → VP-18833 的連串口令**：「用E重做,直接開始」（Cerbo 答完當天開新票、不等）；「檔名用 {accession}_{SHORT}.hl7 就好」；「不應該是把數據放在個別的hl7 file 裡。然後包含該檢測結果的pdf嗎？這樣的話合併的就不送了」；「不對吧，這是要視需求。如果他要per report, 就需要各自先送，應該也有kafka message」（時機跟 push level 走）；「直接merge 並且測試，然後開pr 到production」；「merge 了，請確認 prod 並開啟 Maristany」；「要改用, 退回整單送出」→ 看到 overlap 數據後「直接拆開送沒關係，只要不要有遺漏的test_id 沒有report認領就可以」；「ok 不拆」；**「請你自己推送Maristany 其中一筆訂單」**（他允許 agent 在 prod 主動觸發一筆真病人的 repush 當 round-trip）；**「不需要，直接刪掉後done」**（測試檔刪掉就結案，vendor 端匯入沒觀察到也 Done——這是他的決定，owed 的證明進 digest 不進 blocked）。
+- **Leo 規則 10-14：這類需求的內嵌 PDF 一律壓縮，不論大小** → 自己開 VP-18832（Bug，assignee Leo，由 agent 建票並選必填欄位）；「1 可以直接不重試」（超大就永久失敗）；「直接問, 可以問PM嗎?」→ 用他的帳號在 Jira @PM 問。VP-18832 在 release PR 還沒 merge 時就 Done（他 50 分鐘後 merge）——他不介意 Done 早於 deploy，但 agent 要在 deploy 後補 live 證據。
+- **VP-18842「都照你建議, 1. 對 2. 直接用新的 3. 一起處理」、「如果有問題就留言問」**：blocker 以 Jira comment 問擁有的團隊（Xiaoye），然後轉 Dev Blocked；不等他轉述。
+- **LBS-1842「先還原，再寫替代計畫；沒有替代方案不刪路由」**：對別人指出的我方缺失（Fangyuan 指 VP-18480 的刪除只看流量），回覆只講事實與動作，不寫「you're right」。
+- **BIOINSIGHTS 10-15「這個 ticket 你犯了非常多的錯誤，請檢討」**（三天內第二次要檢討）：他改稿時拿掉的東西比加的多——刪掉認錯句（"You are right, those values follow our document"）、刪掉「下載了幾個檔」的追問、onboarding owner 只留 Mingxi、Zhenhe 那行改成「confirm the order detail, and let us know in this thread if there is anything blocking you」。Duffy：「不要說我們會 register」——沒驗過前置條件與 owner 的動作不承諾。「請進行很久沒有進行的research + improve」→ 週例行自 05-20 第一次跑。
+- **VP-18034「prod 用 1001」**：Slack 轉述的 partner 資訊（key、帳號）就是來源，STM 要寫「Source: Slack relayed by Leo <時間>」。
+
+## 平行 port 的 equal 要有資料、prod env key 是每張票各自撞到的同一個洞、vendor 規格一次只來一句、Done 早於證據時 owed 要寫進 digest（cross-ticket review 2026-10-15；證據 VP-18463 / VP-18481 / VP-18796 / VP-18801 / VP-18802 / VP-18824 / VP-18832 / VP-18833）
+1. **trans-port 家族（18481 / 18796 / 18801 / 18802 / 18482）**：每一個真實偏差都是 live A/B 對 legacy 抓到的，unit test 零命中；**prod env key 是五張票各自用一個 500 發現的同一個洞**（LIS_INVENTORY、COUPON、REDIS、VIBRANT_TRACKING、三個 kits key；VA_INFO 還缺著）。→ Step 5 動手前的清單項：把被搬模組會讀的每個 env key 從 LIS-Sample prod secret/cm 列出來，**merge 前**放進 `lis-trans-config`；A/B 集合必須含有資料的回應。
+2. **Cerbo 三連（18824 / 18833 / 18832）**：vendor 的規格一次只回一句（只吃 .hl7 → 一則一個 PDF → 15 MB），每句當天長出一張票；vendor 端的匯入是唯一證據、per-report 至今沒看到。Leo 以自己的口令結案 → agent 把 owed 的證明與檢查步驟寫進 digest，之後回答不重複「blocked」，只講「還欠什麼、怎麼看」。
+3. **這家族的 Done 語意**：VP-18832 Done 在 release PR merge 前；VP-18833 Done 在測試檔刪掉後；18481 / 18796 / 18801 / 18802 Dev Complete 時沒有任何流量切過去（切換是 VP-18803）。「Done」= code 在 prod + A/B equal，不是流量。加上 reconcile 翻 completed 不補 retrospective（18832 / 18833 / 18842 都沒有），就是 weekly 量到的 retrospective 覆蓋率 77.8% → 26.4%。
+4. **三天兩次被要求檢討（INCIDENT 10-13、BIOINSIGHTS 10-15），根因同一個**：基準是自己的記憶/code，不是對方手上真正有的（他們的 thread、我們寄給他們的文件、prod 狀態）。R7「不留 placeholder」10-13 寫下、10-15 再犯 → 散文式教訓撐不過兩天，hook 才撐得住（#58 / #97 當天上線）。
+5. **順手發現的既有缺陷**（LIS-Sample 每天三次 import、optimalhealthcare 從沒被 poll、`compressPdf` 吞錯、staging TNP 誤寫）：Leo 的模式是回報不修，除非那個缺陷就在這張票的範圍裡；要修就開新票（VP-18832 就是這樣來的）。

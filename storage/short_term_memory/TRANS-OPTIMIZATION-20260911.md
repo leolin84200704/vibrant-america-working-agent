@@ -1,6 +1,7 @@
 ---
 id: TRANS-OPTIMIZATION-20260911
-summary: "Trans v1/v2 optimization program — tracking ticket VP-18276 (related epic VP-17348 / VP-18152)"
+summary: Trans v1/v2 optimization program — tracking ticket VP-18276 (related epic
+  VP-17348 / VP-18152)
 title: Trans v1/v2 optimization program — tracking ticket VP-18276 (related epic VP-17348
   / VP-18152)
 status: active
@@ -20,97 +21,13 @@ tags:
 created: 2026-09-11
 updated: '2026-09-29'
 links:
-- CONFLUENCE-2684321795
-- INCIDENT-20260518
-- INCIDENT-20260528
-- INCIDENT-20260601-sftp-hang
-- INCIDENT-20260817-onprem-deploy-freeze
-- INCIDENT-20260908-grpc-dead-node-ip
-- INCIDENT-20260910-emr-v2-di-crashloop
-- LIS-7882
-- PO-270
-- QH-1104
-- QH-1130
-- QH-1159
-- QH-1591
-- QH-1775
-- QH-211
-- QH-2259
-- QH-2648
-- QH-680
-- QH-862
-- QH-918
-- QH-919
-- VP-15460
-- VP-16169
-- VP-16172
-- VP-16232
-- VP-16391
-- VP-16499
-- VP-16513
-- VP-16514
-- VP-16516
-- VP-16520
-- VP-16629
-- VP-16785
-- VP-16787
-- VP-16859
-- VP-16921
-- VP-16945
-- VP-16968
-- VP-17065
-- VP-17217
-- VP-17222
-- VP-17312
-- VP-17412
-- VP-17422
-- VP-17577
-- VP-17714
-- VP-17753
-- VP-17754
-- VP-17755
-- VP-17765
-- VP-17766
-- VP-17825
-- VP-17868
-- VP-17870
-- VP-18048
-- VP-18050
-- VP-18276
-- VP-18303
-- VP-18320
-- VP-18342
-- VP-18344
 - VP-18347
-- VP-18400
-- VP-18406
-- VP-18460
-- VP-18461
-- VP-18462
-- VP-18463
-- VP-18464
-- VP-18466
 - VP-18474
-- VP-18480
 - VP-18481
-- VP-18482
-- VP-18485
-- VP-18655
-- VP-18673
-- VP-18749
-- VP-18770
-- VP-18771
-- VP-18782
 - VP-18796
-- VP-18801
-- VP-18802
-- VP-9299
-- business-model
-- business-model-deep
 - failures
-- repo-catalog
 - repos
-score: 0.6468
+score: 0.1584
 ---
 
 # Summary

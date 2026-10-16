@@ -3,7 +3,7 @@ id: repo-catalog
 type: ltm
 category: technical
 status: active
-score: 1.2363
+score: 0.1225
 base_weight: 0.9
 created: 2026-06-07
 updated: 2026-06-07

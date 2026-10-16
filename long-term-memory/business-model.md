@@ -3,7 +3,7 @@ id: business-model
 type: ltm
 category: technical
 status: active
-score: 0.8576
+score: 0.1114
 base_weight: 0.9
 created: 2026-06-07
 updated: 2026-06-07

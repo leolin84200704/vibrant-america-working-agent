@@ -3,7 +3,7 @@ id: rules
 type: ltm
 category: pm_patterns
 status: active
-score: 0.1673
+score: 0.1416
 base_weight: 0.8
 urgency: 3
 created: 2026-10-15

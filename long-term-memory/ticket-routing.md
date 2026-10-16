@@ -3,7 +3,7 @@ id: ticket-routing
 type: ltm
 category: pm_patterns
 status: active
-score: 0.1213
+score: 0.0953
 base_weight: 0.7
 created: 2026-04-22
 updated: 2026-09-24
@@ -211,3 +211,18 @@ summary: Ticket keyword to repo/module routing table
 - **"PR 要附 URL / Jira 寫入用 Leo 帳號 / Mingxi 用中文 Slack / 對外信先 prod 再寄 / 正文不留 placeholder"** → `leo-working-rules.md` 10-13。
 - **"LIS-Sample 不能 push？"** → 可以（`repos.md` 09-29 條已作廢，10-13 更新段）。
 
+
+## 2026-10-15 新增路由（dream；VP-18796 / VP-18801 / VP-18802 / VP-18482 / VP-18824 / VP-18833 / VP-18832 / VP-18842 / LBS-1842 / VP-18034 / BIOINSIGHTS / journal 10-15）
+- **"storage retrieval / results-web 改走 trans / SAMPLE_STORAGE_BASE_URL / lis-test-web config 切換 / DATABASE_URL_LIS_INVENTORY_MASTER / 2026-11-13 soak / results-web push 權限"** → STM `VP-18796`（Dev Complete 10-14）+ `repos.md` 10-15。
+- **"tests/rerun / tnp partial-spun / tubes/info / interaction-logs / coupon / phlebotomists / SAMPLE_COUPON_URL / vibrant_tracking slave / staging TNP -45 誤寫 / 期望 403 先探權限"** → STM `VP-18801`（Dev Complete 10-15）+ `patterns.md` 10-15。
+- **"storage racks / records / rack suggestions 500 / DATABASE_URL_VA_INFO_MASTER / legacy import 每天三次 / Redlock retry / SAMPLE_LEGACY_IMPORT_CRON / #948 lock warn log"** → STM `VP-18802`（Dev Complete 10-15）+ `patterns.md` 10-15。
+- **"Phase C / kits / GET /patients/v2/kits / KITS_SHADOW_* / shadow_diff / LIS-Sample ci-tests.yml / contracts 快照 / lis-sample-replay-compare / getPortalJwt / SampleKitsTransBridge / lis-trans-secret 共用"** → STM `VP-18482`（Dev In Progress，shadow 中）。
+- **"一則訊息一個 PDF / 15 MB / per-report HL7 {accession}_{SHORT}.hl7 / testHierarchyForReports / 沒 report 認領的衍生指標 / planPerReportSplit / Maristany split=1 / grpcurl GenerateResultHl7 / Cerbo archive 多則同 accession"** → STM `VP-18833`（Done 10-15）+ `emr-integration.md` 10-15。
+- **"Cerbo >15 MB / compressPdfStrict / ResultMessageTooLargeError / 一律壓縮 / optimalhealthcare 關閉 / humanauthealth / rcode 24 MB / compressPdf 吞錯"** → STM `VP-18832`（Done 10-15）+ `emr-integration.md` 10-15。
+- **"Cerbo 多 PDF 內嵌問答 / VP-18824 收尾 / round-trip watcher"** → STM `VP-18824`（Done 10-15）。
+- **"EMR HL7 order 走 legacy sendOrder / orderTest/order / Place Order API v2 / HL7_ORDER_PLACEMENT_MODE / bundle sub_items / Xiaoye / emr_payment_type"** → STM `VP-18842`（Dev Blocked）+ `emr-integration.md` 10-15。
+- **"Hormone QNR resend 404 / 18 條路由還原 / VP-18480 revert / 替代計畫 / 沒有替代不刪路由 / Fangyuan"** → STM `LBS-1842` + `drafts/LBS-1842-replacement-plan.md` + `patterns.md` 10-15。
+- **"Get Healthy / platform 1001 / platform_public_keys / gethealthy-2026-09 / Chris Wu 換 key"** → STM `VP-18034`（10-14 / 10-15 段）+ `emr-integration.md` 10-15。
+- **"devcom spec / UpdatedExampleOrder_Explained / HL7_Technical_Reference / Aimee Duffy 1528033081 / requisition 資料夾 / vendor-email-reply / partner-specs gap table / Britney JAG 通知"** → STM `BIOINSIGHTS-onboarding`（10-15 段 + Retrospective）+ skill `vendor-email-reply` + `reference/partner-specs/` + `emr-integration.md` 10-15。
+- **"dream spend limit / DREAM_FALLBACK_MODEL / link 飽和 / DF 過濾 / 55 個 archive / summary 空白 / memory-health.py / weekly routine / retrospective 覆蓋率"** → journal `2026-10-15-research-improve-memory-scoring` + `patterns.md` 10-15 + `logs/weekly-2026-10-15.md`。
+- **"required status check typecheck + unit tests / ruleset / VP-18456"** → 兩個 trans repo 10-14 已生效（Ethan）；LIS-Sample 尚無（VP-18482 後續）。
