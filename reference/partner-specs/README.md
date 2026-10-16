@@ -8,7 +8,8 @@ this spec were "invalid").
 
 | Document | Source of truth | Copy here | Sent to |
 |---|---|---|---|
-| UpdatedExampleOrder_Explained.pdf | SharePoint `kristine_l` OneDrive: `EMR/Technical Documentation/UpdatedExampleOrder_Explained.pdf` (2025-10-15) | `UpdatedExampleOrder_Explained.md` (verbatim) | BioInsights/devcom, 2026-09-04 (Leo, share link to 5 addresses) |
+| **UpdatedExampleOrder_Explained v2** (current, matches code) | this repo | `UpdatedExampleOrder_Explained.v2.md` (+ PDF build) | not yet sent; replaces v1 for new partners |
+| UpdatedExampleOrder_Explained.pdf (v1, superseded) | SharePoint `kristine_l` OneDrive: `EMR/Technical Documentation/UpdatedExampleOrder_Explained.pdf` (2025-10-15) | `UpdatedExampleOrder_Explained.md` (verbatim) | BioInsights/devcom, 2026-09-04 (Leo, share link to 5 addresses) |
 | HL7_Technical_Reference.docx | **not located** (not found by SharePoint search 2026-10-15) | none | BioInsights/devcom, 2026-09-04 |
 | Integration_Setup_Guide.docx | SharePoint `kristine_l` OneDrive: `EMR/Technical Documentation/Integration_Setup_Guide.docx` (2026-04-03) | none | unknown |
 

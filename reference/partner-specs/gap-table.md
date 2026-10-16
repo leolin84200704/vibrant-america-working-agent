@@ -1,4 +1,9 @@
-# UpdatedExampleOrder_Explained vs lis-backend-emr-v2 parser
+# UpdatedExampleOrder_Explained (v1) vs lis-backend-emr-v2 parser
+
+v2 (`UpdatedExampleOrder_Explained.v2.md`, 2026-10) rewrites the spec to describe what the code
+does, so every row below is resolved in v2. The table stays because partners who received v1
+(BioInsights/devcom, 2026-09-04) still build against it: when one of them follows v1 on a row
+below, answer with the "What to tell a partner" column and point them to v2.
 
 Verified 2026-10-15 against `lis-backend-emr-v2` origin/main 270f0b2
 (`src/modules/hl7-order-processing/services/{parser,obr-parser,patient-detail-parser}.service.ts`).
