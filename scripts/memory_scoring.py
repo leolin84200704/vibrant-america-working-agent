@@ -9,8 +9,20 @@ format, zero imports from src/ — only stdlib + PyYAML.
 Formula: score = (base_weight * recency * reference_boost * urgency_boost) / 8.0
   recency         e^(-days_since_update / half_life); STM=30d, archive=180d,
                   LTM fixed at 0.99 (knowledge barely decays)
-  reference_boost 1.0 + 0.1 * incoming_link_count
+  reference_boost 1.0 + 0.1 * min(incoming_link_count, LINK_BOOST_CAP)
+                  (incoming counted from STM links only; LTM/archive do not vote)
   urgency_boost   1.0 + 0.15 * (urgency - 1), urgency 1-5 from frontmatter
+
+Linking: `links:` on STM files is REBUILT from scratch on every run (not
+accumulated; LTM files keep union semantics). Two files link when they share >= MIN_LINK_OVERLAP keywords after
+dropping keywords present in more than MAX_KEYWORD_DF of the STM+LTM corpus.
+Hand-curated `relations:` targets are always kept in `links:`.
+
+Why (2026-10-15 research+improve): with accumulate-only linking and no document-
+frequency filter, 25% of all file pairs were linked (median 99 incoming links per
+STM, boost x10). The boost became a near-constant inflation, so completed tickets
+never fell under the 0.1 archive threshold: STM grew 45 -> 178 files in five
+months and grep retrieval hit@1 fell 0.51 -> 0.11.
 
 Pinning: a file with `score_frozen: true` in frontmatter keeps its stored
 `score:` untouched by the formula (add a `note:` explaining why). Use for
@@ -46,6 +58,8 @@ LTM_FIXED_RECENCY = 0.99
 NORMALIZATION = 8.0
 URGENCY_BOOST_PER_LEVEL = 0.15
 MIN_LINK_OVERLAP = 3
+MAX_KEYWORD_DF = 0.20   # keywords in > 20% of STM+LTM files carry no link signal
+LINK_BOOST_CAP = 20     # reference_boost saturates at x3.0
 
 CATEGORY_KEYWORDS = {
     "emr_integration": [
@@ -254,27 +268,65 @@ def extract_keywords(path: Path, meta: dict) -> set[str]:
     return keywords
 
 
-def auto_link_all() -> int:
+def relation_targets(meta: dict) -> set[str]:
+    """Ids named in the hand-curated `relations:` block (any edge type)."""
+    rel = meta.get("relations")
+    out: set[str] = set()
+    if isinstance(rel, dict):
+        for v in rel.values():
+            if isinstance(v, list):
+                out.update(str(x) for x in v)
+            elif v:
+                out.add(str(v))
+    return out
+
+
+def compute_links(kws: dict[str, set[str]]) -> dict[str, set[str]]:
+    """Pairwise keyword-overlap links after dropping high-document-frequency keywords."""
+    n = len(kws)
+    df: dict[str, int] = {}
+    for s in kws.values():
+        for k in s:
+            df[k] = df.get(k, 0) + 1
+    allowed = {k for k, c in df.items() if c <= MAX_KEYWORD_DF * n}
+    filtered = {i: s & allowed for i, s in kws.items()}
+    links: dict[str, set[str]] = {i: set() for i in kws}
+    ids = sorted(kws)
+    for i, a in enumerate(ids):
+        for b in ids[i + 1:]:
+            if len(filtered[a] & filtered[b]) >= MIN_LINK_OVERLAP:
+                links[a].add(b)
+                links[b].add(a)
+    return links
+
+
+def auto_link_all() -> tuple[int, int]:
+    """Rebuild `links:` on every STM/LTM file. Returns (files_rewritten, total_links)."""
     files = list_tier_files("stm") + list_tier_files("ltm")
     metas = {f: read_frontmatter(f) for f in files}
     ids = {f: metas[f].get("id", f.stem) for f in files}
     kws = {ids[f]: extract_keywords(f, metas[f]) for f in files}
     path_by_id = {ids[f]: f for f in files}
+    links = compute_links(kws)
 
-    added = 0
-    sorted_ids = sorted(path_by_id)
-    for i, a in enumerate(sorted_ids):
-        for b in sorted_ids[i + 1:]:
-            if len(kws[a] & kws[b]) < MIN_LINK_OVERLAP:
-                continue
-            for x, y in ((a, b), (b, a)):
-                meta = metas[path_by_id[x]]
-                links = meta.get("links") if isinstance(meta.get("links"), list) else []
-                if y not in links:
-                    meta["links"] = sorted(set(links + [y]))
-                    write_frontmatter(path_by_id[x], meta)
-                    added += 1
-    return added
+    rewritten = 0
+    total = 0
+    for file_id, path in path_by_id.items():
+        meta = metas[path]
+        old = meta.get("links") if isinstance(meta.get("links"), list) else []
+        keep = relation_targets(meta)
+        if meta.get("type") == "ltm":
+            # LTM links accumulate (union) as before: extract-failures.py /
+            # extract-rules.py write their own outbound links into failures.md /
+            # rules.md and would otherwise churn against a from-scratch rebuild.
+            keep |= {str(x) for x in old}
+        new = sorted((links[file_id] | keep) - {file_id})
+        total += len(new)
+        if sorted(str(x) for x in old) != new:
+            meta["links"] = new
+            write_frontmatter(path, meta)
+            rewritten += 1
+    return rewritten, total
 
 
 # ── Scoring ──────────────────────────────────────────────────────
@@ -290,7 +342,7 @@ def score_file(path: Path, meta: dict, incoming: int, today: date) -> tuple[floa
     else:
         recency = math.exp(-days_since / HALF_LIFE.get(tier, 30))
 
-    boost = 1.0 + 0.1 * incoming
+    boost = 1.0 + 0.1 * min(incoming, LINK_BOOST_CAP)
     try:
         urgency = max(1, min(5, int(meta.get("urgency", 1))))
     except (TypeError, ValueError):
@@ -305,10 +357,16 @@ def rescore_and_reindex(write: bool = True) -> dict:
     all_files = [(t, f) for t in TIER_DIRS for f in list_tier_files(t)]
     metas = {f: read_frontmatter(f) for _, f in all_files}
 
+    # Only STM links vote. Archive files keep their historical links but a pile
+    # of archived tickets must not keep a long-finished STM looking hot, and LTM
+    # link lists accumulate forever (see auto_link_all), so they carry no signal.
     incoming: dict[str, int] = {}
-    for _, f in all_files:
+    for tier, f in all_files:
+        if tier != "stm":
+            continue
         for link in metas[f].get("links", []) if isinstance(metas[f].get("links"), list) else []:
             incoming[link] = incoming.get(link, 0) + 1
+    missing_summary: list[str] = []
 
     stats: dict = {}
     for tier in TIER_DIRS:
@@ -349,7 +407,10 @@ def rescore_and_reindex(write: bool = True) -> dict:
                 for score, file_id, meta in scored:
                     tags = meta.get("tags", [])
                     tag_str = " ".join(str(t) for t in tags) if isinstance(tags, list) else str(tags or "")
-                    lines.append(f"| {score:.2f} | {file_id} | {meta.get('summary', '')} | {tag_str} | "
+                    summary, derived = index_summary(TIER_DIRS[tier] / f"{file_id}.md", meta)
+                    if derived:
+                        missing_summary.append(file_id)
+                    lines.append(f"| {score:.2f} | {file_id} | {summary} | {tag_str} | "
                                  f"{meta.get('status', 'active')} | {meta.get('category', 'technical')} | "
                                  f"{meta.get('updated', '')} |")
             lines.append("")
@@ -362,7 +423,36 @@ def rescore_and_reindex(write: bool = True) -> dict:
             "lowest": min(scores) if scores else 0,
             "median": sorted(scores)[len(scores) // 2] if scores else 0,
         }
+    stats["_missing_summary"] = missing_summary
     return stats
+
+
+_ID_PREFIX = None
+
+
+def index_summary(path: Path, meta: dict) -> tuple[str, bool]:
+    """Summary text for an index row. Falls back to `title:` and then to the first
+    H1 of the body, so a file written without `summary:` still routes instead of
+    showing a blank cell (16 of 178 STM rows were blank on 2026-10-15).
+    Returns (text, derived_from_fallback)."""
+    s = str(meta.get("summary") or "").strip()
+    if s:
+        return " ".join(s.split()), False
+    t = str(meta.get("title") or "").strip()
+    if t:
+        return " ".join(t.split()), True
+    try:
+        body = path.read_text(encoding="utf-8")
+    except OSError:
+        return "", True
+    for line in body.splitlines():
+        if line.startswith("# "):
+            head = line[2:].strip()
+            fid = str(meta.get("id", path.stem))
+            if head.startswith(fid):
+                head = head[len(fid):].lstrip(" -—:")
+            return head, True
+    return "", True
 
 
 def main() -> int:
@@ -373,11 +463,15 @@ def main() -> int:
     if args.stats:
         stats = rescore_and_reindex(write=False)
     else:
-        added = auto_link_all()
-        print(f"Auto-linked: {added} new link entries")
+        rewritten, total = auto_link_all()
+        print(f"Links rebuilt: {total} links, {rewritten} files rewritten")
         stats = rescore_and_reindex(write=True)
         print("Scores and indexes rebuilt")
 
+    missing = stats.pop("_missing_summary", [])
+    if missing:
+        print(f"  WARN: {len(missing)} index rows derived from title/H1 (no summary:): "
+              + ", ".join(missing))
     for tier, s in stats.items():
         print(f"  {tier}: count={s['count']} highest={s['highest']:.2f} "
               f"lowest={s['lowest']:.2f} median={s['median']:.2f}")

@@ -45,7 +45,7 @@ bash scripts/install-launchd.sh --status
 
 **Liveness**: the pipeline died silently for 3 weeks in June 2026 (plist hardcoded another machine's path; failures were misread as success). Guards now in place: `install-launchd.sh` generates the plist from the current checkout path; `run-dream.sh` checks the `claude` binary and exit codes and raises a macOS notification on failure; every Claude Code session checks the STM index `Last updated:` date at session start and flags staleness > 3 days (see `RETRIEVAL.md` § Staleness check).
 
-A weekly self-improvement routine (`scripts/weekly-routine.sh`, Sunday 11:00) refreshes derived LTM files and captures eval snapshots.
+A weekly self-improvement routine (`scripts/weekly-routine.sh`, Sunday 11:00) refreshes derived LTM files, captures eval snapshots and appends a write-stage quality section (`scripts/memory-health.py`: empty summaries, completed tickets without a retrospective, link density, oversized LTM files, archive-eligible STM). The launchd job for it has never been loaded on Leo's machine (`install-launchd.sh dream` leaves that alone; `install-launchd.sh weekly` loads it) — the 2026-10-15 run was manual, the first since 2026-05-20.
 
 ## Repo layout
 
