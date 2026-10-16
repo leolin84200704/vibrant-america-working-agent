@@ -127,6 +127,9 @@ links:
 - VP-18714
 - VP-18755
 - VP-18824
+- VP-18832
+- VP-18833
+- VP-18842
 - emr-integration
 - fhir-api
 tags:
@@ -147,7 +150,7 @@ summary: 'hl7_file_input 6746 (order_28984_1785429636_83.hl7, /turnpaughemr/orde
   clinic 13505, active, no duplicates (core-verified). Leo direct request, no Jira
   ticket; requested_by=customer_not_found-fix-20260731.'
 jira_status: none
-score: 0.127
+score: 0.1215
 ---
 
 # HL7FAIL-20260730 — Turnpaugh customer_not_found (Vincent Grove)

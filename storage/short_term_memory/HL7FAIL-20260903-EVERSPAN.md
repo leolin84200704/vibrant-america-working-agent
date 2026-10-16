@@ -131,9 +131,12 @@ links:
 - VP-18714
 - VP-18755
 - VP-18824
+- VP-18832
+- VP-18833
+- VP-18842
 - emr-integration
 - fhir-api
-score: 0.3885
+score: 0.3717
 ---
 
 # HL7FAIL-20260903 — Everspan customer_not_found (Mary Jo Allen)

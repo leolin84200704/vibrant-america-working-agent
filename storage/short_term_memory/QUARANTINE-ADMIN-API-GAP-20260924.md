@@ -3,7 +3,7 @@ id: QUARANTINE-ADMIN-API-GAP-20260924
 type: stm
 category: emr_integration
 status: active
-score: 0.8692
+score: 0.8318
 base_weight: 1.0
 created: 2026-09-24
 updated: 2026-09-24
@@ -127,6 +127,9 @@ links:
 - VP-18714
 - VP-18755
 - VP-18824
+- VP-18832
+- VP-18833
+- VP-18842
 - emr-integration
 - fhir-api
 relations:

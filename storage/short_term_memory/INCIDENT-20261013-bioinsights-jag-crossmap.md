@@ -4,6 +4,7 @@ type: stm
 category: emr_integration
 status: active
 base_weight: 1.0
+urgency: 5
 created: 2026-10-13
 updated: '2026-10-13'
 links:
@@ -98,6 +99,9 @@ links:
 - VP-18714
 - VP-18755
 - VP-18824
+- VP-18832
+- VP-18833
+- VP-18842
 - emr-integration
 - fhir-api
 - leo-working-rules
@@ -116,7 +120,7 @@ summary: 'Retrospective (Leo: "這是嚴重的錯誤，請你檢討"). 07-27 the
   between JAG complaint (10-01) and containment (10-13). Memory recorded the source
   as "Serdar email" which never existed; two L4 checks verified the DB row instead
   of the originating email. Eight concrete rule changes listed under Lessons.'
-score: 1.275
+score: 1.9646
 ---
 
 # INCIDENT 2026-10-13: BioInsights vendor row carried JAG's practice for 78 days

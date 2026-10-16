@@ -3,7 +3,7 @@ id: INCIDENT-20260604
 type: stm
 category: technical
 status: resolved
-score: 0.008
+score: 0.0077
 base_weight: 0.9
 urgency: 5
 created: 2026-06-04
@@ -32,6 +32,7 @@ links:
 - VP-18481
 - VP-18771
 - VP-18782
+- VP-18802
 - failures
 - repo-catalog
 - repos

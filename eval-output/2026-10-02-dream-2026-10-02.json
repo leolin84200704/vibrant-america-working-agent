@@ -1,0 +1,142 @@
+{
+  "coverage": {
+    "completed_without_retro": [
+      "BETA-E2E-20260729",
+      "HL7FAIL-20260722-MDHQ",
+      "HL7FAIL-20260730-TURNPAUGH",
+      "HL7FAIL-20260903-EVERSPAN",
+      "LBS-1656",
+      "LBS-1762",
+      "LBS-1773",
+      "LBS-1785",
+      "LBS-1799",
+      "PH-847",
+      "RESULTCHECK-20260819-RCODE-2608186060",
+      "VEJO-DELETION-20260804",
+      "VP-17283",
+      "VP-17286",
+      "VP-17411",
+      "VP-17460",
+      "VP-17474",
+      "VP-17475",
+      "VP-17493",
+      "VP-17497",
+      "VP-17499",
+      "VP-17503",
+      "VP-17517",
+      "VP-17537",
+      "VP-17538",
+      "VP-17539",
+      "VP-17584",
+      "VP-17589",
+      "VP-17631",
+      "VP-17685",
+      "VP-17686",
+      "VP-17691",
+      "VP-17715",
+      "VP-17734",
+      "VP-17748",
+      "VP-17752",
+      "VP-17753",
+      "VP-17754",
+      "VP-17755",
+      "VP-17765",
+      "VP-17810",
+      "VP-17825",
+      "VP-17870",
+      "VP-17914",
+      "VP-18034",
+      "VP-18048",
+      "VP-18086",
+      "VP-18185",
+      "VP-18243",
+      "VP-18270",
+      "VP-18288",
+      "VP-18303",
+      "VP-18320",
+      "VP-18372",
+      "VP-18386",
+      "VP-18400",
+      "VP-18404",
+      "VP-18406",
+      "VP-18461",
+      "VP-18466",
+      "VP-18485",
+      "VP-18589",
+      "VP-18593",
+      "VP-18595",
+      "VP-18596"
+    ],
+    "failures_pct": 24.2,
+    "retrospective_pct": 23.0
+  },
+  "cross_links": 20816,
+  "date": "2026-10-02",
+  "last_dream": {
+    "log": "dream-2026-10-02.md",
+    "ops": {
+      "merged": 0
+    }
+  },
+  "ltm_lines": {
+    "business-model": 250,
+    "business-model-deep": 225,
+    "emr-integration": 2147,
+    "failures": 1718,
+    "fhir-api": 291,
+    "leo-working-rules": 519,
+    "patterns": 2886,
+    "repo-catalog": 458,
+    "repos": 363,
+    "rules": 359,
+    "ticket-routing": 155
+  },
+  "tiers": {
+    "archive": {
+      "archive_candidates": 8,
+      "by_category": {
+        "emr_integration": 42,
+        "pm_patterns": 1,
+        "process": 1,
+        "repo_patterns": 3,
+        "technical": 62
+      },
+      "count": 109,
+      "highest": 1.1436,
+      "lowest": 0.0057,
+      "mean": 0.3316,
+      "median": 0.055,
+      "stdev": 0.4061
+    },
+    "ltm": {
+      "archive_candidates": 0,
+      "by_category": {
+        "emr_integration": 2,
+        "pm_patterns": 2,
+        "process": 1,
+        "repo_patterns": 1,
+        "technical": 5
+      },
+      "count": 11,
+      "highest": 1.7696,
+      "lowest": 0.1126,
+      "mean": 0.8438,
+      "median": 0.7351,
+      "stdev": 0.652
+    },
+    "stm": {
+      "archive_candidates": 0,
+      "by_category": {
+        "emr_integration": 95,
+        "process": 3,
+        "technical": 63
+      },
+      "count": 161,
+      "highest": 1.45,
+      "lowest": 0.0015,
+      "mean": 0.3711,
+      "median": 0.2821,
+      "stdev": 0.3838
+    }
+  }
+}

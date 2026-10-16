@@ -3,7 +3,7 @@ id: repos
 type: ltm
 category: technical
 status: active
-score: 1.4702
+score: 1.5036
 base_weight: 0.9
 created: 2026-04-22
 updated: 2026-09-24
@@ -110,6 +110,7 @@ links:
 - VP-18474
 - VP-18480
 - VP-18481
+- VP-18482
 - VP-18485
 - VP-18655
 - VP-18673
@@ -118,6 +119,8 @@ links:
 - VP-18771
 - VP-18782
 - VP-18796
+- VP-18801
+- VP-18802
 - VP-9299
 - business-model
 - business-model-deep

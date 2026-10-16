@@ -3,7 +3,7 @@ id: fhir-api
 type: ltm
 category: emr_integration
 status: active
-score: 1.8068
+score: 1.8439
 base_weight: 1.0
 created: 2026-06-06
 updated: 2026-06-06
@@ -144,6 +144,9 @@ links:
 - VP-18714
 - VP-18755
 - VP-18824
+- VP-18832
+- VP-18833
+- VP-18842
 - emr-integration
 - repos
 tags:

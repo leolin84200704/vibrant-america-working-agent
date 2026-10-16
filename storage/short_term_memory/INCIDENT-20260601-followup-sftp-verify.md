@@ -3,8 +3,9 @@ id: INCIDENT-20260601-followup-sftp-verify
 type: stm
 category: technical
 status: pending
-score: 0.0016
+score: 0.0023
 base_weight: 0.9
+urgency: 5
 created: 2026-06-01
 updated: 2026-06-01
 links:

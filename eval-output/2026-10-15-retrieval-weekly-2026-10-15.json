@@ -1,0 +1,35 @@
+{
+  "corpus_size": 161,
+  "retrievers": [
+    {
+      "avg_ms": 256.65,
+      "hit@1": 0.112,
+      "hit@3": 0.36,
+      "hit@5": 0.503,
+      "mrr": 0.302,
+      "n": 161,
+      "retriever": "grep_body",
+      "zero_recall_pct": 0.0
+    },
+    {
+      "avg_ms": 4.72,
+      "hit@1": 0.845,
+      "hit@3": 0.938,
+      "hit@5": 0.975,
+      "mrr": 0.9,
+      "n": 161,
+      "retriever": "summary_only",
+      "zero_recall_pct": 0.0
+    },
+    {
+      "avg_ms": 0.22,
+      "hit@1": 0.0,
+      "hit@3": 0.0,
+      "hit@5": 0.0,
+      "mrr": 0.0,
+      "n": 161,
+      "retriever": "skill_index",
+      "zero_recall_pct": 100.0
+    }
+  ]
+}
