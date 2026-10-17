@@ -12,6 +12,7 @@
 ## 模型（本 instance 一律 Fable 5 — Leo 指令 2026-08-18）
 - 互動 session：`.claude/settings.json` 釘 `"model": "fable[1m]"`（要 1M 窗口——實測本 instance 常態超過 250k context，掉回 200k 會頻繁 compact）
 - 所有 headless `claude -p`（dream / daily-digest / bug_watch / hl7 triage / ticket watch）預設 `fable`，各自可用 `DREAM_MODEL` / `DIGEST_MODEL` / `BUGWATCH_MODEL` / `TRIAGE_MODEL` / `TICKETWATCH_MODEL` env 覆寫
+- **Session 內派的 subagent（Agent tool）一律 `model: "opus"`**，不論 agent type、不靠預設繼承（Leo 指令 2026-10-17，VP-18800）
 - 改這裡等同改 automation 行為 → 走 PR，不直接 commit main
 
 ## Git 規則（本工作專屬）
