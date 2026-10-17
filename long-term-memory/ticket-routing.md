@@ -226,3 +226,13 @@ summary: Ticket keyword to repo/module routing table
 - **"devcom spec / UpdatedExampleOrder_Explained / HL7_Technical_Reference / Aimee Duffy 1528033081 / requisition 資料夾 / vendor-email-reply / partner-specs gap table / Britney JAG 通知"** → STM `BIOINSIGHTS-onboarding`（10-15 段 + Retrospective）+ skill `vendor-email-reply` + `reference/partner-specs/` + `emr-integration.md` 10-15。
 - **"dream spend limit / DREAM_FALLBACK_MODEL / link 飽和 / DF 過濾 / 55 個 archive / summary 空白 / memory-health.py / weekly routine / retrospective 覆蓋率"** → journal `2026-10-15-research-improve-memory-scoring` + `patterns.md` 10-15 + `logs/weekly-2026-10-15.md`。
 - **"required status check typecheck + unit tests / ruleset / VP-18456"** → 兩個 trans repo 10-14 已生效（Ethan）；LIS-Sample 尚無（VP-18482 後續）。
+
+## 2026-10-17 新增路由（dream；LBS-1842 / VP-18889 / VP-18801 / VP-18802 / VP-18800 / VP-18673 / journal 10-16）
+- **"notifications/active / POST notifications / GET /customers / GetClientsCustomers / SAMPLE_CORE_V1_NOTIFICATION_GRPC / lis-core notification.proto / #961 / #963"** → STM `VP-18889`（Dev Complete 10-16；dream 10-17 從 LBS-1842 STM + journal 建）+ journal `2026-10-16-lbs1842-vp18889-recovery-to-closeout`。
+- **"interaction-logs/:id/details / interaction-logs/resolution / storage tubes PUT DELETE / records/batch/removal / #960 / #962 / 還原路由搬 trans"** → STM `LBS-1842` 10-16 段 + STM `VP-18801` / `VP-18802`（scope 擴充、重開再關）。
+- **"record-management / merge-patients / transfer-all-orders / transfer-selected-patients / providers/:id/patients / VP-18800"** → STM `VP-18800`（Dev In Progress）。
+- **"route migration 流程 / caller 文件 before after / Confluence 2737373187 / 2026-10-30 deadline / 五點刪除規則 / /v1/portal/trans-service"** → `runbooks/lis-sample-route-migration.md` + CLAUDE.md Git 規則 + `repos.md` 10-17。
+- **"session 被殺 / worktree 沒 commit / TS2742 / node_modules symlink / APFS clone / deploy 同秒 race / 舊 image 落地 / re-run deploy job"** → `patterns.md` 10-17 + journal 10-16。
+- **"重開 Dev Complete / QA Review → QA Rejected → Dev In Progress / contracts 衝突 / auto-merge 關著"** → `patterns.md` 10-17。
+- **"base-report token mint / VIBRANT_API_TOKEN / Latest report time for barcode / No finished reports"** → STM `VP-18673`（Dev Complete 10-16）。
+- **"prisma service_call_records findUnique record_id missing"** → `patterns.md` 10-17（未歸因，VP-18801 路由的 DTO 驗證洞）。

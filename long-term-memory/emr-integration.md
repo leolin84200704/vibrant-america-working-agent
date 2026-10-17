@@ -3,7 +3,7 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 0.2599
+score: 0.2475
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-09-24

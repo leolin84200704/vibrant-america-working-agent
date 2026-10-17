@@ -2,6 +2,8 @@
 date: 2026-10-16
 tickets: [LBS-1842, VP-18889, VP-18801, VP-18802]
 type: session
+distilled: true
+distilled_on: 2026-10-17
 summary: Session killed mid-port; recovered two uncommitted trans ports, took them through staging A/B, main merge, prod A/B, Dev Complete x3, a Confluence caller guide and a recorded migration process.
 ---
 

@@ -617,6 +617,14 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 - **BIOINSIGHTS 10-15「這個 ticket 你犯了非常多的錯誤，請檢討」**（三天內第二次要檢討）：他改稿時拿掉的東西比加的多——刪掉認錯句（"You are right, those values follow our document"）、刪掉「下載了幾個檔」的追問、onboarding owner 只留 Mingxi、Zhenhe 那行改成「confirm the order detail, and let us know in this thread if there is anything blocking you」。Duffy：「不要說我們會 register」——沒驗過前置條件與 owner 的動作不承諾。「請進行很久沒有進行的research + improve」→ 週例行自 05-20 第一次跑。
 - **VP-18034「prod 用 1001」**：Slack 轉述的 partner 資訊（key、帳號）就是來源，STM 要寫「Source: Slack relayed by Leo <時間>」。
 
+## Leo 10-16 的決定與打回（LBS-1842 / VP-18889 / VP-18801 / VP-18802 / VP-18800 / VP-18673）
+- **main 的 merge 留給 Leo，即使 staging 全程 agent 自己 merge**：agent 問要不要自己 merge，答「等 Leo merge」；兩個 PR 他 approve 後自己按。只有 #961 因 #960 先進造成 contracts 衝突、agent 重推 head 之後，他明說授權 agent 解衝突並 merge——一次性授權，不延伸到下一張票。
+- **scope 用 Jira comment 加，不改 description；票已 Dev Complete 就重開**：五條還原路由屬於 VP-18801 / VP-18802 → 各自 scope comment + 重開；不屬於任何家族票的（notifications / customers）→ 開新票 VP-18889（parent VP-18260）。
+- **「都轉 Dev Complete」的條件 = code 在 prod + read-only A/B equal + 文件；流量切不切不是 Done 的條件**（與 10-15 cross-review 第 3 點同一條）。
+- **Done 之後的對外物件順序**：Confluence「之前／之後」caller 文件寫進他的資料夾（2119335937）→ 他自己在 Slack 給兩週（deadline 2026-10-30）→ Jira comment 連結文件。Slack 貼文 agent 起草、Leo 發。
+- **「以後每次 migration 都照這個流程」→ 流程落成 runbook + CLAUDE.md 規則**，不是只留在 STM。
+- **「1 + 2 先做」（10-16 17:00）**：1 = VP-18673 收尾（審核證據後轉 Dev Complete，不貼 Jira comment），2 = VP-18798 或 VP-18800 擇一 → agent 選最便宜的 VP-18800 並說明理由。
+
 ## 平行 port 的 equal 要有資料、prod env key 是每張票各自撞到的同一個洞、vendor 規格一次只來一句、Done 早於證據時 owed 要寫進 digest（cross-ticket review 2026-10-15；證據 VP-18463 / VP-18481 / VP-18796 / VP-18801 / VP-18802 / VP-18824 / VP-18832 / VP-18833）
 1. **trans-port 家族（18481 / 18796 / 18801 / 18802 / 18482）**：每一個真實偏差都是 live A/B 對 legacy 抓到的，unit test 零命中；**prod env key 是五張票各自用一個 500 發現的同一個洞**（LIS_INVENTORY、COUPON、REDIS、VIBRANT_TRACKING、三個 kits key；VA_INFO 還缺著）。→ Step 5 動手前的清單項：把被搬模組會讀的每個 env key 從 LIS-Sample prod secret/cm 列出來，**merge 前**放進 `lis-trans-config`；A/B 集合必須含有資料的回應。
 2. **Cerbo 三連（18824 / 18833 / 18832）**：vendor 的規格一次只回一句（只吃 .hl7 → 一則一個 PDF → 15 MB），每句當天長出一張票；vendor 端的匯入是唯一證據、per-report 至今沒看到。Leo 以自己的口令結案 → agent 把 owed 的證明與檢查步驟寫進 digest，之後回答不重複「blocked」，只講「還欠什麼、怎麼看」。

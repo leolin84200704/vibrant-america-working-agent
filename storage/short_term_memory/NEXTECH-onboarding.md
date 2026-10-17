@@ -3,13 +3,12 @@ id: NEXTECH-onboarding
 type: stm
 category: emr_integration
 status: active
-score: 0.134
+score: 0.1164
 base_weight: 1.0
 created: 2026-09-22
 updated: 2026-10-07
 links:
 - BIOINSIGHTS-onboarding
-- LBS-1785
 - VP-17812
 - VP-18194
 - emr-integration
