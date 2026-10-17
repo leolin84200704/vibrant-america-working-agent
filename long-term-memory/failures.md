@@ -7,7 +7,7 @@ score: 0.1737
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-10-15
+updated: 2026-10-17
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -175,7 +175,7 @@ summary: Auto-aggregated failure index from 129 entries across STM
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-10-15 — total 129 entries
+> Last updated: 2026-10-17 — total 129 entries
 
 ## Themes
 
@@ -817,12 +817,6 @@ and QA has not run — moving it would falsely signal it was tested, so it was l
 **實際**：prod pod 還沒 rollout，跑的是舊 image。Image build + push + pod restart 大約 15-20 分鐘。
 **Preventable**：是。下次 deploy 後先 `kubectl exec ... grep -c <新 marker> /app/dist/...js` 驗證 dist 真的有新 code。
 
-### **[[VP-18048]]**
-
-- First `tsc` run: `omitInternalEventFields` generic spread typed as `Record<string, unknown>` failed on `T extends object`; fixed with an explicit cast.
-- First jest run in the worktree: 3 suites failed to load — `Azure_kafka_general_events environment variable is not set`. Worktree had no `.env`; symlinked the main checkout's (gitignored). Worth adding to the worktree checklist next to node_modules.
-- `prisma/manual-migrations/20260522_add_v2_calendar_specialties.sql` and all `scripts/vp-*-apply-migration.js` are **untracked in origin/main** (only exist in Leo's main checkout). The "one apply script per ticket" convention I copied lives nowhere in git. This ticket's SQL + script ARE committed.
-
 ### **[[VP-18402]]** — `2026-09-26 00:10` — Functional verification on STAGING against the real service + real DB
 
 Leo: "那就用 image 測試" — version confirmed by pod image tag, then exercise the real compiled
@@ -999,6 +993,12 @@ REMAINING: the last mile — an actual `removeCustomerFromClinic` with a real ad
 only path that exercises a SUCCESSFUL deactivation through trans. Needs a token and removes a real
 provider (core side-effects: RBAC strip, role rows, patient reassignment), so it needs Leo's
 go-ahead on a specific target rather than being done unilaterally.
+
+### **[[VP-18048]]** — **
+
+- First `tsc` run: `omitInternalEventFields` generic spread typed as `Record<string, unknown>` failed on `T extends object`; fixed with an explicit cast.
+- First jest run in the worktree: 3 suites failed to load — `Azure_kafka_general_events environment variable is not set`. Worktree had no `.env`; symlinked the main checkout's (gitignored). Worth adding to the worktree checklist next to node_modules.
+- `prisma/manual-migrations/20260522_add_v2_calendar_specialties.sql` and all `scripts/vp-*-apply-migration.js` are **untracked in origin/main** (only exist in Leo's main checkout). The "one apply script per ticket" convention I copied lives nowhere in git. This ticket's SQL + script ARE committed.
 
 ### **[[VP-16934]]** — `2026-06-09` — **
 
