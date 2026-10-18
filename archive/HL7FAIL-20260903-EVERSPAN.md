@@ -18,7 +18,7 @@ links:
 - VP-17812
 - VP-17827
 - emr-integration
-score: 0.026
+score: 0.0251
 ---
 
 # HL7FAIL-20260903 — Everspan customer_not_found (Mary Jo Allen)
