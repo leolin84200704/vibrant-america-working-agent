@@ -34,6 +34,9 @@
 - Jira ticket 的 summary/description 寫英文；給 Leo 的回覆維持繁中；Jira comment 只起草、不直接發
 - **Atlassian 一律用新的 connector `mcp__claude_ai_Atlassian_MCP__*`（v2 Streamable HTTP），讀寫都是；舊的 `mcp__claude_ai_Atlassian__*`（v1 SSE）已 deprecate，不要再用**（Leo 指令 2026-10-15：舊 connector 當天開始回 403 "The app is not installed on this instance"，新的正常、身分同為 Leo）。新 connector 的工具名不同（例：`getJiraIssue`、`addOrEditJiraIssueComment`、`transitionJiraIssue`，其他操作用 `discover` 找名字再走 `executeRead`/`executeWrite`）；cloudId 照舊 `373c4f18-fda5-4843-8438-6db1ac2e98f0`。舊 connector 的 SSE deprecation banner 不要轉述；新的若也失敗，才建議 Leo 去 claude.ai integrations reconnect
 
+## Slack
+- **Slack 訊息一律存草稿（`slack_send_message_draft`），不用 `slack_send_message` 直接送**，即使 Leo 說「幫我回／幫我發」也一樣：草稿存進對應對話，回報 Leo 去按送出。理由：經 Slack 的 Claude 整合直接送出的訊息會被自動加上「Sent using @Claude」，agent 端無參數可關；Leo 自己按送出才是他本人的訊息（Leo 指令 2026-10-19，回 Yekai VP-18796 那則帶出 footer 後）
+
 ## Memory 架構（本 instance 路徑）
 
 | Layer | 位置 | 用途 |
