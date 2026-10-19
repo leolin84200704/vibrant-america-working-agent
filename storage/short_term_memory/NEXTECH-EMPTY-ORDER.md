@@ -44,3 +44,12 @@ related: [NEXTECH-onboarding]
 - Next: release PR staging -> main is Leo's.
 
 ### [2026-10-19 19:30] Release PR #487 staging -> main opened (2 commits, = #486). Leo merges; after merge verify prod pods on main HEAD + dist grep, then watch next NEXTECH order.
+
+### [2026-10-19 19:50] Prod release + re-place of 26-0018 (Leo: new sample, kit shipping accepted)
+- #487 merged 19:33Z (main de221a4). AKS prod `lis-emr-v2-deployment-prod-97d45d878-9prs6` on de221a4 by ~19:38Z, dist grep 2/3. On-prem prod pod not checked (NEXTECH folder is pipeline_location=cloud -> AKS).
+- Backup of hl7_file_input 7314 + emr_sample 6728 before write: scratchpad backup_7314_6728.json.
+- Writes (each asserted 1 row): emr_sample 6728 control_id NxMsg3 -> `NxMsg3-empty-20261019` (WHERE id+sample_id+control_id+emr_service); hl7_file_input 7314 parse_finished 0, retry_num 1, sample_id/sample_id_payment/julien_barcode/payment_id/order_input/last_error NULL (WHERE id+sample_id+file_name+parse_finished=1). File copied archive/ -> localDir (md5 match).
+- 19:45Z rescan: placed sample **2655460**, accession **2610196534**, items [2 Celiac & Gluten Sensitivity, 4 Anemia], patientPayLater total 150, kits shipToPatient, emr_sample 6780 control_id NxMsg3, collection 2026-10-09 00:00.
+- Old empty sample 2650711 still exists in core (now unlinked from dedup) -- needs voiding by ops; 2646314 (26-0012) likewise.
+- NEW pre-existing bug found: parser.service.ts OBR loop (line ~365) runs inside the per-ORC loop (line ~199), so every OBR is processed once per ORC. Nextech sends one ORC per OBR -> testGroupList doubled: emr_sample.test_input `2,4,2,4`, order_input.original_price 233.88 (should be 150). actual_price / total / orderItems correct (BestDeal dedups). Also obrParseFailures would list each failure once per ORC. Follow-up PR candidate.
+- Outlook reply-all draft created (not sent) on Jessica's 10-19 14:45Z "schedule a call" mail; may need to be sent from Outlook (inline signature images).
