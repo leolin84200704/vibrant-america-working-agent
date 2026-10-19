@@ -1,0 +1,527 @@
+{
+ "batches": {
+  "1": {
+   "announced": "2026-10-16",
+   "deadline": "2026-10-30",
+   "slack": "#developers C02AQGMU422 2026-10-16 14:11 PDT"
+  },
+  "2": {
+   "announced": "2026-10-19",
+   "deadline": "2026-11-02",
+   "slack": "#developers C02AQGMU422 2026-10-19 15:44 PDT"
+  }
+ },
+ "routes": [
+  {
+   "method": "GET",
+   "path": "/interaction-logs",
+   "family": "Interaction logs",
+   "ticket": "VP-18801",
+   "batch": 1
+  },
+  {
+   "method": "POST",
+   "path": "/interaction-logs",
+   "family": "Interaction logs",
+   "ticket": "VP-18801",
+   "batch": 1
+  },
+  {
+   "method": "GET",
+   "path": "/interaction-logs/:id/details",
+   "family": "Interaction logs",
+   "ticket": "VP-18801",
+   "batch": 1
+  },
+  {
+   "method": "POST",
+   "path": "/interaction-logs/resolution",
+   "family": "Interaction logs",
+   "ticket": "VP-18801",
+   "batch": 1
+  },
+  {
+   "method": "POST",
+   "path": "/tests/rerun",
+   "family": "Tests",
+   "ticket": "VP-18801",
+   "batch": 1
+  },
+  {
+   "method": "POST",
+   "path": "/tests/tnp/partial-spun",
+   "family": "Tests",
+   "ticket": "VP-18801",
+   "batch": 1
+  },
+  {
+   "method": "PATCH",
+   "path": "/tubes/info",
+   "family": "Tubes",
+   "ticket": "VP-18801",
+   "batch": 1
+  },
+  {
+   "method": "GET",
+   "path": "/coupon",
+   "family": "Coupon",
+   "ticket": "VP-18801",
+   "batch": 1
+  },
+  {
+   "method": "GET",
+   "path": "/phlebotomists",
+   "family": "Phlebotomists",
+   "ticket": "VP-18801",
+   "batch": 1
+  },
+  {
+   "method": "GET",
+   "path": "/storage/racks",
+   "family": "Storage",
+   "ticket": "VP-18802",
+   "batch": 1
+  },
+  {
+   "method": "POST",
+   "path": "/storage/racks",
+   "family": "Storage",
+   "ticket": "VP-18802",
+   "batch": 1
+  },
+  {
+   "method": "PUT",
+   "path": "/storage/racks/:rack_serial_number",
+   "family": "Storage",
+   "ticket": "VP-18802",
+   "batch": 1
+  },
+  {
+   "method": "DELETE",
+   "path": "/storage/racks/:rack_serial_number",
+   "family": "Storage",
+   "ticket": "VP-18802",
+   "batch": 1
+  },
+  {
+   "method": "GET",
+   "path": "/storage/racks/type-list",
+   "family": "Storage",
+   "ticket": "VP-18802",
+   "batch": 1
+  },
+  {
+   "method": "GET",
+   "path": "/storage/racks/dimension-list",
+   "family": "Storage",
+   "ticket": "VP-18802",
+   "batch": 1
+  },
+  {
+   "method": "GET",
+   "path": "/storage/racks/suggestions",
+   "family": "Storage",
+   "ticket": "VP-18802",
+   "batch": 1
+  },
+  {
+   "method": "GET",
+   "path": "/storage/racks/:rack_serial_number/samples/tubes",
+   "family": "Storage",
+   "ticket": "VP-18802",
+   "batch": 1
+  },
+  {
+   "method": "POST",
+   "path": "/storage/racks/samples/tubes",
+   "family": "Storage",
+   "ticket": "VP-18802",
+   "batch": 1
+  },
+  {
+   "method": "PUT",
+   "path": "/storage/racks/samples/tubes/:storage_record_index",
+   "family": "Storage",
+   "ticket": "VP-18802",
+   "batch": 1
+  },
+  {
+   "method": "DELETE",
+   "path": "/storage/racks/samples/tubes/:storage_record_index",
+   "family": "Storage",
+   "ticket": "VP-18802",
+   "batch": 1
+  },
+  {
+   "method": "GET",
+   "path": "/storage/records",
+   "family": "Storage",
+   "ticket": "VP-18802",
+   "batch": 1
+  },
+  {
+   "method": "POST",
+   "path": "/storage/records/batch/removal",
+   "family": "Storage",
+   "ticket": "VP-18802",
+   "batch": 1
+  },
+  {
+   "method": "POST",
+   "path": "/storage/records/samples/retrieval",
+   "family": "Storage",
+   "ticket": "VP-18796",
+   "batch": 1
+  },
+  {
+   "method": "GET",
+   "path": "/patients/v2/kits",
+   "family": "Kits",
+   "ticket": "VP-18482",
+   "batch": 1
+  },
+  {
+   "method": "GET",
+   "path": "/notifications/active",
+   "family": "Notifications",
+   "ticket": "VP-18889",
+   "batch": 1
+  },
+  {
+   "method": "POST",
+   "path": "/notifications",
+   "family": "Notifications",
+   "ticket": "VP-18889",
+   "batch": 1
+  },
+  {
+   "method": "PATCH",
+   "path": "/notifications/:id",
+   "family": "Notifications",
+   "ticket": "VP-18889",
+   "batch": 1
+  },
+  {
+   "method": "DELETE",
+   "path": "/notifications/:id",
+   "family": "Notifications",
+   "ticket": "VP-18889",
+   "batch": 1
+  },
+  {
+   "method": "POST",
+   "path": "/record-management/merge-patients",
+   "family": "Record management",
+   "ticket": "VP-18800",
+   "batch": 2
+  },
+  {
+   "method": "GET",
+   "path": "/record-management/patients/search",
+   "family": "Record management",
+   "ticket": "VP-18800",
+   "batch": 2
+  },
+  {
+   "method": "GET",
+   "path": "/record-management/patients/:patient_id/order-total",
+   "family": "Record management",
+   "ticket": "VP-18800",
+   "batch": 2
+  },
+  {
+   "method": "GET",
+   "path": "/record-management/practices/search",
+   "family": "Record management",
+   "ticket": "VP-18800",
+   "batch": 2
+  },
+  {
+   "method": "GET",
+   "path": "/record-management/clinics/:clinic_id",
+   "family": "Record management",
+   "ticket": "VP-18800",
+   "batch": 2
+  },
+  {
+   "method": "GET",
+   "path": "/record-management/providers/search",
+   "family": "Record management",
+   "ticket": "VP-18800",
+   "batch": 2
+  },
+  {
+   "method": "GET",
+   "path": "/record-management/providers/:customer_id/clinics",
+   "family": "Record management",
+   "ticket": "VP-18800",
+   "batch": 2
+  },
+  {
+   "method": "GET",
+   "path": "/record-management/providers/:customer_id/patients",
+   "family": "Record management",
+   "ticket": "VP-18800",
+   "batch": 2
+  },
+  {
+   "method": "GET",
+   "path": "/record-management/providers/:customer_id/samples",
+   "family": "Record management",
+   "ticket": "VP-18800",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/record-management/transfer-provider-practice",
+   "family": "Record management",
+   "ticket": "VP-18800",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/record-management/transfer-all-patients",
+   "family": "Record management",
+   "ticket": "VP-18800",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/record-management/transfer-all-orders",
+   "family": "Record management",
+   "ticket": "VP-18800",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/record-management/transfer-selected-patients",
+   "family": "Record management",
+   "ticket": "VP-18800",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/record-management/transfer-selected-orders",
+   "family": "Record management",
+   "ticket": "VP-18800",
+   "batch": 2
+  },
+  {
+   "method": "GET",
+   "path": "/patients",
+   "family": "Patients",
+   "ticket": "VP-18798",
+   "batch": 2
+  },
+  {
+   "method": "PATCH",
+   "path": "/patients/profiles",
+   "family": "Patients",
+   "ticket": "VP-18798",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/patients/duplicate-check",
+   "family": "Patients",
+   "ticket": "VP-18798",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/patients/complete-reports",
+   "family": "Patients",
+   "ticket": "VP-18798",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/patients/kits/resend",
+   "family": "Patients",
+   "ticket": "VP-18798",
+   "batch": 2
+  },
+  {
+   "method": "GET",
+   "path": "/patients/resend-tubes",
+   "family": "Patients",
+   "ticket": "VP-18798",
+   "batch": 2
+  },
+  {
+   "method": "GET",
+   "path": "/patients/portal-jwt",
+   "family": "Patients",
+   "ticket": "VP-18798",
+   "batch": 2
+  },
+  {
+   "method": "GET",
+   "path": "/patients/pns-jwt",
+   "family": "Patients",
+   "ticket": "VP-18798",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/patients/orders/nutriproz-skincare-qnr",
+   "family": "Patients",
+   "ticket": "VP-18798",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/patients/orders/hormone-qnr",
+   "family": "Patients",
+   "ticket": "VP-18798",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/patients/orders/hormone-zoomer-qnr",
+   "family": "Patients",
+   "ticket": "VP-18798",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/patients/orders/gut-zoomer-qnr",
+   "family": "Patients",
+   "ticket": "VP-18798",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/patients/orders/cardio-zoomer-qnr",
+   "family": "Patients",
+   "ticket": "VP-18798",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/patients/orders/ny-waiver-form",
+   "family": "Patients",
+   "ticket": "VP-18798",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/patients/orders/disclosure-restricted-notif",
+   "family": "Patients",
+   "ticket": "VP-18798",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/patients/orders/notif-email",
+   "family": "Patients",
+   "ticket": "VP-18798",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/patients/orders/batch/notif-email",
+   "family": "Patients",
+   "ticket": "VP-18798",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/patients/orders/shipping-address/confirmation-email",
+   "family": "Patients",
+   "ticket": "VP-18798",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/patients/orders/reset-questionnaire",
+   "family": "Patients",
+   "ticket": "VP-18798",
+   "batch": 2
+  },
+  {
+   "method": "GET",
+   "path": "/customers",
+   "family": "Customers",
+   "ticket": "VP-18889",
+   "batch": 1
+  },
+  {
+   "method": "POST",
+   "path": "/order/check",
+   "family": "Order",
+   "ticket": "VP-18799",
+   "batch": 2
+  },
+  {
+   "method": "GET",
+   "path": "/order/overviews",
+   "family": "Order",
+   "ticket": "VP-18799",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/order/overviews/export",
+   "family": "Order",
+   "ticket": "VP-18799",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/order/attribute-value-check",
+   "family": "Order",
+   "ticket": "VP-18799",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/order/attribute-value-check/batch",
+   "family": "Order",
+   "ticket": "VP-18799",
+   "batch": 2
+  },
+  {
+   "method": "GET",
+   "path": "/order/patient-emails",
+   "family": "Order",
+   "ticket": "VP-18799",
+   "batch": 2
+  },
+  {
+   "method": "POST",
+   "path": "/order/sample/validation",
+   "family": "Order",
+   "ticket": "VP-18799",
+   "batch": 2
+  },
+  {
+   "method": "GET",
+   "path": "/order/audit-logs",
+   "family": "Order",
+   "ticket": "VP-18799",
+   "batch": 2
+  },
+  {
+   "method": "PATCH",
+   "path": "/order/sample-level-info",
+   "family": "Order",
+   "ticket": "VP-18799",
+   "batch": 2
+  },
+  {
+   "method": "GET",
+   "path": "/order/clients",
+   "family": "Order",
+   "ticket": "VP-18799",
+   "batch": 2
+  },
+  {
+   "method": "GET",
+   "path": "/order/clinics",
+   "family": "Order",
+   "ticket": "VP-18799",
+   "batch": 2
+  }
+ ]
+}

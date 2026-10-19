@@ -68,9 +68,13 @@ clean; announced in the LIS dev channel with the route list and date.
    the removal rule. First page: "LIS-Sample routes now served by trans v1: what callers change (before / after)".
    For later families **update that page** (add rows, move routes from "not yet" to "switch today") rather than
    creating a sibling.
-3. Leo posts the page in the Slack group and gives callers **two weeks**. The agent does not post to Slack.
-4. After the window: watch `caller_attribution` on the old routes, then the ingress rewrite / removal per the
-   ground rule (VP-18803 pattern). STM + journal for the ticket; this runbook updated if the process changed.
+3. The agent drafts the announcement; Leo posts it in Slack **#developers** (`C02AQGMU422`) with a **two-week**
+   deadline. The agent does not post to Slack. Posted so far: 2026-10-16 (29 routes, deadline 2026-10-30) and
+   2026-10-19 (44 routes, deadline 2026-11-02).
+4. After the window: add the routes and the deadline to `DailyJob/lis_sample_route_removal/routes.json`. That
+   daily job checks `caller_attribution` (14 days at zero) and the org-wide code search per route and opens a
+   draft removal PR on LIS-Sample for the eligible ones; Leo merges. The ingress rewrite / scale-down stays with
+   VP-18803. STM + journal for the ticket; this runbook updated if the process changed.
 
 ## 5. Artifacts from the first run (2026-10-16)
 
