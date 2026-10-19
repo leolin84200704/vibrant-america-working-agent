@@ -21,7 +21,10 @@ related: [NEXTECH-onboarding]
 
 ## Code Changes
 ### [2026-10-19 12:40]
-- Worktree `~/src/lis-backend-emr-v2.worktrees/NEXTECH-EMPTY-ORDER`, branch `bugfix/leo/NEXTECH-EMPTY-ORDER` from origin/main 270f0b2. Uncommitted, waiting for Leo review.
+- Worktree `~/src/lis-backend-emr-v2.worktrees/NEXTECH-EMPTY-ORDER`, branch `bugfix/leo/NEXTECH-EMPTY-ORDER` from origin/main 270f0b2.
+
+### [2026-10-19 13:00]
+- Committed + pushed; PR #486 -> staging (Vibrant-America/lis-backend-emr-v2). Not merged yet: Leo asked for the PR only; open question on partial-OBR drop still pending.
 
 ## Test Results
 ### [2026-10-19 12:45]
