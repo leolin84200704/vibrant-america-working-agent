@@ -2,7 +2,7 @@
 id: NEXTECH-ORC-OBR
 title: emr-v2 parses each OBR once per ORC; partial OBR failure placed silently
 category: technical
-status: in_review
+status: release_pending
 created: 2026-10-19
 updated: 2026-10-19
 related: [NEXTECH-EMPTY-ORDER, NEXTECH-onboarding]
@@ -28,3 +28,10 @@ related: [NEXTECH-EMPTY-ORDER, NEXTECH-onboarding]
 ### [2026-10-19 21:50]
 - 58 suites / 953 passed, build clean, no CJK. Mutation: parser revert -> 2 new tests fail.
 - Pending: staging E2E (multi-ORC file + partial failure file) after merge.
+
+### [2026-10-19 22:05] Staging E2E PASSED + release PR #489
+- #488 merged by Leo -> staging 7afa278; on-prem staging `lis-emr-v2-deployment-66f678b4-b8z2k` + AKS staging on 7afa278; dist grep OBR_PARSE_FAILED_CLASS=2.
+- Files (on-prem `/EMR_storage/HL7Message_prod/FOLLOWTHATPATIENT/Staging/Order/`, ORC/OBR/DG1 x2, VAREQUISTION35+36, 4769@134410), rescan 22:00Z:
+  - 2250 M1 (both OBR-7 date-only): placed sample 2554943, items [2,4], emr_sample.test_input `2,4`, original_price 150 (prod 7314 same codes: `2,4,2,4` / 233.88).
+  - 2251 M2 (OBR-2 `2026-10-19`): not placed, last_error `obr_parse_failed (skipped OBR-2: ...)` once, retry 2->1. Cleanup: parse_finished=1 retry_num=0 (1 row, id+file_name+parse_finished=0).
+- Release PR #489 staging -> main opened. Leo merges; then verify prod pods on main HEAD + dist grep.
