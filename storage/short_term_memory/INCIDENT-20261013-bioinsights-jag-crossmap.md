@@ -156,3 +156,4 @@ reversal with Mingxi; BioInsights provider confirmation draft pending Leo; close
   One row (accession 2609236273, delivered 2026-10-10) carries a real full name and DOB. Stated in the draft; relevant to the privacy assessment.
 - CSV copy kept ONLY in the session scratchpad (JAG-results-delivered-to-BioInsights-SFTP-2026-07-29_2026-10-13.csv); storage/evidence/ is tracked by git, so the PHI file was removed from the repo. Regenerate from the evidence listing + the lis_re/lis_core_v7 join if needed.
 - Scratch: delivery_dates.csv, db_rows.csv, jag_table.html in the session scratchpad. emr-v2 DB user (lis_emr) has no lis_re grant, so the rows were taken from the MCP query result, not a script.
+- 10-19 Leo: "不要放 address" -> item 3 no longer lists address. Draft recreated (previous two drafts deleted); current draft id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABipcMSAAA. Not sent.
