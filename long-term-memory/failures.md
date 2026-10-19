@@ -7,7 +7,7 @@ score: 0.1737
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-10-18
+updated: 2026-10-19
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -175,7 +175,7 @@ summary: Auto-aggregated failure index from 129 entries across STM
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-10-18 — total 129 entries
+> Last updated: 2026-10-19 — total 129 entries
 
 ## Themes
 
@@ -231,36 +231,6 @@ summary: Auto-aggregated failure index from 129 entries across STM
 - F1: Concluded "not a bug, customer misremembered" from a clean prod DB — WRONG. The bug (cancel cascade + a second producer) had erased/never-wrote the prod evidence. Corrected only after reading the customer's actual reminder screenshot (Leo supplied).
 - F2: Theorized "zombie from 5/22 cancel-and-rebook left is_canceled=false" — WRONG (git showed rescheduleClinicalConsult sets is_canceled=true, and it was deployed 6/2 anyway). The real producer was a different env entirely.
 - F3: Assumed the local `.env` calendar_prod = the only/authoritative prod DB and that all senders write there. Missed that a separate cluster could send to the same prod email topic without touching prod's DB.
-
-### **[[VP-16987]]** — `2026-06-16 17:55` — — Live prod 取證 (appserver04, leo 授權, 唯讀)
-
-Prod pod: `lis-emr-v2-deployment-prod-54d77c8846-c8l9b` (default ns, container `lis-emr-v2-prod`, image `192.168.60.10:6004/vibrant/lis-backend-emr-v2:latest`). Prod 只有單一 pod，無獨立 pusher/intake 分離部署。
-
-**Env (排除假設)**:
-- `ENVIRONMENT=production` / `NODE_ENV=production` → **排除候選 #1 (staging skip)**
-- `POD_ROLE` **未設** → 預設 'all' → isPusher=true → **排除候選 #4 (POD_ROLE gate)**
-- `VIBRANT_API_BASE_URL=https://api.vibrant-wellness.com/v1/lis/base-report-service` (與 repo .env 的 vibrant-america 不同，prod override)
-- DB: `lisportalprod2.mysql.database.azure.com` / db `lis_emr` / user `lis_emr`
-
-**DB 證據 (決定性)**:
-- `emr_periodic_report_customers`: **全表只有 1 個 customer = 30248/JAGHP**，frequency=quarterly，SFTP `jagconsulting@64.124.9.100:2223` path `/Prod/JAGConsulting/Results`，created 2025-12-11。→ **排除候選 #2 (設定存在且正確)**
-- `periodic_report_records`: **整張表完全空 (total=0, 0 customers, MIN/MAX=NULL)** → 自動 pipeline **從未** 成功記錄過任何一次交付（對任何 customer）。
-
-**Boot/scheduler (排除假設)**:
-- ScheduledReportsModule + ScheduleModule 正常 init，Nest app started。→ module 有載入
-- Node `Intl.DateTimeFormat('America/Los_Angeles')` 可解析 (用內建 ICU，雖然 `/usr/share/zoneinfo` 不存在) → **推翻「Node @Cron 因缺 tzdata 註冊失敗」假設**
-- ⚠️ 但 Go gRPC service 報 `failed to load timezone: unknown time zone America/Los_Angeles` (generateBarcodeForSampleID) → Go 端確實缺 OS tzdata。**若** report pipeline 的 `getCustomerSamplesByTimeRange` gRPC 也傳 LA timezone 給 Go service → 每次季度執行在抓資料階段就 throw → 無 CSV → 無上傳 → 無 record。**未證實，列為主要待查機制**。
-- cron-status 端點需 auth (401)，未強驗 cron 是否真的 fire。
-
-**Code path 確認**: `periodicReportRecord.createMany` 只在 **SFTP 上傳成功 AND processedRecords>0** 後才寫 (base-report.service.ts:598-605)。空表 = 從未走到成功上傳。自動產 **`.xlsx`**，但客戶收到/手動腳本送的是 **`.csv`** → 格式不一致。
-
-### **[[VP-17812]]**
-
-- Probe script round 1-2: guessed columns not in prod schema (ehr_vendors.api_enabled,
-  hl7_file_input.file_path, sftp_folder_mapping.sftp_remote_path) and queried dropped
-  table emr_sftp_source. Root cause: wrote SQL from LTM memory instead of checking
-  prisma/schema.prisma first. Known lesson (patterns.md order_clients updated_at) —
-  check schema before writing raw SQL. Cost: 2 retry rounds, read-only, no harm.
 
 ### **[[VP-18402]]** — `2026-09-28` — Two days live: zero rejections, zero deactivations — and what that means
 
@@ -329,6 +299,36 @@ Wrote `WHERE id = 1 AND code = 'MDHQ'` from the prod row; staging has MDHQ at id
 UPDATE silently did nothing there (the apply script's 100% verify caught it, exit 3). Fix: key
 seed/data statements in migrations on the stable business key (`code`), never on an auto id
 copied from one environment.
+
+### **[[VP-16987]]** — `2026-06-16 17:55` — **
+
+Prod pod: `lis-emr-v2-deployment-prod-54d77c8846-c8l9b` (default ns, container `lis-emr-v2-prod`, image `192.168.60.10:6004/vibrant/lis-backend-emr-v2:latest`). Prod 只有單一 pod，無獨立 pusher/intake 分離部署。
+
+**Env (排除假設)**:
+- `ENVIRONMENT=production` / `NODE_ENV=production` → **排除候選 #1 (staging skip)**
+- `POD_ROLE` **未設** → 預設 'all' → isPusher=true → **排除候選 #4 (POD_ROLE gate)**
+- `VIBRANT_API_BASE_URL=https://api.vibrant-wellness.com/v1/lis/base-report-service` (與 repo .env 的 vibrant-america 不同，prod override)
+- DB: `lisportalprod2.mysql.database.azure.com` / db `lis_emr` / user `lis_emr`
+
+**DB 證據 (決定性)**:
+- `emr_periodic_report_customers`: **全表只有 1 個 customer = 30248/JAGHP**，frequency=quarterly，SFTP `jagconsulting@64.124.9.100:2223` path `/Prod/JAGConsulting/Results`，created 2025-12-11。→ **排除候選 #2 (設定存在且正確)**
+- `periodic_report_records`: **整張表完全空 (total=0, 0 customers, MIN/MAX=NULL)** → 自動 pipeline **從未** 成功記錄過任何一次交付（對任何 customer）。
+
+**Boot/scheduler (排除假設)**:
+- ScheduledReportsModule + ScheduleModule 正常 init，Nest app started。→ module 有載入
+- Node `Intl.DateTimeFormat('America/Los_Angeles')` 可解析 (用內建 ICU，雖然 `/usr/share/zoneinfo` 不存在) → **推翻「Node @Cron 因缺 tzdata 註冊失敗」假設**
+- ⚠️ 但 Go gRPC service 報 `failed to load timezone: unknown time zone America/Los_Angeles` (generateBarcodeForSampleID) → Go 端確實缺 OS tzdata。**若** report pipeline 的 `getCustomerSamplesByTimeRange` gRPC 也傳 LA timezone 給 Go service → 每次季度執行在抓資料階段就 throw → 無 CSV → 無上傳 → 無 record。**未證實，列為主要待查機制**。
+- cron-status 端點需 auth (401)，未強驗 cron 是否真的 fire。
+
+**Code path 確認**: `periodicReportRecord.createMany` 只在 **SFTP 上傳成功 AND processedRecords>0** 後才寫 (base-report.service.ts:598-605)。空表 = 從未走到成功上傳。自動產 **`.xlsx`**，但客戶收到/手動腳本送的是 **`.csv`** → 格式不一致。
+
+### **[[VP-17812]]** — **
+
+- Probe script round 1-2: guessed columns not in prod schema (ehr_vendors.api_enabled,
+  hl7_file_input.file_path, sftp_folder_mapping.sftp_remote_path) and queried dropped
+  table emr_sftp_source. Root cause: wrote SQL from LTM memory instead of checking
+  prisma/schema.prisma first. Known lesson (patterns.md order_clients updated_at) —
+  check schema before writing raw SQL. Cost: 2 retry rounds, read-only, no harm.
 
 ### **[[VP-16166]]** — **
 
@@ -1531,24 +1531,6 @@ Root cause: 第一次跑時我用 `tail -50` 截取 output，後段顯示 record
 - First probe used GET on POST-only routes and read the 404s as "service decommissioned"; corrected by replaying the real bundle calls with the real body. Lesson: when a bundle shows axios.post, probe with POST and the Origin header before concluding anything about liveness.
 - zsh does not word-split `$m` in `set -- $m`; the first :8019 probe ran curl with empty args and hung the shell 120s. macOS has no `timeout` binary; the kubectl loop silently did nothing. Use `curl -m` and explicit arrays.
 
-### **[[VP-16987]]** — `2026-06-16 18:40` — — pipeline 設計脆弱點 (連帶發現)
-
-1. per-customer `catch` 只 `logger.error(msg, error.message)` 且 error.message 對 Prisma 錯誤為空 → 失敗幾乎不可見、無告警。
-2. 失敗時不寫任何 record（連 failure record 都沒）→ 監控無從得知 0 交付。
-3. upload 成功但 record 失敗 → 狀態不一致。
-4. 自動產的 xlsx 內容 (per-accession csvReport, 7.4MB) 與手動精簡版 (139KB) 差異大 → 正式內容規格需與 PM 對齊。
-
-### **[[VP-18303]]**
-
-- Ran `git checkout origin/main -- .` inside the main `lis-backend-emr-v2` checkout, which was on
-  `feature/leo/VP-18085-menu-section`. Overwrote the worktree with origin/main content while HEAD
-  stayed on the feature branch. Restored with `git reset HEAD -- . && git checkout -- .` (the tree
-  had been clean, so nothing was lost). Lesson: to read another ref, make a worktree — never
-  `checkout <ref> -- .` in a checkout that is on a different branch.
-- Nearly claimed that Cerbo silently drops oversized files, on the grounds that the 24.1MB
-  2607136250 push of 2026-07-28 never reached the archive. Checked first: same-filename overwrites
-  before the next pickup explain the gap just as well. Not evidence. Reported as a risk, not a fact.
-
 ### **[[VP-18404]]** — `2026-09-25 17:00` — Leo rejected the design as over-built; rewritten, and a bad commit caught
 
 Leo: "LIS-transformer 有需要改這麼多嗎？不是很簡單的 url endpoint 讓 trans call 就好了嗎"
@@ -1592,6 +1574,24 @@ Tests 22 suites / 255 assertions green.
 - Error: `npm ci` "Missing: @nestjs/platform-express@7.6.18 from lock file" (+ its express subtree). Cause: (1) `npm install @azure/service-bus` in the main worktree ran under local npm 11.6, which regenerated package-lock.json and dropped 517 lines of nested entries that the CI runner's npm 10 still requires; (2) cherry-picking that lock diff onto stage_test (whose lock differs from main's) produced a lock inconsistent with stage's package.json. My local `npm ci` passed because npm 11 tolerates what npm 10 rejects -> a local `npm ci` is not evidence for the runner.
 - Fix: restore the base branch's own lock (`git checkout origin/<base> -- package-lock.json`) and add ONLY the new dependency with the runner's npm major: `npx -y npm@10 install <pkg> --package-lock-only --ignore-scripts`; verify with `npx -y npm@10 ci --dry-run --ignore-scripts`. Stage twin: 73b3f3f (+511 lines only); main twin: same treatment. PR comment on #920 updated with the new head SHA (one-PR-one-head rule: pushed before review, comment left).
 - First attempt at the fix silently did nothing: `git checkout origin/stage_test -- file` STAGES the file, and the following `npm install --package-lock-only` (npm 11) rewrote the worktree copy back to the main-style tree, so `git add` + `commit` found index == HEAD ("no changes added") and my PR comment carried the old SHA. Always read the commit output and `git rev-parse HEAD` before quoting a SHA.
+
+### **[[VP-16987]]** — `2026-06-16 18:40` — **
+
+1. per-customer `catch` 只 `logger.error(msg, error.message)` 且 error.message 對 Prisma 錯誤為空 → 失敗幾乎不可見、無告警。
+2. 失敗時不寫任何 record（連 failure record 都沒）→ 監控無從得知 0 交付。
+3. upload 成功但 record 失敗 → 狀態不一致。
+4. 自動產的 xlsx 內容 (per-accession csvReport, 7.4MB) 與手動精簡版 (139KB) 差異大 → 正式內容規格需與 PM 對齊。
+
+### **[[VP-18303]]** — **
+
+- Ran `git checkout origin/main -- .` inside the main `lis-backend-emr-v2` checkout, which was on
+  `feature/leo/VP-18085-menu-section`. Overwrote the worktree with origin/main content while HEAD
+  stayed on the feature branch. Restored with `git reset HEAD -- . && git checkout -- .` (the tree
+  had been clean, so nothing was lost). Lesson: to read another ref, make a worktree — never
+  `checkout <ref> -- .` in a checkout that is on a different branch.
+- Nearly claimed that Cerbo silently drops oversized files, on the grounds that the 24.1MB
+  2607136250 push of 2026-07-28 never reached the archive. Checked first: same-filename overwrites
+  before the next pickup explain the gap just as well. Not evidence. Reported as a risk, not a fact.
 
 ### **[[VP-17524]]** — **
 
