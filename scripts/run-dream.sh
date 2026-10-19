@@ -15,7 +15,7 @@ export CLAUDE_CODE_DISABLE_AUTO_MEMORY=1
 # user's interactive default from ~/.claude/settings.json — if that default is a
 # premium model, every nightly dream silently bills it (same failure class as
 # the jac/gpa incidents fixed 2026-08-15).
-DREAM_MODEL="${DREAM_MODEL:-fable}"
+DREAM_MODEL="${DREAM_MODEL:-opus}"
 # When the pinned model is refused for a spend/usage limit, the remaining attempts
 # run on this model instead of burning all three on the same refusal. 2026-10-14
 # 18:30 .. 2026-10-15 12:30: four consecutive firings, twelve attempts, every one

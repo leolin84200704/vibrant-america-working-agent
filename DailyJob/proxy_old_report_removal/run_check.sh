@@ -38,7 +38,7 @@ echo "claude=$(command -v claude)  gh=$(command -v gh)  git=$(command -v git)"
 # Pin the model. An unpinned `claude -p` can change under us between the day
 # this was written and the day it fires, which for a job that opens a PR is not
 # a difference worth discovering in production.
-REMOVAL_MODEL="${REMOVAL_MODEL:-fable}"
+REMOVAL_MODEL="${REMOVAL_MODEL:-opus}"
 
 PROMPT="$(cat "$JOB_DIR/prompt.md")"
 

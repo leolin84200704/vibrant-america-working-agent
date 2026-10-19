@@ -23,7 +23,7 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 # the system of record), and must pin the model — an unpinned `claude -p` inherits
 # the interactive default and silently bills it every morning.
 export CLAUDE_CODE_DISABLE_AUTO_MEMORY=1
-TICKETWATCH_MODEL="${TICKETWATCH_MODEL:-fable}"
+TICKETWATCH_MODEL="${TICKETWATCH_MODEL:-opus}"
 
 TODAY=$(date +%Y-%m-%d)
 LOG_FILE="${WATCH_DIR}/run_${TODAY}.log"

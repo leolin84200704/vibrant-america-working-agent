@@ -56,7 +56,7 @@ LIS_EMR_DB_USER=lis_core_emr
 LIS_EMR_DB_PASSWORD=...
 LIS_EMR_DB_NAME=lis_emr
 PRICING_API_TOKEN=Bearer ...        # optional; falls back to EMR-Backend orderApi.yaml orderApiToken.prod
-HL7_TRIAGE_MODEL=fable              # optional; model passed to claude -p
+HL7_TRIAGE_MODEL=opus               # optional; model passed to claude -p
 REPORT_SMTP_HOST / REPORT_SMTP_PORT / REPORT_SMTP_USER / REPORT_SMTP_PASSWORD / REPORT_EMAIL_TO
 ```
 

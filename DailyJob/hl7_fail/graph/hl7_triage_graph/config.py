@@ -23,7 +23,7 @@ PACKAGE_PRICE_URL = "https://api.vibrant-wellness.com/v1/pricing/item/price/getL
 BUNDLE_URL = "https://api.vibrant-wellness.com/v1/pricing/item/promotion/getLegacyBundleMapping?currency=usd"
 
 DEFAULT_LOOKBACK_HOURS = 72
-DEFAULT_MODEL = "fable"
+DEFAULT_MODEL = "opus"
 
 
 def load_env_file(path: Path) -> dict[str, str]:

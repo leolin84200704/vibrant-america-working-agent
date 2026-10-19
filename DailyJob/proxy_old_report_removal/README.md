@@ -61,7 +61,7 @@ launchctl bootout gui/$(id -u)/com.lis.proxy-old-report-removal
 rm ~/Library/LaunchAgents/com.lis.proxy-old-report-removal.plist
 ```
 
-Model is pinned (`REMOVAL_MODEL`, default `fable`) — an unpinned `claude -p`
+Model is pinned (`REMOVAL_MODEL`, default `opus`) — an unpinned `claude -p`
 could change between the day this was written and the day it fires, which for a
 job that opens a PR is not a difference worth discovering in production.
 
