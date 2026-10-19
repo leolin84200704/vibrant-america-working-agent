@@ -147,3 +147,12 @@ reversal with Mingxi; BioInsights provider confirmation draft pending Leo; close
 
 ### 7. Draft
 - Outlook reply-all draft on Francesco's 10-19 21:02Z mail (see session report for id). Not sent.
+
+### [2026-10-19 PT] Leo: "直接把 list 附上" -> patient list built and put inline in the draft
+- Outlook MCP cannot attach files; list placed as an HTML table at the end of the reply-all draft (new draft replaces the first one, which was deleted).
+- Source: 200 accessions from storage/evidence/BIOINSIGHTS-incoming-cleanup-20261013.txt joined (lisportalprod2 ro) to lis_re.order_table -> lis_core_v7.patient.
+  Checks: 200 rows, 200 distinct accessions = the SFTP listing exactly, 195 distinct patient_id, all customer 30248. Delivery date per file = SFTP mtime.
+- FINDING: JAG's patient records are coded. 199 of 200 rows have last_name = 8-digit code, first_name = YYYYMMDD date, DOB = 1 January of the birth year.
+  One row (accession 2609236273, delivered 2026-10-10) carries a real full name and DOB. Stated in the draft; relevant to the privacy assessment.
+- CSV copy: storage/evidence/JAG-results-delivered-to-BioInsights-SFTP-2026-07-29_2026-10-13.csv (PHI; do not commit if not ignored).
+- Scratch: delivery_dates.csv, db_rows.csv, jag_table.html in the session scratchpad. emr-v2 DB user (lis_emr) has no lis_re grant, so the rows were taken from the MCP query result, not a script.
