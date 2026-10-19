@@ -32,3 +32,13 @@ related: [NEXTECH-onboarding]
 - Mutation: reverting the normalizeObr7 call makes 2 new tests fail.
 - Real files: new dist ObrParserService on both archived prod files -> all 4 OBRs classify testGroup, collection time `10/02/2026 00:00` / `10/09/2026 00:00`.
 - Prod package_price_mapping: VAREQUISTION35/36/106 = ids 2/4/21, isOrderable TRUE. VAREQ groups do place in prod (BIOINSIGHTS 7196 placed with items).
+
+### [2026-10-19 19:20] Staging E2E PASSED (PR #486 merged by Leo 18:50Z, staging f727216)
+- Deploy: AKS staging `5686bb7f5b-njgpm` + on-prem staging intake `lis-emr-v2-deployment-7c889846b8-vg9n8` (ns default, via appserver04 expect/ssh) both on f727216; dist grep normalizeObr7=2, NO_ORDER_ITEMS_CLASS=3.
+- Before-evidence: staging 2245 (VP17827 T1, 10-08) had 14-digit OBR-7 and was placed EMPTY (sample 2554429, orderItems []) -- same bug, nobody noticed.
+- Fixture: T1 clone (FOLLOWTHATPATIENT, provider 4769 @ practice 134410), OBR-4 VAREQUISTION36 + VAREQUISTION106, only OBR-7 / MSH-10 varied. Files in on-prem `/EMR_storage/HL7Message_prod/FOLLOWTHATPATIENT/Staging/Order/`, rows retry_num 2, rescan 19:15Z.
+  - 2247 N1 OBR-7 `20261019`: placed sample 2554939, items [4, 21], emr_sample.test_input `4,21`, sample_collection_time 2026-10-19 00:00.
+  - 2248 N2 OBR-7 `20261019195515`: placed sample 2554940, items [4, 21], collection 19:55.
+  - 2249 N3 OBR-7 `2026-10-19`: NOT placed; last_error `no_order_items (skipped OBR-1: Invalid sampleCollectionTime format...; OBR-2: ...)`, retry_num 2->1, parse_finished 0, emr_code_not_found NULL. Pod log shows both `OBR parse failed` + `parse failure (retry_num→1): no_order_items`.
+- Cleanup: 2249 set parse_finished=1 retry_num=0 by id+file_name+parse_finished=0 (1 row) before the 19:30Z tick could exhaust it and fire Slack. Staging samples 2554939/2554940 are dev-core samples (ids collide with prod snapshot) -- left in place, same as VP-17827.
+- Next: release PR staging -> main is Leo's.
