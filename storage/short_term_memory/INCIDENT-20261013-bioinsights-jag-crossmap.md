@@ -168,3 +168,7 @@ reversal with Mingxi; BioInsights provider confirmation draft pending Leo; close
 - 10-19 22:15:55Z SENT by Leo: reply to Francesco (To Francesco, Britney, Kristina, Zhenhe, Mingxi), with CSV attachment, internetMessageId
   <IA2PR22MB54234E7F8757E6461C0D1170F2982@IA2PR22MB5423.namprd22.prod.outlook.com>. Commits made in that mail: (a) Leo sends BioInsights a signed-letter request "today" unless Francesco takes it; (b) recurrence statement.
 - Next: BioInsights signed-letter request drafted (reply-all on Leo's 10-15 23:40Z mail to Olena, To Lisa Bond + BioInsights team, devcom, Zhenhe/Mingxi/Keith, Britney, Kristina). Not sent; wait for Francesco's answer on ownership or Leo's go.
+- 10-19 Leo: "我先discard draft, 等回信" -> BioInsights signed-letter draft deleted. Wording kept here for reuse once Francesco answers:
+  To Lisa Bond: 200 result files of another clinic delivered to /incoming/ 29 Jul..13 Oct, error ours, deleted 13 Oct, Olena 15 Oct said one person downloaded a file and it was deleted;
+  ask for a letter signed by an authorized representative stating (1) the incident ~200 files / period, (2) how many files were downloaded or copied, (3) all files and copies incl. backups removed, (4) nothing retained, (5) name/title/signature/date; PDF by reply is fine. No deadline, no JAG name, no NDA.
+  STATE: waiting on Francesco (ownership of the request) before anything goes to BioInsights.
