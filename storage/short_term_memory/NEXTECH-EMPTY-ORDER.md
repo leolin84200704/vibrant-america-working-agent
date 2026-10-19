@@ -53,3 +53,8 @@ related: [NEXTECH-onboarding]
 - Old empty sample 2650711 still exists in core (now unlinked from dedup) -- needs voiding by ops; 2646314 (26-0012) likewise.
 - NEW pre-existing bug found: parser.service.ts OBR loop (line ~365) runs inside the per-ORC loop (line ~199), so every OBR is processed once per ORC. Nextech sends one ORC per OBR -> testGroupList doubled: emr_sample.test_input `2,4,2,4`, order_input.original_price 233.88 (should be 150). actual_price / total / orderItems correct (BestDeal dedups). Also obrParseFailures would list each failure once per ORC. Follow-up PR candidate.
 - Outlook reply-all draft created (not sent) on Jessica's 10-19 14:45Z "schedule a call" mail; may need to be sent from Outlook (inline signature images).
+
+## User Feedback
+### [2026-10-19 20:00] Leo on the Nextech reply draft
+- "不要說 issue on our side（你還是沒有記得回覆形式）". What he wants in a vendor reply about a failure: (1) why it did not work, in terms of what THEY sent vs what we expected (OBR-7 date-only vs full date/time); (2) we adjusted, so it works now; (3) going forward we still recommend the proper format (YYYYMMDDHHMM). No blame framing ("issue on our side"), and the draft goes straight into Outlook.
+- Draft replaced: old reply-all draft deleted, new one created on Jessica's 10-19 14:45Z mail (not sent; inline signature images -> send from Outlook).
