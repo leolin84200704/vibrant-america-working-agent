@@ -14,7 +14,7 @@ export CLAUDE_CODE_DISABLE_AUTO_MEMORY=1
 
 # Model policy for this instance: Fable 5 everywhere, overridable per run
 # (Leo directive 2026-08-18).
-TRIAGE_MODEL="${TRIAGE_MODEL:-fable}"
+TRIAGE_MODEL="${TRIAGE_MODEL:-opus}"
 
 # Mail the day's report (or a BLOCKED / no-report alert) to Leo. Shares the
 # SMTP transport + .env credentials with the ticket_watch mailer; exits 2 and
