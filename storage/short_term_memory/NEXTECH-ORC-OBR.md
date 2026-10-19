@@ -2,7 +2,7 @@
 id: NEXTECH-ORC-OBR
 title: emr-v2 parses each OBR once per ORC; partial OBR failure placed silently
 category: technical
-status: release_pending
+status: done
 created: 2026-10-19
 updated: 2026-10-19
 related: [NEXTECH-EMPTY-ORDER, NEXTECH-onboarding]
@@ -35,3 +35,5 @@ related: [NEXTECH-EMPTY-ORDER, NEXTECH-onboarding]
   - 2250 M1 (both OBR-7 date-only): placed sample 2554943, items [2,4], emr_sample.test_input `2,4`, original_price 150 (prod 7314 same codes: `2,4,2,4` / 233.88).
   - 2251 M2 (OBR-2 `2026-10-19`): not placed, last_error `obr_parse_failed (skipped OBR-2: ...)` once, retry 2->1. Cleanup: parse_finished=1 retry_num=0 (1 row, id+file_name+parse_finished=0).
 - Release PR #489 staging -> main opened. Leo merges; then verify prod pods on main HEAD + dist grep.
+
+### [2026-10-19 22:30] Released. #489 merged (main 2c077ff). Prod AKS `lis-emr-v2-deployment-prod-55d86c6f4d-gd8p9` and on-prem `lis-emr-v2-deployment-prod-96d489c8f-2c9v7` both on 2c077ff, old pods gone, dist grep OBR_PARSE_FAILED_CLASS=2 on both. Next Nextech order should show single test_input and correct original_price. Open: void empty samples 2650711 / 2646314 (ops).
