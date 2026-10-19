@@ -159,3 +159,7 @@ reversal with Mingxi; BioInsights provider confirmation draft pending Leo; close
 - 10-19 Leo: "不要放 address" -> item 3 no longer lists address. Draft recreated (previous two drafts deleted); current draft id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABipcMSAAA. Not sent.
 - 10-19 Leo: "數據不要全部擠在一起, 直接給csv file" -> inline table removed; item 2 says the list is attached as CSV. Draft recreated, id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABipcMUQAA (not sent).
   Outlook MCP cannot attach files: CSV copied to ~/Downloads/JAG-results-delivered-to-BioInsights-SFTP-2026-07-29_2026-10-13.csv (201 lines incl. header) for Leo to attach in Outlook before sending. PHI file; not in the repo.
+- 10-19 Leo: "這有對嗎..你有確認過嗎？" (names look like numbers). Verified against the ACTUAL HL7 sent, lis_emr.result_transmission_records (ehr_vendor_id=46):
+  204 TRANSMITTED rows / 200 distinct samples, 2026-07-29 01:24Z .. 2026-10-13 17:30Z (= the 200 files; 4 re-pushes overwrote the same file name).
+  PID of 2610076669: `PID|1||3292100||10000065^20210127||19890101|M|||^^^^^` ; PID of 2609236273: `PID|1||3061012||Patrick^Susan||19620412|F|||^^^^^`.
+  So the files carried exactly what the CSV shows: JAG enters an 8-digit code as last name and a YYYYMMDD date as first name (663 of their 745 patient records follow this pattern), DOB = 1 Jan of the birth year. PID-11 address is empty in the files -> removing "address" from the draft was right. Ordering provider in PV1-7/OBR-16 = 1730269200 David LeMay.
