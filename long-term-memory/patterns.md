@@ -6,7 +6,7 @@ status: active
 score: 0.099
 base_weight: 0.8
 created: 2026-04-22
-updated: 2026-09-24
+updated: 2026-10-19
 links:
 - INCIDENT-20260528
 - INCIDENT-20260529
@@ -3010,3 +3010,9 @@ Atlassian MCP 斷線時的 fallback：`~/src/credential/atlassian-api-token.md`�
 - **trans 要呼叫 Core v1 沒宣告在自家 proto 的 RPC 時，另開一個 client 載入來源 repo 的 proto（VP-18889 `SAMPLE_CORE_V1_NOTIFICATION_GRPC` 載 `protos/sample/lis-core/notification.proto`）**：同 `CORE_RPC_STAGE` host / token / metadata；proto 檔 byte-identical 複製、不改名（含 `GetAcitveNotifications` / `DeleNotificationsById` 的錯字）。
 - **vibrant-wellness-portal 唯一的 LIS-Sample 呼叫（`ServiceConfig.js PORTAL_NOTIFICATION`）指向 on-prem dev 192.168.60.6**：owner 的事實，寫進 caller 文件，不順手修。
 - **prod `prisma.service_call_records.findUnique()` 缺 `record_id` 的 error（10-16 18:51–18:52Z ×2，image 9912cbf，#960 之前）**：VP-18801 的 interaction-log 路由拿到非數字 id 時的驗證洞；不是這晚 deploy 造成，兩筆後沒再出現（dream 10-17 記為未歸因）。要修的話是 DTO 層的 `@IsInt()`，不是 service。
+
+## 【蒸餾 2026-10-19】搬 env-gated 邏輯要查兩邊跑著的 pod、Confluence dry-run 輸出先存檔再 parse（VP-18800 closeout / VP-18798 port）
+- **env-gated 行為不會 1:1 搬過去——gate 的值要去兩邊「跑著的 pod」查，不是看 config 檔**（VP-18800）：LIS-Sample 用 `NODE_ENV==='prod'` 區分 prod（`start-CLOUD:prod`）與 staging（`start-CLOUD:dev`）來開 14 條 permission；trans 兩個環境都是 `NODE_ENV=prod`（`/proc/1/cmdline` 與 ConfigMap 都查過），照抄就會在 staging 也 enforce。port 改用 `SERVER_ENVIRONMENT==='prod'`（prod `prod`、st `stprod`），prod A/B 59/59 時 user-1 token 全部 403 才算證實。VP-18798 的 Kafka 發佈 gate 同款處理。
+- **Confluence 頁面更新的 dry-run 輸出可能超過工具輸出上限**：先寫到檔案再 parse／grep，不要直接把整頁 ADF 印回對話（VP-18800 第一次 dry-run 直接被截斷）。
+- **zsh 迴圈變數不要叫 `path`**（會 clobber `PATH`，curl 當場消失）——已在上方段落記過，VP-18800 再踩一次；用 `rp`／`route` 之類非保留名。
+- **一個 ticket 的 closeout 若橫跨 Leo 手動 merge 之後**：merge 後清單固定四件——prod 唯讀 A/B（含 prod-only 403 路徑）、公開 ingress 探針（prod 與 staging 各比一次 byte-identical）、Confluence 2737373187 caller 頁「switch today」更新、Jira Dev Complete + comment；寫入路由是否 live 跑由 Leo 決定，沒跑就在 STM 與 Jira comment 明寫「未 live 跑」。

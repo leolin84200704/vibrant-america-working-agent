@@ -3,16 +3,20 @@ id: QUARANTINE-ADMIN-API-GAP-20260924
 type: stm
 category: emr_integration
 status: active
-score: 0.0562
+score: 0.0706
 base_weight: 1.0
 created: 2026-09-24
 updated: 2026-09-24
 links:
 - HL7-NPI-PRACTICE-MATCH-20260820
+- LBS-1833
+- NEXTECH-onboarding
 - VP-16166
 - VP-16167
 - VP-16173
 - VP-17827
+- VP-18194
+- emr-integration
 relations:
   unblocked_by: []
   blocks:

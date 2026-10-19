@@ -7,7 +7,8 @@ base_weight: 1.0
 urgency: 5
 created: 2026-10-13
 updated: '2026-10-13'
-links: []
+links:
+- VP-18372
 tags:
 - incident
 - bioinsights
@@ -23,7 +24,7 @@ summary: 'Retrospective (Leo: "這是嚴重的錯誤，請你檢討"). 07-27 the
   between JAG complaint (10-01) and containment (10-13). Memory recorded the source
   as "Serdar email" which never existed; two L4 checks verified the DB row instead
   of the originating email. Eight concrete rule changes listed under Lessons.'
-score: 0.1693
+score: 0.1801
 ---
 
 # INCIDENT 2026-10-13: BioInsights vendor row carried JAG's practice for 78 days

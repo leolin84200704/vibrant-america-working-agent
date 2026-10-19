@@ -3,15 +3,24 @@ id: NEXTECH-onboarding
 type: stm
 category: emr_integration
 status: active
-score: 0.1126
+score: 0.176
 base_weight: 1.0
 created: 2026-09-22
 updated: 2026-10-07
 links:
 - BIOINSIGHTS-onboarding
-- VP-17812
+- HL7-NPI-PRACTICE-MATCH-20260820
+- LBS-1833
+- QUARANTINE-ADMIN-API-GAP-20260924
+- VP-17827
+- VP-18138
 - VP-18194
+- VP-18372
+- VP-18402
+- VP-18824
+- VP-18833
 - emr-integration
+- fhir-api
 relations:
   unblocked_by: []
   blocks: []

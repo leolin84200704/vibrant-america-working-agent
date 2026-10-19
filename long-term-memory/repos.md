@@ -6,7 +6,7 @@ status: active
 score: 0.1336
 base_weight: 0.9
 created: 2026-04-22
-updated: 2026-09-24
+updated: 2026-10-19
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -463,3 +463,11 @@ sudo prompt 用 `echo <pw> | sudo -S <cmd>`。Heredoc 內含 `[^...]` 之類 exp
 - **RBAC 開關的環境判準不同**：LIS-Sample 只在 `NODE_ENV==='prod'` 時 enforce 14 條 permission（prod pod `start-CLOUD:prod`、staging `start-CLOUD:dev`）；trans 兩個環境都是 `NODE_ENV=prod`（lis-trans-config 與 -st 皆然），所以 port 改用 `SERVER_ENVIRONMENT==='prod'`（prod `prod`、st `stprod`，兩個 ConfigMap 都查過）。之後任何「只在 prod 生效」的 trans 邏輯都要用 SERVER_ENVIRONMENT，不能用 NODE_ENV。
 - **Staging A/B 49/49 equal**（A = LIS-Sample staging svc 16399、B = trans-st 3147、dev-signed lis.results 69154）：9 條 GET 帶真資料 + paging/filter/unknown id/非數字 400/401 + 6 條 POST 的 validation 與 same-id 400（six write routes 都在 gRPC 前先擋 same-id）→ 零寫入。**staging 真寫入（merge-patients、5 條 transfer）沒做**：Leo 10-17「剩下的等merge 後再測」。#967 merge 後的清單：prod 唯讀 A/B（含 prod-only 403）、ingress 探針、Confluence 2737373187 caller 頁更新、Jira Dev Complete + comment。
 - **Leo 10-17 指令**：subagent 一律跑 Opus → working-agent CLAUDE.md PR #61（已 merge，c36b0f68）。
+
+## 【更新 2026-10-19】VP-18800 record-management 已在 prod（#967 merged）；VP-18798 patients remainder 本機建好未 push
+- **LIS-transformer main**：`1b4a64f` → `03f43da`（#967 `feature/leo/VP-18800` f643aff，Leo merge 10-18 16:26Z）；deploy-prod 39145000759 ✓（16:26 → 16:43Z，buildImage 約 20 分）；`lis-trans-deployment` image 03f43da 3/3。stage_test 仍 `8baccf1`。open PR 不變：#965 Michael VP-18458、#947 VP-18860、#878/#877 VP-18702、#730 VP-18022。
+- **VP-18800 prod closeout（10-18，Dev Complete 09:45 PT，Jira comment 192549）**：prod 唯讀 A/B 59/59 equal（A = LIS-Sample prod svc 16398、B = trans prod svc 3146）——真資料 reads、所有 400/401、以及 14 條路由用 user-1 token 都回 403 "Permission denied: Not granted"（trans 的 prod-only RBAC 首次在 prod 證實）；公開 ingress prod/staging 各 2 路 byte-identical；Confluence 2737373187 v3（29 → 43 條、record-management 進「switch today」）。**沒做（by design）**：寫入路由（merge-patients、5 條 transfer）從未 live 跑過——staging 與 prod 都是 Leo 的選擇；Slack 宣告新路由是 Leo 的；caller 切換與 ingress rewrite 屬 VP-18803。
+- **trans prod 10-18 deploy 後 Datadog（dream 10-19 check）**：record-management 路徑零 error / 零 5xx；error class 仍是舊 baseline——boot 期 ioredis ETIMEDOUT、`[getRequest]` 對 lis-accounting 的 400、以及 `TypeError: Converting circular structure to JSON` unhandled rejection（10-04 → 10-18 已有 46 次，與 VP-18800 無關；尚無人認領）。
+- **VP-18798 patients remainder（10-18，Dev In Progress）**：worktree `~/src/LIS-transformer.worktrees/vp18798` `feature/leo/VP-18798` head 32143fc，**未 push**。19 條路由（GET /patients、PATCH /profiles、duplicate-check、complete-reports、kits/resend、resend-tubes、portal-jwt、pns-jwt 加 guard、10 條 POST /orders/* 郵件與 QNR 路由、reset-questionnaire 無票認領故併入）；59 files +18.7k（protos/contracts 為主）；jest src/sample 40 suites / 965 green。新 gRPC client `SAMPLE_CORE_V1_PATIENT_GRPC` / `SAMPLE_CORE_V2_PATIENT_GRPC` / `SAMPLE_TEST_RESULT_INFO_GRPC`。
+- **VP-18798 等 Leo 決定的四件事**：(1) 新 env key `SAMPLE_SHIPPING_HTTP_URL`（prod `.../v1/lis/shipping/`、st `.../shipping/staging/`）與 `SAMPLE_CORE_HTTP_URL`（僅 v1 fallback）要先進 lis-trans-config / -st——這是 cross-ticket review 10-15 第 1 點「每張票各自撞到的 prod env key 洞」的又一例，這次在 merge 前就列出來了；Kafka 連線字串改讀既有 `Azure_kafka_connection_string_gen`（sha256[:12] 86850d3eba64 = LIS-Sample prod secret），不需新 secret；(2) GET /patients 在 LIS-Sample 沒有 guard（任何 patient_id 回 name/DOB/gender）——要不要加；(3) staging 寫入要不要真跑（PATCH profiles、kits/resend 會寄 kit、reset-questionnaire）；(4) complete-reports 的 prod 身分：LIS-Sample 用 VibrantClient（VIBRANT_CLIENT_ID），trans 用 settingTool.serviceToken()（OAUTH2_CLIENT_ID）→ 下游 record_user_id 會不同。
+- **VP-18798 port 的其他事實**：pns-jwt secret trans `listSec()` 的 secretOrKeyProd/Dev 與 LIS-Sample AUTH_JWT_SECRET prod/dev sha256 相同；`PATIENT_UPDATE_CORE_VERSION` 兩邊都沒設 → v2；Kafka 發佈 LIS-Sample 以 NODE_ENV=prod 判斷、port 改 SERVER_ENVIRONMENT=prod（同 VP-18800 的 env-gate 教訓）；`npm install --package-lock-only` 本機 npm 會重寫 500 行 lockfile → 只手改 root deps 一行（同 VP-18481 #920 教訓）。
