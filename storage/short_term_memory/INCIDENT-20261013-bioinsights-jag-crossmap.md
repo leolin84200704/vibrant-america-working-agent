@@ -154,5 +154,5 @@ reversal with Mingxi; BioInsights provider confirmation draft pending Leo; close
   Checks: 200 rows, 200 distinct accessions = the SFTP listing exactly, 195 distinct patient_id, all customer 30248. Delivery date per file = SFTP mtime.
 - FINDING: JAG's patient records are coded. 199 of 200 rows have last_name = 8-digit code, first_name = YYYYMMDD date, DOB = 1 January of the birth year.
   One row (accession 2609236273, delivered 2026-10-10) carries a real full name and DOB. Stated in the draft; relevant to the privacy assessment.
-- CSV copy: storage/evidence/JAG-results-delivered-to-BioInsights-SFTP-2026-07-29_2026-10-13.csv (PHI; do not commit if not ignored).
+- CSV copy kept ONLY in the session scratchpad (JAG-results-delivered-to-BioInsights-SFTP-2026-07-29_2026-10-13.csv); storage/evidence/ is tracked by git, so the PHI file was removed from the repo. Regenerate from the evidence listing + the lis_re/lis_core_v7 join if needed.
 - Scratch: delivery_dates.csv, db_rows.csv, jag_table.html in the session scratchpad. emr-v2 DB user (lis_emr) has no lis_re grant, so the rows were taken from the MCP query result, not a script.
