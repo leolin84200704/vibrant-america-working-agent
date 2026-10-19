@@ -2,7 +2,7 @@
 id: NEXTECH-EMPTY-ORDER
 title: emr-v2 places HL7 orders with zero items when every OBR throws (Nextech date-only OBR-7)
 category: technical
-status: in_review
+status: done
 created: 2026-10-19
 updated: 2026-10-19
 related: [NEXTECH-onboarding]
@@ -58,3 +58,5 @@ related: [NEXTECH-onboarding]
 ### [2026-10-19 20:00] Leo on the Nextech reply draft
 - "不要說 issue on our side（你還是沒有記得回覆形式）". What he wants in a vendor reply about a failure: (1) why it did not work, in terms of what THEY sent vs what we expected (OBR-7 date-only vs full date/time); (2) we adjusted, so it works now; (3) going forward we still recommend the proper format (YYYYMMDDHHMM). No blame framing ("issue on our side"), and the draft goes straight into Outlook.
 - Draft replaced: old reply-all draft deleted, new one created on Jessica's 10-19 14:45Z mail (not sent; inline signature images -> send from Outlook).
+
+### [2026-10-19 20:05] Leo sent the reply to Jessica. Closed. Open follow-ups (Leo to decide): void empty samples 2650711 / 2646314 (ops); multi-ORC OBR duplication PR; partial-OBR-failure-should-error PR.
