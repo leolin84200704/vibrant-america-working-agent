@@ -6,7 +6,7 @@ status: active
 score: 0.176
 base_weight: 1.0
 created: 2026-09-22
-updated: 2026-10-07
+updated: 2026-10-19
 links:
 - BIOINSIGHTS-onboarding
 - HL7-NPI-PRACTICE-MATCH-20260820
@@ -80,6 +80,11 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 - Resend caveat: MSH-10 dedup (`findExistingSampleId(controlId)`) — a resend with `NxMsg1` short-circuits to sample 2646314 and places nothing. Nextech must use a NEW message control id (and ideally new placer numbers) on the retry.
 - Secondary: customer 28981 has no payment method on file -> patientPayLater / billing_issue. Needs a decision on how ATCA orders are charged before go-live.
 - Open: cancel/void empty sample 2646314 / order 11492640 (prod write, gated — Leo decides); decide whether to make `isICD9` lenient (truncate 14 -> 12) in emr-v2 vs ask Nextech for 12-digit OBR-7.
+
+### [2026-10-19 11:40] CORRECTION: OBR-7 is 8 digits (date only), not 14
+- Re-read both archived files from prod pod 6f555c7b87-9sx9n. Decoder does `fields = split('|').slice(1)`, so `obr.fields[6]` = OBR-7 = `20261002` / `20261009` (yyyyMMdd). The 14-digit `20261002115705` is OBR-6 (requested date/time) -- the 10-07 entry mis-indexed it. isICD9 regex still rejects -> same swallow -> same empty order, but the "truncate 14 -> 12" fix idea would NOT work; leniency would have to pad date-only (or fall back to OBR-6).
+- Second empty order: hl7_file_input 7314 (`NXHL7Exp 26-0018 - 2.hl7`, 10-09 20:30Z, sample 2650711), OBR-4 VAREQUISTION35 + VAREQUISTION36, same OBR-7 date-only. 7295 (`26-0017`, 10-08) is parse_finished=0, no archive path -- not looked at yet.
+- Prod-wide `orderItems": []` with parse_finished=1: NEXTECH 2 (7251, 7314), MDHQ 7 (2025-07..08), Breathermae 1 (2025-11) -- the older ones not checked for cause.
 
 ## Approaches Considered
 - Followed BIOINSIGHTS-onboarding (2026-07) as the precedent for a vendor-hosted SFTP: connectivity probe -> gated ehr_vendors + sftp_folder_mapping INSERT -> wait for practice scope -> ehr_integrations. Differences: password auth (not key), and this time ALSO inserted the `ehr_vendor_sftp_templates` row so the self-service integration create flow (needs a template, else 400) works for Nextech.
