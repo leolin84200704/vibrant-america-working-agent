@@ -6,7 +6,7 @@ status: active
 base_weight: 1.0
 urgency: 5
 created: 2026-10-13
-updated: '2026-10-13'
+updated: '2026-10-19'
 links:
 - VP-18372
 tags:
@@ -106,3 +106,44 @@ was switched off until 10-13.
 - R1/R2/R3 are now enforced-by: lis-prod-change-gate Gate 1b (PR #57, merged by Leo 23:55Z, 02f8fe6).
 Row cms3icsz700010xlgywfuj8do REJECTED (18:31:10Z, history 218); 200 files deleted; order cancel + charge
 reversal with Mingxi; BioInsights provider confirmation draft pending Leo; closeout to Britney pre-drafted.
+
+
+## Vendor-email-reply checklist 2026-10-19 (Francesco, Privacy Officer, thread "Update Regarding John Doe")
+
+### 1. Thread (Outlook, chronological)
+- 10-19 11:33 ET Britney -> JAG (Amber/Ashley/April, cc Javier, Kristina): notice based on Leo's 10-15 text (200 files, 29 Jul..13 Oct, one download, "written confirmation of deletion", NDA).
+- 10-19 12:02 ET Ashley Gomes (JAG, Sr Director) -> Britney: "concerning", cc'd their Sr Director of Performance Analytics (Stephen Suydam), asks for a copy of the signed BioInsights confirmation and what we do to prevent recurrence.
+- 10-19 15:51 ET Kristina (VP Sales) -> Zhenhe/Leo/Mingxi/Francesco/Britney: JAG has a DOJ contract, wants reassurance; "how would you like us to respond?"
+- 10-19 16:58 ET Britney: JAG requires a formal SIGNED letter from BioInsights: incident description (file count, period), all files/copies removed, nothing retained, name/title/signature/date of an authorized BioInsights representative.
+- 10-19 17:01/17:02 ET Francesco (Privacy Officer) -> Zhenhe/Leo/Mingxi/Britney: Q1 incorrect parameter in manual EHR sync? Q2 exactly how many results (patient list for JAG)? Q3 what information? Q4 BioInsights' written confirmation of deletion.
+- Side thread "[Vibrant Wellness] Integration with Vibrant Wellness" 10-19 14:56 ET Britney: JAG asks for a copy of the signed confirmation (same ask).
+
+### 2. Open asks
+| Ask | From | Date | Owner | Status |
+|---|---|---|---|---|
+| Q1 cause | Francesco | 10-19 | Leo | answered in draft |
+| Q2 count + patient list | Francesco | 10-19 | Leo | count in draft; list = PHI, Leo decides delivery |
+| Q3 content | Francesco | 10-19 | Leo | answered in draft |
+| Q4 signed deletion letter | Francesco / Britney / JAG | 10-19 | NOT IN HAND -> request to BioInsights (Leo offers; Francesco may take over) | open |
+| Recurrence measures | JAG via Kristina | 10-19 | Leo | answered in draft |
+
+### 3. Shared with partner
+- Nothing new; the only partner-facing text is Leo's 10-13 19:09Z mail to BioInsights (asks provider + "confirm nobody downloaded/copied; if retained, destroyed").
+
+### 4. Partner files vs spec
+- N/A (no file from the partner in this exchange).
+
+### 5. Claims verified (evidence)
+- "200 files, 195 patients, all customer 30248": storage/evidence/BIOINSIGHTS-incoming-cleanup-20261013.txt (200 .hl7 names) joined to lis_re.order_table (lisportalprod2 ro, 10-19): 200 accessions matched, 195 distinct patient_id, customers = 30248 only. Delivery dates from the sftp listing: 29 Jul .. 13 Oct (Aug 31 = 29 files = VP-18372 re-push batch).
+- "Cause = practice registered on vendor connection with result delivery on, not a manual sync": ehr_integrations cms3icsz700010xlgywfuj8do created 2026-07-27 17:35Z requested_by BIOINSIGHTS-onboarding, FULL_INTEGRATION, result_enabled was 1 until 10-13 18:31Z (history 218). Kafka report_finished listener pushes on LIVE+result_enabled (STM 10-13).
+- "Content incl. embedded PDF": emr-v2 hl7-encoder.service.ts buildPID (PID-3 id, PID-5 name, PID-7 DOB, PID-8 sex, PID-11 address), PV1-7/OBR-16 provider NPI+name, OBR-3 accession, OBR-7/14 dates, OBX value/units/range/flag, buildPDFOBX base64; result-generation.service.ts buildClientConfigurationFromIntegration: add_report = 1 for report_option CLASSIC (row is CLASSIC) -> PDF embedded. File sizes 530-600 KB agree.
+- "No signed confirmation from BioInsights": Outlook sender search bioinsights.com -> last mail 09-24 (Lisa). Only statement is Olena (devcom) 10-15 07:50Z: "Regarding the file that was sent by mistake: a person from our team downloaded it, but I confirmed that it has been deleted." Singular, unsigned, from the contractor. Leo's 10-15 mail to Britney called this "confirmed the deletion in writing"; Britney passed that to JAG on 10-19.
+- "NDA with BioInsights": Leo's statement 10-15; no document in thread or memory. NOT repeated in the 10-19 draft.
+- "Recurrence measures since 13 October": lis-prod-change-gate Gate 1b (PR #57 merged 10-13 23:55Z) = provenance from vendor/practice thread, no LIVE/result_enabled on unverified mapping, no real customer NPI for testing. These are checklist gates in our change process, not system-enforced controls.
+
+### 6. Promised actions
+- "I will send BioInsights (Lisa Bond) a request today for the signed letter": owner Leo; precondition = BioInsights thread exists (Lisa/Travis/Paola/Serdar on 10-13 mail). Draft of that request NOT yet created; create after Leo confirms he keeps ownership (Francesco may take it as Privacy Officer).
+- Patient list (195): query ready = lis_re.order_table julien_barcode IN (<200 accessions from evidence file>) joined to patient table for name/DOB. Not generated (PHI); Leo decides channel/recipient.
+
+### 7. Draft
+- Outlook reply-all draft on Francesco's 10-19 21:02Z mail (see session report for id). Not sent.
