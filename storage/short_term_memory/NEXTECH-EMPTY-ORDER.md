@@ -42,3 +42,5 @@ related: [NEXTECH-onboarding]
   - 2249 N3 OBR-7 `2026-10-19`: NOT placed; last_error `no_order_items (skipped OBR-1: Invalid sampleCollectionTime format...; OBR-2: ...)`, retry_num 2->1, parse_finished 0, emr_code_not_found NULL. Pod log shows both `OBR parse failed` + `parse failure (retry_num→1): no_order_items`.
 - Cleanup: 2249 set parse_finished=1 retry_num=0 by id+file_name+parse_finished=0 (1 row) before the 19:30Z tick could exhaust it and fire Slack. Staging samples 2554939/2554940 are dev-core samples (ids collide with prod snapshot) -- left in place, same as VP-17827.
 - Next: release PR staging -> main is Leo's.
+
+### [2026-10-19 19:30] Release PR #487 staging -> main opened (2 commits, = #486). Leo merges; after merge verify prod pods on main HEAD + dist grep, then watch next NEXTECH order.
