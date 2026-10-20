@@ -172,3 +172,7 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 - emr-v2 result encoder (hl7-encoder.service.ts buildPID/buildOBR): PID-2 hard-coded empty, PID-3 = Vibrant patientId; ORC-2/OBR-2 = emrOrderId which result-generation sets to julienBarcode (accession) for every vendor except THM (THM reads emr_sample.emr_order_id).
 - Stored today: emr_sample.emr_order_id = `26-0018 - A` (first OBR only). EMR patient id from PID-2 is NOT stored anywhere (order_input has Vibrant patientId 3290335 only).
 - Fix needs code: OBR-2 can follow the THM precedent; PID-2 needs persistence of the inbound PID-2 (schema or reuse). Open: per-OBR placer (A/B) vs single. Waiting on Leo.
+
+### [2026-10-20 15:00] Leo feedback on the PID-2/OBR-2 reply draft
+- First draft said "we'll update it to send both back" + "no additional test order is needed yet" -> Leo: wrong, it commits to a change before requirements are confirmed. Correct engineering order for a vendor's "field X is missing": (1) state what our system sends today, (2) hand requirement verification to the PM (@Keith). No promise of a fix, no answer on next test order.
+- Old draft deleted; new reply-all draft created on Jessica's 10-20 14:16Z mail (not sent; send from Outlook, convert @Keith to a real mention).
