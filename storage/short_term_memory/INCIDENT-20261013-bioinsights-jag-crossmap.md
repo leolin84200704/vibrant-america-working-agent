@@ -6,7 +6,7 @@ status: active
 base_weight: 1.0
 urgency: 5
 created: 2026-10-13
-updated: '2026-10-19'
+updated: '2026-10-20'
 links:
 - VP-18372
 tags:
@@ -172,3 +172,8 @@ reversal with Mingxi; BioInsights provider confirmation draft pending Leo; close
   To Lisa Bond: 200 result files of another clinic delivered to /incoming/ 29 Jul..13 Oct, error ours, deleted 13 Oct, Olena 15 Oct said one person downloaded a file and it was deleted;
   ask for a letter signed by an authorized representative stating (1) the incident ~200 files / period, (2) how many files were downloaded or copied, (3) all files and copies incl. backups removed, (4) nothing retained, (5) name/title/signature/date; PDF by reply is fine. No deadline, no JAG name, no NDA.
   STATE: waiting on Francesco (ownership of the request) before anything goes to BioInsights.
+
+### [2026-10-20] Francesco 10-19 23:45Z reply: (1) post-mortem asks for steps taken, e.g. a reviewer; (4) Leo to send Lisa the request, cc him
+- Leo decision on (1): engineers will no longer set up customer integrations; all integrations configured by the customer/vendor themselves, enforced in the system. (Commitment made by Leo; implementation not yet scoped/ticketed.)
+- Leo decision on (4): Francesco sends the signed-letter request to Lisa Bond (lisa@bioinsights.com), cc Leo; ask included: number of files downloaded/copied.
+- Reply-all draft created on Francesco's mail, id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABi9g9GQAA. Not sent.
