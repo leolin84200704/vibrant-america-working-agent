@@ -176,3 +176,8 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 ### [2026-10-20 15:00] Leo feedback on the PID-2/OBR-2 reply draft
 - First draft said "we'll update it to send both back" + "no additional test order is needed yet" -> Leo: wrong, it commits to a change before requirements are confirmed. Correct engineering order for a vendor's "field X is missing": (1) state what our system sends today, (2) hand requirement verification to the PM (@Keith). No promise of a fix, no answer on next test order.
 - Old draft deleted; new reply-all draft created on Jessica's 10-20 14:16Z mail (not sent; send from Outlook, convert @Keith to a real mention).
+
+### [2026-10-20 18:40] Reply sent, Keith asked Jessica the requirement questions; rule fixed by Leo
+- Leo sent the current-state reply 17:48Z. Keith (PM) replied 18:32Z asking Jessica: per-test (26-0018 - A) vs base (26-0018) matching; which number when one result OBR covers several ordered tests; whether unanswered per-test orders stay open; where to put our accession; which field carries the Nextech patient ID and whether to echo it in result PID-2. Also told her: another test order will be needed, hold until we say ready.
+- Leo's rule (2026-10-20): OBR-3 always = accession. OBR-2 default = accession; only vendors that specify otherwise (THM, NEXTECH) get their own placer number. Prod check: THM already OBR|1|12958|2610076237 (placer|accession); FTP/MDHQ/NEXTECH OBR-2 = OBR-3 = accession.
+- Implementation when answered: extend THM branch in result-generation buildSampleInfo (~1693) to NEXTECH, but keep file name (~2436) and PDF download (~3027) on accession. PID-2 needs a new emr_sample column (schema change, manual prod ALTER first). Waiting on Jessica's answers.
