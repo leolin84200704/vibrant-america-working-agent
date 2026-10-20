@@ -6,7 +6,7 @@ status: active
 score: 0.176
 base_weight: 1.0
 created: 2026-09-22
-updated: 2026-10-19
+updated: 2026-10-20
 links:
 - BIOINSIGHTS-onboarding
 - HL7-NPI-PRACTICE-MATCH-20260820
@@ -165,3 +165,10 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 - **Build a new integration row from the API service code, not from a peer row.** Peer-copying would have produced `pipeline_location='onprem'` (silent dead end — no pod scans the folder), `legacy_emr_service='MDHQ'`, and no `ehr_integration_status_history` row. `IntegrationRequestService.create()` is the spec; peers are only evidence of what defaults people picked.
 - The per-practice SFTP folder slug problem is Cerbo/MDHQ-specific (`{folder}` placeholder in the template). Non-Cerbo vendors copy concrete template paths, so "which folder?" is not a question to ask for them — check the template for `{folder}` before asking anyone.
 - Correction to a claim made mid-session: `sftp_archive_path` on ehr_integrations is inert (only the configuration-management CRUD reads it), but that does NOT mean the remote `archive/` folder is unused — the fetcher archives via `HL7_REMOTE_POST_FETCH_ACTION` (default `archive`) in `hl7-order-fetch.service.ts`, independent of that column. Two different mechanisms with confusingly similar names.
+
+### [2026-10-20 14:40] Jessica 10-20 14:16Z: result received, PID-2.1 and OBR-2.1 missing
+- Her mail (to Britney/support, Leo cc): "We were missing the patient ID in PID 2.1 and the order # in OBR 2.1. Do you need an additional order for testing?" Attachments 2610196534.pdf + Demo_Patient_1_000005.pdf; inline images are only signature icons.
+- Order 26-0018 sent: PID-2 `1^^^Nextech Practice` (also PID-3/PID-4 = 1), ORC-2/OBR-2 per test `26-0018 - A` / `26-0018 - B`, ORC-4 `26-0018`.
+- emr-v2 result encoder (hl7-encoder.service.ts buildPID/buildOBR): PID-2 hard-coded empty, PID-3 = Vibrant patientId; ORC-2/OBR-2 = emrOrderId which result-generation sets to julienBarcode (accession) for every vendor except THM (THM reads emr_sample.emr_order_id).
+- Stored today: emr_sample.emr_order_id = `26-0018 - A` (first OBR only). EMR patient id from PID-2 is NOT stored anywhere (order_input has Vibrant patientId 3290335 only).
+- Fix needs code: OBR-2 can follow the THM precedent; PID-2 needs persistence of the inbound PID-2 (schema or reuse). Open: per-OBR placer (A/B) vs single. Waiting on Leo.
