@@ -8,7 +8,17 @@ urgency: 5
 created: 2026-10-13
 updated: '2026-10-20'
 links:
+- BIOINSIGHTS-onboarding
+- FHIR-ONDEMAND-RESULT
+- INCIDENT-20260817-onprem-stale-deploy
+- INCIDENT-2604156666
+- VP-18138
+- VP-18194
 - VP-18372
+- VP-18824
+- VP-18833
+- emr-integration
+- fhir-api
 tags:
 - incident
 - bioinsights
@@ -24,7 +34,7 @@ summary: 'Retrospective (Leo: "這是嚴重的錯誤，請你檢討"). 07-27 the
   between JAG complaint (10-01) and containment (10-13). Memory recorded the source
   as "Serdar email" which never existed; two L4 checks verified the DB row instead
   of the originating email. Eight concrete rule changes listed under Lessons.'
-score: 0.1801
+score: 0.3675
 ---
 
 # INCIDENT 2026-10-13: BioInsights vendor row carried JAG's practice for 78 days

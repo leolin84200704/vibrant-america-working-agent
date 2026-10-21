@@ -3,10 +3,10 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 0.3217
+score: 0.3712
 base_weight: 1.0
 created: 2026-04-22
-updated: 2026-09-24
+updated: 2026-10-21
 links:
 - BETA-E2E-20260729
 - BIOINSIGHTS-SFTP-KEY
@@ -18,6 +18,7 @@ links:
 - HL7FAIL-20260729-PLESSEN
 - HL7FAIL-20260730-TURNPAUGH
 - HL7FAIL-20260903-EVERSPAN
+- HL7FAIL-20261019-PARSLEY-KHATRI
 - INCIDENT-20260808-critical-result-tnp
 - INCIDENT-20260817-onprem-stale-deploy
 - INCIDENT-20261013-bioinsights-jag-crossmap
@@ -146,6 +147,8 @@ links:
 - VP-18832
 - VP-18833
 - VP-18842
+- VP-18918
+- VP-18959
 - fhir-api
 tags:
 - emr
@@ -2304,3 +2307,40 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 - 09-23 / 09-29 的欄位稽核把 MSH-5 `IN OFFICE`、MSH-6 `LC`、MSH-12 `2.5`、OBR-11 `N`、OBR-15 `0`、OBR-26 fasting 全判為錯——**這些全是我們 09-04 給 devcom 的 `UpdatedExampleOrder_Explained.pdf` + `HL7_Technical_Reference.docx` 明文規定的**；devcom 10-15 拿文件頂回來，他們是對的。根因：共享給 partner 的 spec 從未進 STM，稽核只有 parser 當基準。**規則**：partner 檔案對著我們給的 spec 判；spec 與 code 的落差是我們的（已知：OBR-26 vs parser OBR-19；IN1-2 spec "C=Commercial" vs code C=customerPay；spec 範例碼 VAREQUISTION279 / VATEST2270 是錯的、devcom 照抄；XCN comp2 spec 寫 internal id、parser 讀 last name）。機制：`reference/partner-specs/` + gap table、skill `vendor-email-reply`（PR #59）；Outlook 草稿含 `[TBD]`/`TODO` 直接被 hook 擋（#58 / factory #97）。`HL7_Technical_Reference.docx` 在 SharePoint 找不到。
 - **BioInsights 的新 ordering provider = Aimee Duffy MD，NPI 1528033081（不是 Travis Bond 50243）**；不在 `ehr_integrations`。新 provider = 完整 onboarding（Vibrant 帳號、clinic/practice、integration type、kit delivery、billing），**owner 是 Mingxi**（Leo 把 Keith 拿掉）；agent 只在他們收齊後執行那一列。vendor 46 仍 `is_public=0`（portal 自助整合申請可能列不出）。Olena 的其他問題：draw location → HL7 沒這欄，是 per-row `ehr_integrations.kit_delivery_option`；requisition → order-time Order Summary PDF 已存在（VP-18138，`ehr_vendors.sftp_order_forms_path`，目前只 vendor 44 開）——Leo 的回信已承諾「他們給資料夾我們就開」，vendor 46 那欄目前 NULL（prod 10-15 驗）；clinical catalog 細節 → Zhenhe（10-05 問到現在沒答）。
 - **JAG 這一側 10-14 21:46Z 由 Leo 寄出 closeout 收尾**：200 檔已刪（10-13）、測試單 2609256344 取消 + 退款 txn 1008956 $570（10-14 16:32Z；原交易 447178 `refunded` 仍 0——流程只記 refund 列不翻旗標）、John Doe 病人 3286031 留著不停用（Leo）。還開著、全在 BioInsights 手上：(a) 回覆 provider 確認信；(b) 書面確認 `/incoming/` 沒留存——而且 Olena 說「有一個人下載過一個檔」（JAG PHI），Britney 10-15 兩封問要不要正式通知 JAG，草稿已備（誠實告知、NDA 存在是 Leo 的說法、下載數維持「一個檔」），未寄。
+
+## 【蒸餾 2026-10-21】PDF 內容修好 ≠ 快取修好、大量更正重推在 P2P 會變「新報告」、OBR-7 精度與 OBR 迴圈在 ORC 迴圈裡、vendor gate（shadow）、accessionId 查詢、GZ NY 不再看 beta gate、手動預約在 MCP 掛掉時的路（VP-18918 / VP-18959 / NEXTECH-EMPTY-ORDER / NEXTECH-ORC-OBR / NEXTECH-onboarding / VP-18960 / VP-18931 / VP-18933 / LBS-1848 / VP-18117）
+### 報告內容修正後的快取與重推（VP-18918 → VP-18959）
+- **template 修好不會回頭修已快取的 PDF**：9 月 classic PDF 少了 Iron Panel（Ferritin 等；LIS-7757 改名 + report-pdf classic card 白名單），VP-18376（09-25）修了 template 但沒 regenerate，壞窗口內的快取 PDF 全部凍結。修內容缺陷的票要問「有沒有 regenerate」。
+- **regenerate 路徑** = `processReportChange`（lazy、不發 notification）+ classic download；之後 `GenerateResultHl7` 逐筆重推（8 s pacing）。40 筆 / 11 customers，40/40 TRANSMITTED。檢查陷阱：grep "iron" 會命中 Environmental 的免責聲明，用 "Iron Panel" / ferritin；PF vendor SFTP 從筆電連會 ECONNRESET → 用 rtr 推算的 PDF 大小 vs 快取大小比對。
+- **大量更正重推在 Power2Practice 會被當成「新報告」通知（VP-18959）**：每次重推都是新的 ORU，OBR-25 / OBX-11 寫死 `F`（VP-18372 的發現），P2P 沒有更正標記可對，就當新 lab 歸檔。客戶回報「舊報告觸發新通知」= 預期結果，不是缺陷。**下次大量更正重推前，先讓 integration / 客戶知道會出現重複通知**；長期解是依 vendor 送 `C`（VP-18372 結案備註）。辨識手法：rtr `created_by=result_generation_service` 且無 bullmq job = 直接 gRPC/REST 重推；Datadog audit `report_cache_refreshed` by "User 786"（emr-v2 VIBRANT_API_TOKEN 身分）1:1 對上。
+
+### HL7 order intake：OBR-7 精度、OBR 迴圈重複、失敗不再靜默（NEXTECH，prod 2c077ff）
+- OBR-7 是 HL7 TS，精度 8/10/12/14 位都合法；舊 `isICD9` regex 只吃 12 位 → throw → OBR loop catch 後繼續 → `orderItems: []` 的空單被下單（prod 2646314、2650711；staging 10-08 的 2245 也中過沒人發現）。`normalizeObr7` 補/截到 12 位；不合法照樣丟。
+- `parser.service.ts` 的 OBR + DG1 迴圈原本在 per-ORC 迴圈裡 → Nextech 一個 OBR 一個 ORC，test_input 變 `2,4,2,4`、original_price 233.88（應 150）。移出 ORC 迴圈、用最後一個 ORC 的 customer 跑一次。
+- 現在任何 OBR parse 失敗 → retryable `obr_parse_failed`（扣 retry_num），item 在 OBR 之後消失 → retryable `no_order_items`；都不會再靜默下單。90 天掃描：on-prem 692 檔 0 multi-ORC；AKS 7 檔 3 個 multi-ORC 全是 NEXTECH。
+- 還沒處理：空 sample 2650711 / 2646314 要 ops void。
+- **Nextech result 回傳**：Jessica 要 PID-2.1（Nextech patient id）與 OBR-2.1（他們的 order #）。現況 PID-2 寫死空、OBR-2 = accession（THM 例外讀 `emr_sample.emr_order_id`）；inbound PID-2 沒存任何地方 → 要新 `emr_sample` 欄位（schema 變更，先手動 ALTER prod）。Leo 規則見 leo-working-rules 10-21；等 Jessica 回 Keith 的問題。
+
+### Vendor gate：order 的 vendor 必須是該 customer 整合過的 vendor（VP-18960，prod 5ba4f6c，shadow）
+- `ORDER_VENDOR_GATE_MODE` off|shadow|enforce，未設 = shadow（code default，故意不進 ConfigMap）。enforce：只讓同 vendor 的 `ehr_integrations` 列競爭，無 → `vendor_mismatch <ORC12>@<vendor>`（retryable，不寫 customer_not_found）；last_error 帶完整說明（候選列、修法 A 的精確 UPDATE + retry_num=3、修法 B 不要做什麼），此類上限 4000 字（#496/#497）。
+- Order vendor = `hl7_file_input.emr_service` = `sftp_folder_mapping.emrName`，大寫去底線比對（VP-17385）。
+- 2 週回測 99 筆：90 過、5 會被擋（都是資料問題：customer 35353 / clinic 128087 標 POWER2PRACTICE 但走 MDHQ；clinic 17147 的 15181 / 35457 ORDER_ONLY 列 `ehr_vendor_id` NULL）。**168 筆 LIVE ordering 列 `ehr_vendor_id` NULL**（VP-16968 ORDER_ONLY backfill）→ 轉 enforce 前要先清資料（Leo 決定，prod DB 寫入）。
+- 原始 HL7 order 檔：on-prem prod pod `/EMR_storage/HL7Message_prod/**`（Datadog 只有 AKS pod log，看不到 on-prem）；MDHQ raw order 不在 cloud PV。
+
+### Order-status 以 accessionId 查詢（VP-18931，prod 5ba4f6c）
+- `GET /order-status?accessionId=`：accession → `getSampleIdByBarcode` → `listSamplesBatch` → scope = `order.clinic_id == token clinic_id`（token 無 clinic → own account；比 list mode 嚴）。有自己的 intake 列走原路徑，沒有（Portal / clinic-peer 單）orderId/placerId null、updatedAt = 最新事件時間（PM 待回 comment 192840）。
+- prod 驗證：17/17 近年單 200；**2017-2018 的舊單 `order.clinic_id=0` → LIST 看得到但 accession 查詢 404**（scope 是 clinic 相等）。Leo 待決定。
+
+### Gut Zoomer NY 轉換不再看 beta program（VP-18933，prod fa14617）
+- `parser.service.ts` 兩條路徑 `gzNyEnabled` → `nyRoutingInScope`（GZ 或 bundle），不再呼叫 beta RPC；`isGzNyEnabled` 移除。NY 的 GZ 單若沒有 inbound state → `NY_ADDRESS_REQUIRED` 拒絕（所有 clinic）。無 env kill switch，rollback = revert。
+- 部署基準：hl7_file_input max_id 7370、NY_* reject 0；結案時 7371-7377 還沒有 GZ 單（**沒有 live 驗證過轉換**）。
+- AKS node IP：`10.224.0.199` 已不是 node；現役 node 從 pod hostIP 查（`kubectl get pods -A -o jsonpath='{range .items[*]}{.status.hostIP}{"\n"}{end}' | sort -u`）。`lis-prod-change-gate` Gate 7 仍寫 .0.199（skill = automation，要走 PR 改）。
+
+### 手動預約 consult：vibrant MCP 掛掉時（LBS-1848，延續 LBS-1828 / LBS-1799 配方）
+- lis_core_v7 讀：configmap `default/lis-corelisv7-config` DATABASE_URL + emr-v2 node_modules 的 mysql2，session 強制 READ ONLY（emr-v2 `.env` 的 lis_emr 帳號沒有 lis_core_v7 SELECT）。calendar_prod：`transv2/lis-transv2-config` DATABASE_URL_CALENDAR 走 psql。
+- 可重用 script 在 `scripts/consult-booking/`（my.js / pg.sh / mint.js / gql.sh；mint.js 每張票改 id）。`getLabClinicianAvailability` 回單一物件；`isAccessionClaimable(accession_id:)` 是 snake_case；Postmark key 在 noti/notification-center pod env。
+- 驗證清單：v2_event + claim + audit 各一、accession 只被一個 event 引用、clinician 那個時段不再出現在 availability、兩封 Postmark 都 Sent。
+
+### 其他
+- **quarantined_orders 不會自己變 resolved**：pod 內手改 HL7 修好的單（VP-18117 / LBS-1772），quarantine 列停在 EXPIRED、resolved_at NULL——沒走 resolve API 就是這樣，非缺陷。
+- **Story type 的票沒有 Root Cause 欄位**（不在 edit 也不在 transition screen），MCP 設不了；Bug 的 close validator 則必填（customfield_10485 ADF + 10490），要先 editJiraIssue 再 transition（VP-18959 / VP-18487 / VP-18117）。

@@ -3,7 +3,7 @@ id: fhir-api
 type: ltm
 category: emr_integration
 status: active
-score: 0.2351
+score: 0.2599
 base_weight: 1.0
 created: 2026-06-06
 updated: 2026-06-06
@@ -18,6 +18,7 @@ links:
 - HL7FAIL-20260729-PLESSEN
 - HL7FAIL-20260730-TURNPAUGH
 - HL7FAIL-20260903-EVERSPAN
+- HL7FAIL-20261019-PARSLEY-KHATRI
 - INCIDENT-20260808-critical-result-tnp
 - INCIDENT-20260817-onprem-stale-deploy
 - INCIDENT-20261013-bioinsights-jag-crossmap

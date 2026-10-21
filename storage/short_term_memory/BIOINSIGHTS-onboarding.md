@@ -14,6 +14,8 @@ created: 2026-07-21
 updated: 2026-10-15
 links:
 - BIOINSIGHTS-SFTP-KEY
+- HL7FAIL-20261019-PARSLEY-KHATRI
+- INCIDENT-20261013-bioinsights-jag-crossmap
 - NEXTECH-onboarding
 - VP-17827
 - VP-18138
@@ -40,7 +42,7 @@ summary: 'New EMR vendor BioInsights — first key-based (non-password) SFTP int
   unaffected; AKS pod egress to bioinsights:2022 OK. 2026-07-21 email sent to Thomas
   (perms + dir layout + sample HL7). STATUS: waiting on vendor reply.'
 jira_status: none
-score: 0.1477
+score: 0.1566
 ---
 
 # BioInsights EMR vendor onboarding (SFTP, key-based auth)

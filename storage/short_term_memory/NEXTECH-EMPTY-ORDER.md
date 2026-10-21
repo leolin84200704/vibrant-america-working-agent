@@ -1,11 +1,14 @@
 ---
 id: NEXTECH-EMPTY-ORDER
-title: emr-v2 places HL7 orders with zero items when every OBR throws (Nextech date-only OBR-7)
+title: emr-v2 places HL7 orders with zero items when every OBR throws (Nextech date-only
+  OBR-7)
 category: technical
 status: done
 created: 2026-10-19
 updated: 2026-10-19
-related: [NEXTECH-onboarding]
+related:
+- NEXTECH-onboarding
+score: 0.1052
 ---
 
 ## Ticket Analysis

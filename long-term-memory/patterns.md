@@ -6,7 +6,7 @@ status: active
 score: 0.099
 base_weight: 0.8
 created: 2026-04-22
-updated: 2026-10-19
+updated: 2026-10-21
 links:
 - INCIDENT-20260528
 - INCIDENT-20260529
@@ -3016,3 +3016,12 @@ Atlassian MCP 斷線時的 fallback：`~/src/credential/atlassian-api-token.md`�
 - **Confluence 頁面更新的 dry-run 輸出可能超過工具輸出上限**：先寫到檔案再 parse／grep，不要直接把整頁 ADF 印回對話（VP-18800 第一次 dry-run 直接被截斷）。
 - **zsh 迴圈變數不要叫 `path`**（會 clobber `PATH`，curl 當場消失）——已在上方段落記過，VP-18800 再踩一次；用 `rp`／`route` 之類非保留名。
 - **一個 ticket 的 closeout 若橫跨 Leo 手動 merge 之後**：merge 後清單固定四件——prod 唯讀 A/B（含 prod-only 403 路徑）、公開 ingress 探針（prod 與 staging 各比一次 byte-identical）、Confluence 2737373187 caller 頁「switch today」更新、Jira Dev Complete + comment；寫入路由是否 live 跑由 Leo 決定，沒跑就在 STM 與 Jira comment 明寫「未 live 跑」。
+
+## 【蒸餾 2026-10-21】verbatim port 也要搬「共用可變物件的副作用」、要被拒的 A/B case 先看 validator、潛伏 bug 用「載入已部署 dist 在記憶體裡呼叫」復現、「log 沒收」的主張要對 raw pod log、swallow → rethrow with context 而不是退成空值、stage_test 遠超 main 時 release 用 cherry-pick（VP-18798 / VP-18799 / VP-18486 / VP-18487）
+- **verbatim port 看不到 call site 以外的副作用（VP-18798）**：LIS-Sample 的 results-service gRPC 認證靠一個「被別處 mutate 過的共用 Metadata 物件」帶 token；照 call site 逐行搬到 trans，call site 本身沒傳 token → prod（有 enforce auth）`resend-tubes` 回 "Missing authorization token"，staging 不 enforce 所以看不到。修法 #973。**規則：port 時對每個 downstream 呼叫，查 prod 上它實際送出的 metadata/headers，不是只看 call site 傳了什麼；每條依賴 downstream 的 read route 都要在 prod 做 read-only A/B**——這次就是 prod A/B 抓到的。
+- **staging A/B 裡「應該被拒」的 case，送之前先確認 validator 真的會拒（VP-18798）**：兩個 case 的 DTO 只有 `@IsNotEmpty` / `@IsString`，送出去會一路走到寄信的 handler。逐 case 讀 validator 再送。
+- **前幾張 port 票的 review 意見直接寫進下一張的 subagent brief（VP-18799）**：「不加新 env key、不加 proto、token audit 由 port 自己做」寫在 brief 裡，省掉一整輪 review；零新 config、零新 proto 交付。
+- **潛伏 bug 的人工復現（VP-18486）**：bug 在 code 裡真實存在但 live 從不觸發（core 不送 sample-less order；prod 62/1.58M 筆沒有 sample 的 order，全是 2022-2025 舊資料）。做法：`kubectl cp` 一個 script 進 pod，`require` 已部署的 `/dist/.../getPatient.service.js`，`Object.create(prototype)` + stub 依賴，在記憶體裡直接呼叫 `getWarning`（無 DB、無網路），舊 pod（prod）重現錯誤、新 pod（staging）全綠——用來回答 Leo 的「為什麼查不出來？能不能人為復現？」。用完刪掉 pod 裡的暫存檔。
+- **「這個 log 沒被收進 Datadog」是要驗證的主張，不是解釋（VP-18486 CORRECTION）**：先說 `console.error` 沒進 Datadog，後來 raw pod log（35 分 306 次 findPatient）顯示 0 次 "Error in getWarning"、Datadog 也有其他 trans TypeError → 不是 logging gap，是真的沒觸發。查不到訊號時先對 raw pod log，再下「沒收到」或「沒發生」的結論。
+- **吞掉錯誤的 helper：rethrow with context，不要退成空值（VP-18487）**：`getFullTestMapping` catch 後回 undefined → 外層 `.map` TypeError、log 只剩無法歸因的 "reading 'map'"。退成空 mapping 會讓病人頁看起來「沒有結果」（把失敗偽裝成正常）；改成丟 `TestHierarchyUnavailableError`（帶 accession + stack），回應完全不變、只修歸因。另：票上寫「回 500」不對——外層 catch 把 `test_related` 丟掉、仍回 200；golden spec 早已 pin 住這行為。
+- **LIS-transformer `stage_test` 比 main 超前很多時（10-20：166 commits），release 只走 cherry-pick**：從 `origin/main` 開 `{branch}-main`、cherry-pick 單一 commit、跑 suite + build + pre-push DI smoke 再開 PR（VP-18487 #983）；不要開 stage_test → main。（emr-v2 相反，見 leo-working-rules 10-21：只准 staging → main。）

@@ -6,7 +6,7 @@ status: active
 score: 0.0953
 base_weight: 0.7
 created: 2026-04-22
-updated: 2026-10-19
+updated: 2026-10-21
 links:
 - SANDBOX-SEED-W2W-20261005
 - rules
@@ -240,3 +240,15 @@ summary: Ticket keyword to repo/module routing table
 ## 2026-10-19 新增路由（dream；VP-18798 / VP-18800 closeout）
 - **"patients remainder / PATCH /profiles / duplicate-check / complete-reports / kits/resend / resend-tubes / portal-jwt / pns-jwt / notif-email / hormone-qnr / reset-questionnaire / SAMPLE_SHIPPING_HTTP_URL / SAMPLE_CORE_V2_PATIENT_GRPC / VP-18798"** → STM `VP-18798`（Dev In Progress；本機 32143fc 未 push，等 Leo 四個決定）+ `repos.md` 10-19。
 - **"trans prod circular structure to JSON / unhandled rejection lis-trans-deployment"** → `repos.md` 10-19（pre-existing baseline，10-04 起 46 次，未歸因）。
+
+## 2026-10-21 新增路由（dream；VP-18918 / VP-18959 / NEXTECH / VP-18960 / VP-18931 / VP-18933 / VP-18486 / VP-18487 / LBS-1848）
+- **"舊報告觸發新通知 / old reports new notifications / P2P new lab / 更正重推重複"** → STM `VP-18959` + `emr-integration.md` 10-21（預期結果；OBR-25 寫死 F → VP-18372）。
+- **"PDF 少了某個 panel / Ferritin missing / Iron Panel / regenerate cache / processReportChange"** → STM `VP-18918` + `emr-integration.md` 10-21。
+- **"OBR-7 / collection time format / 空單 orderItems [] / no_order_items / obr_parse_failed / test_input 重複 / original_price 翻倍 / multi-ORC"** → STM `NEXTECH-EMPTY-ORDER` / `NEXTECH-ORC-OBR`。
+- **"Nextech PID-2 / OBR-2 placer / 回傳 order #"** → STM `NEXTECH-onboarding`（等 Jessica 回答；PID-2 要 schema 變更）。
+- **"vendor mismatch / order 落到錯的 customer 的預防 / ORDER_VENDOR_GATE_MODE / ehr_vendor_id NULL"** → STM `VP-18960` + skill `emr-order-customer-resolution`。
+- **"order-status accessionId / 用 accession 查 order 狀態 / webhook order lookup / clinic_id=0 404"** → STM `VP-18931`。
+- **"Gut Zoomer NY / NY_ADDRESS_REQUIRED / gz_ny beta"** → STM `VP-18933`。
+- **"findPatient warning / getWarning / processTNPWarningData / order.issue.filter"** → STM `VP-18486`（PR #987 在 stage_test；main PR 待 Leo）。
+- **"patientTestResultnewrange / getFullTestMapping / TestHierarchyUnavailableError"** → STM `VP-18487`。
+- **"手動預約 consult（MCP 掛掉）"** → STM `LBS-1848` + `scripts/consult-booking/`。

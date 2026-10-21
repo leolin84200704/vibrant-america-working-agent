@@ -4,7 +4,18 @@ category: emr_integration
 created: 2026-10-19
 updated: 2026-10-19
 status: waiting_external
+links:
+- BIOINSIGHTS-onboarding
+- NEXTECH-onboarding
+- VP-17827
+- VP-18138
+- VP-18194
+- VP-18372
+- emr-integration
+- fhir-api
+score: 0.1684
 ---
+
 # hl7_file_input 7319 / quarantine 23 - MDHQ Parsley, Kinnari Khatri customer_not_found
 
 ## Context

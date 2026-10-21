@@ -6,7 +6,7 @@ status: active
 score: 0.1336
 base_weight: 0.9
 created: 2026-04-22
-updated: 2026-10-19
+updated: 2026-10-21
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -471,3 +471,10 @@ sudo prompt 用 `echo <pw> | sudo -S <cmd>`。Heredoc 內含 `[^...]` 之類 exp
 - **VP-18798 patients remainder（10-18，Dev In Progress）**：worktree `~/src/LIS-transformer.worktrees/vp18798` `feature/leo/VP-18798` head 32143fc，**未 push**。19 條路由（GET /patients、PATCH /profiles、duplicate-check、complete-reports、kits/resend、resend-tubes、portal-jwt、pns-jwt 加 guard、10 條 POST /orders/* 郵件與 QNR 路由、reset-questionnaire 無票認領故併入）；59 files +18.7k（protos/contracts 為主）；jest src/sample 40 suites / 965 green。新 gRPC client `SAMPLE_CORE_V1_PATIENT_GRPC` / `SAMPLE_CORE_V2_PATIENT_GRPC` / `SAMPLE_TEST_RESULT_INFO_GRPC`。
 - **VP-18798 等 Leo 決定的四件事**：(1) 新 env key `SAMPLE_SHIPPING_HTTP_URL`（prod `.../v1/lis/shipping/`、st `.../shipping/staging/`）與 `SAMPLE_CORE_HTTP_URL`（僅 v1 fallback）要先進 lis-trans-config / -st——這是 cross-ticket review 10-15 第 1 點「每張票各自撞到的 prod env key 洞」的又一例，這次在 merge 前就列出來了；Kafka 連線字串改讀既有 `Azure_kafka_connection_string_gen`（sha256[:12] 86850d3eba64 = LIS-Sample prod secret），不需新 secret；(2) GET /patients 在 LIS-Sample 沒有 guard（任何 patient_id 回 name/DOB/gender）——要不要加；(3) staging 寫入要不要真跑（PATCH profiles、kits/resend 會寄 kit、reset-questionnaire）；(4) complete-reports 的 prod 身分：LIS-Sample 用 VibrantClient（VIBRANT_CLIENT_ID），trans 用 settingTool.serviceToken()（OAUTH2_CLIENT_ID）→ 下游 record_user_id 會不同。
 - **VP-18798 port 的其他事實**：pns-jwt secret trans `listSec()` 的 secretOrKeyProd/Dev 與 LIS-Sample AUTH_JWT_SECRET prod/dev sha256 相同；`PATIENT_UPDATE_CORE_VERSION` 兩邊都沒設 → v2；Kafka 發佈 LIS-Sample 以 NODE_ENV=prod 判斷、port 改 SERVER_ENVIRONMENT=prod（同 VP-18800 的 env-gate 教訓）；`npm install --package-lock-only` 本機 npm 會重寫 500 行 lockfile → 只手改 root deps 一行（同 VP-18481 #920 教訓）。
+
+## 【更新 2026-10-21】emr-v2 prod 5ba4f6c（vendor gate shadow + accessionId 查詢）、trans main 02bc53c、VP-18486 在 stage_test
+- **lis-backend-emr-v2 main**：270f0b2 → de221a4（#487 NEXTECH-EMPTY-ORDER，10-19 19:33Z）→ 2c077ff（#489 NEXTECH-ORC-OBR，22:30Z）→ fa14617（#491 VP-18933，10-20 03:24Z）→ **5ba4f6c**（#495 VP-18960 + VP-18931，10-21 18:57Z；AKS + on-prem 192.168.60.10:6004 都上）。**#497（staging → main，只帶 053a744 = VP-18960 last_error 說明）待 approving review。**部署驗證看 Jenkins commit status；GitHub Actions 在這個 repo 只跑 CodeQL。
+- **LIS-transformer main**：03f43da → 0773c6e（#969 VP-18798）→ 429a61b（#973 auth metadata fix）→ 18bdd16（#975 VP-18799）→ **02bc53c**（#983 VP-18487 cherry-pick）；之後 VP-18947 與 dependabot（#979/#981/#984）。所有 deploy run success。
+- **VP-18486**：#987 → stage_test merged a66f46f（10-21 18:20Z，deploy 39651905758 ✓）；main PR（`bugfix/leo/VP-18486` bc32b11）尚未開。
+- **agent repo**：PR #63（`DailyJob/lis_sample_route_removal`）merged 3f8e1aa；launchd `com.lis.lis-sample-route-removal` 已載入。
+- **vibrant MCP `mysql_query` 只連 lisportalprod**（`Unknown database 'lis_emr'`）——lis_emr 要用 emr-v2 `.env` 的 mysql2 路徑。

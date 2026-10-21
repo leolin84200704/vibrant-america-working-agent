@@ -8,6 +8,7 @@ base_weight: 1.0
 created: 2026-07-02
 updated: 2026-07-05
 links:
+- INCIDENT-20261013-bioinsights-jag-crossmap
 - VP-18138
 - VP-18194
 - VP-18372

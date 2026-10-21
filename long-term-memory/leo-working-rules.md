@@ -7,7 +7,7 @@ score: 0.1615
 base_weight: 0.9
 urgency: 4
 created: 2026-08-16
-updated: 2026-09-24
+updated: 2026-10-21
 summary: Leo's working rules for this instance — reporting, ticket handling, Jira
   mechanics, and repo hygiene. The job-specific residue of the native auto-memory
   store; universal engineering discipline lives in factory ENGINEERING-LESSONS.
@@ -631,3 +631,20 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 3. **這家族的 Done 語意**：VP-18832 Done 在 release PR merge 前；VP-18833 Done 在測試檔刪掉後；18481 / 18796 / 18801 / 18802 Dev Complete 時沒有任何流量切過去（切換是 VP-18803）。「Done」= code 在 prod + A/B equal，不是流量。加上 reconcile 翻 completed 不補 retrospective（18832 / 18833 / 18842 都沒有），就是 weekly 量到的 retrospective 覆蓋率 77.8% → 26.4%。
 4. **三天兩次被要求檢討（INCIDENT 10-13、BIOINSIGHTS 10-15），根因同一個**：基準是自己的記憶/code，不是對方手上真正有的（他們的 thread、我們寄給他們的文件、prod 狀態）。R7「不留 placeholder」10-13 寫下、10-15 再犯 → 散文式教訓撐不過兩天，hook 才撐得住（#58 / #97 當天上線）。
 5. **順手發現的既有缺陷**（LIS-Sample 每天三次 import、optimalhealthcare 從沒被 poll、`compressPdf` 吞錯、staging TNP 誤寫）：Leo 的模式是回報不修，除非那個缺陷就在這張票的範圍裡；要修就開新票（VP-18832 就是這樣來的）。
+
+## Leo 10-19 → 10-21 的決定與打回（VP-18931 / VP-18960 / NEXTECH / VP-18918 / VP-18959 / VP-18933 / VP-18486 / VP-18117 / LBS-1848）
+- **「comment 在 ticket 裡面 @Xiaoye，以後這種設計上的問題直接問。不需要等我」（VP-18931，常設）**：PM 擁有的票上的產品/設計模糊點 → 直接用 Atlassian MCP（Leo 帳號）發 Jira comment @ reporter，不用先給 Leo 看。**這一類覆蓋「Jira comment 只起草」**；其他 comment 照舊起草。
+- **「以後這個 repo 要從 staging -> main，不是獨立開 pr」（VP-18960，常設，lis-backend-emr-v2）**：永遠不開 feature → main，即使是為了不把 staging 上別張票一起帶出去；release PR 帶 staging 上所有東西並逐張列出。（#494 已關，改 #495。）main 的 org ruleset 要 1 個 approving review、作者不能自審、不用 `--admin`。
+- **「blocked orders must explain themselves in last_error in full」（VP-18960）**：被擋的單，last_error 要寫到 ops 不用查 code 就能修：誰、為什麼、候選列、精確 UPDATE、不要做什麼。
+- **vendor 回信（NEXTECH 10-19 / 10-20 兩次打回）**：(1)「不要說 issue on our side（你還是沒有記得回覆形式）」——失敗說明 = 他們送的 vs 我們預期的（OBR-7 只有日期 vs 完整時間）→ 我們已調整、現在可以 → 之後仍建議怎麼送。(2) vendor 說「欄位 X 缺了」：先講我方現在送什麼，需求確認交給 PM（@Keith）；**不承諾修、不回答要不要再下測試單**——在需求確認前承諾改動是錯的。
+- **OBR-2 / OBR-3 規則（Leo 10-20）**：OBR-3 一律 = accession；OBR-2 預設 = accession，只有 vendor 明確要求的（THM、NEXTECH）才放他們自己的 placer number。檔名與 PDF 下載仍用 accession。
+- **結案口令越來越短，照字面做**：VP-18918「regenerate, resend all, comment + close」；VP-18959「comment + done」；VP-18117「no comment, close directly」（Bug validator 的 Root Cause 欄位照填）；LBS-1848 延續 LBS-1828「訂好 + comment + Done」；VP-18933「done, no daily check」（接受沒有 live 驗證，也不要每日盯——digest 仍列為 owed，不重複追問）。
+- **VP-18486「為什麼會查不出來？能不能人為復現？」**：bug 在 code 裡但 live 沒出現時，他要兩個答案：觸發條件為何在 live 不成立（附資料量），以及一個能在已部署 code 上重現的人工方法（見 patterns 10-21）。
+- **VP-18933 Leo 接受「規則 3」而不跑 raw-HL7 baseline**：baseline-first 是 gate 預設，Leo 可以明講豁免；STM 要寫「not run, Leo accepted」。
+
+## 罕見觸發的改動靠「等流量」結案、修正動作在對方系統的副作用、別的團隊轉 Done ≠ 修好（cross-ticket review 2026-10-21；證據 VP-18933 / VP-18487 / VP-18486 / NEXTECH-EMPTY-ORDER / NEXTECH-ORC-OBR / VP-18798 / VP-18799 / VP-18918 / VP-18959 / PO-270 / VP-18796 / VP-18800 / VP-18673 / VP-18889 / LBS-1848 / VP-18117）
+1. **觸發條件罕見的改動，結案時都只有「artifact 在 pod 裡 + 一段安靜的 Datadog」**：VP-18933（還沒有 NY GZ 單）、VP-18487（base rate 3 / 14 天）都被 closeout 稽核 FLAG。做得好的反例在同一批：NEXTECH 兩張用 staging fixture 檔（只改 OBR-7 / MSH-10）在已部署 code 上走過每個分支；VP-18486 在 pod 裡載入 dist 直接呼叫。**規則：觸發罕見時，用合成觸發打已部署的 code（fixture 檔、in-memory 呼叫、或至少一個 success-path 請求），等真實流量只能當補充；做不到就在 STM 與 digest 寫明 owed。**
+2. **prod-only 缺陷還是只有 prod A/B 抓得到**（VP-18798 auth metadata，延續 10-15 review 第 1 點）：staging 不 enforce 的東西（auth、RBAC env gate，VP-18800）在 staging 一律 equal。
+3. **修正動作本身會在接收端產生新票**：VP-18918 的 40 筆更正重推，隔天變成 VP-18959「舊報告觸發新通知」。大量重推 / 重放前，先想接收端看到的是什麼（新 ORU、新通知、重複 import），並在動作前告知對方。
+4. **別的團隊把票轉 Done ≠ 問題修好**：PO-270 由 owner（Vinodh）以「呼叫 Blood Draw Settings API 會讓服務 crash、幾分鐘自癒、會盡快修」結案——500 會再來。reconcile 翻成 completed 時 STM 沒記結案原因。reconcile 翻狀態的票，dream 要補一行「誰、以什麼理由關的」。
+5. **Leo 授權的邊界在擴大**：staging 自己 merge（10-03）、PM 設計問題直接 comment（10-20）、結案直接關；但 main / release 仍是他（emr-v2 ruleset 也強制）。每次擴大都是一句明確的話——沒聽到那句話就照舊。

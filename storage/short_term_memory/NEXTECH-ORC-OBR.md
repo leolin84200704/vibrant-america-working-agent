@@ -5,7 +5,10 @@ category: technical
 status: done
 created: 2026-10-19
 updated: 2026-10-19
-related: [NEXTECH-EMPTY-ORDER, NEXTECH-onboarding]
+related:
+- NEXTECH-EMPTY-ORDER
+- NEXTECH-onboarding
+score: 0.1052
 ---
 
 ## Ticket Analysis

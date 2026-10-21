@@ -3,13 +3,14 @@ id: NEXTECH-onboarding
 type: stm
 category: emr_integration
 status: active
-score: 0.176
+score: 0.266
 base_weight: 1.0
 created: 2026-09-22
 updated: 2026-10-20
 links:
 - BIOINSIGHTS-onboarding
 - HL7-NPI-PRACTICE-MATCH-20260820
+- HL7FAIL-20261019-PARSLEY-KHATRI
 - LBS-1833
 - QUARANTINE-ADMIN-API-GAP-20260924
 - VP-17827

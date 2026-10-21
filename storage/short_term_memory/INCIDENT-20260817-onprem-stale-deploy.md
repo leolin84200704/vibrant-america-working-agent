@@ -8,6 +8,7 @@ created: 2026-08-17
 updated: '2026-08-19'
 links:
 - INCIDENT-20260817-onprem-deploy-freeze
+- INCIDENT-20261013-bioinsights-jag-crossmap
 - INCIDENT-2604156666
 - VP-18138
 - VP-18194
@@ -29,7 +30,7 @@ summary: 'Leo''s manual result publish for samples 2602947/2602948 (cust 4953 MD
   13.15 days = started 2026-08-04 18:28Z, so its baked Prisma client predates the
   2026-08-14 enum. Every main merge since 2026-08-04 11:14 PDT is absent from on-prem,
   which still OWNS 536 of 1036 LIVE result-enabled integrations.'
-score: 0.025
+score: 0.0248
 ---
 
 # INCIDENT-20260817 — emr-v2 on-prem prod deploy drift (13 days)

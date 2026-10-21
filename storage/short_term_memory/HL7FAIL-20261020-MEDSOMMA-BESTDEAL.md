@@ -3,14 +3,13 @@ id: HL7FAIL-20261020-MEDSOMMA-BESTDEAL
 type: stm
 category: emr_integration
 status: blocked
-score: 0.8
+score: 0.1209
 base_weight: 1.0
 created: 2026-10-20
 updated: '2026-10-20'
-links:
-- HL7FAIL-20260729-PLESSEN
-- VP-17535
-unblock_when: 'BestDeal returns 200 for test_id_list ["337"] (and 338/381/382/383/384/91); then bump retry_num on hl7_file_input 7375'
+links: []
+unblock_when: BestDeal returns 200 for test_id_list ["337"] (and 338/381/382/383/384/91);
+  then bump retry_num on hl7_file_input 7375
 ---
 
 # hl7_file_input 7375 (medsommaemr, MDHQ) - BestDeal 400 non_existing_test_ids
