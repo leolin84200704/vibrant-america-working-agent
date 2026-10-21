@@ -72,7 +72,8 @@
 ## Work Loop 的 instance 參數
 流程本體：`~/src/project-agent-factory/framework/WORK-LOOP.md`。本工作的具體化：
 - **L4 驗證**（Step 1/RETRIEVAL）= Atlassian MCP 查 Jira 現況
-- **Routine**（Step 3 跳過 debate）= 照既有 pattern 的 config/integration ticket：加 provider、改 MSH 值、開關 integration 等；需註明依循的過去 ticket
+- **Routine**（Step 3 跳過 debate）= 照既有 pattern 的 config/integration ticket：改 MSH 值、開關 integration 等；需註明依循的過去 ticket
+- **Integration 一律由客戶在 Website 自行建立**（Leo 指令 2026-10-21，VP-18960）：agent 不新增 `ehr_integrations` / `order_clients` 列，包括「照 practice peer 複製」；customer_not_found 回報給 Leo、請客戶到 Website 串接，客戶建好後才 retry_num 重下。起因：INCIDENT-20261013（agent 建錯的 BioInsights+JAG 列），訂單端的檢查擋不住建錯的設定
 - **Explore**（Step 2）= 掃相關 LIS repos；subagent patterns 見 `AGENTS.md`（本 repo）
 - Retrospective 詳細框架：`~/src/project-agent-factory/skills/work-loop/RETROSPECTIVE.md`
 
