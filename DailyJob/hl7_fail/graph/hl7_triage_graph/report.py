@@ -149,7 +149,7 @@ def render_report(state: dict[str, Any]) -> str:
                 out.append(_code_table(lookups.get(i, [])))
             if cls == "CNF":
                 out.append(f"- customer_not_found: {r.get('customer_not_found')}")
-                out.append("- playbook: add-provider integration (emr-order-customer-resolution skill), then retry_num re-place")
+                out.append("- next step: the customer integrates on the website (integrations are website-only, 2026-10-21); then retry_num re-place. Do not add the integration by hand.")
             if cls == "B":
                 out.append("- recovery: NOT executed by the graph (prod write); run the recovery path manually")
                 out.append(f"- order_input (first 300 chars): `{(r.get('order_input') or '')[:300]}`")

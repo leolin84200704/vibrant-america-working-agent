@@ -158,7 +158,7 @@ Rules:
 - In `code_lookups`, `flagged: true` marks the code(s) emr-v2 recorded in emr_code_not_found; `flagged: false` entries are the other OBR codes on the same order, checked so a retry does not fail on them. Report sibling codes briefly (ok / not ok); do not present them as the cause unless their diagnosis is not `ok`.
 - For records where `competing` is true, explain that the NPI has several LIVE ordering integrations and which one wins and why (FULL_INTEGRATION before ORDER_ONLY, then newest updated_at), and that a bundle bound to the losing customer is a known cause of emr_code_not_found.
 - For `ambiguous` resolutions, say ownership could not be determined and list what was tried.
-- customer_not_found records: the provider has no ehr_integrations row; the fix is the add-provider integration playbook, then re-placing via retry_num. Do not describe it as done.
+- customer_not_found records: the provider has no ehr_integrations row. Integrations are created only by the customer on the website (Leo, 2026-10-21); never propose adding the integration by hand. The fix is: the customer integrates on the website, then re-place via retry_num. Do not describe it as done.
 - Type B: the graph did not execute any payment/order recovery. Say that recovery is pending manual action.
 - Prescriptions are proposals for Leo to decide. Nothing was changed. Do not phrase them as completed actions.
 - Group identical root causes across records instead of repeating the same paragraph per record.
