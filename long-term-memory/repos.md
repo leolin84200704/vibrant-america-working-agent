@@ -6,7 +6,7 @@ status: active
 score: 0.1336
 base_weight: 0.9
 created: 2026-04-22
-updated: 2026-10-21
+updated: 2026-10-22
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -478,3 +478,8 @@ sudo prompt 用 `echo <pw> | sudo -S <cmd>`。Heredoc 內含 `[^...]` 之類 exp
 - **VP-18486**：#987 → stage_test merged a66f46f（10-21 18:20Z，deploy 39651905758 ✓）；main PR（`bugfix/leo/VP-18486` bc32b11）尚未開。
 - **agent repo**：PR #63（`DailyJob/lis_sample_route_removal`）merged 3f8e1aa；launchd `com.lis.lis-sample-route-removal` 已載入。
 - **vibrant MCP `mysql_query` 只連 lisportalprod**（`Unknown database 'lis_emr'`）——lis_emr 要用 emr-v2 `.env` 的 mysql2 路徑。
+
+## 【更新 2026-10-22】emr-v2 prod 24f46ca（gate enforce）、trans main 26d26a6（VP-18486）、kits caller 切到 trans
+- **lis-backend-emr-v2 main**：5ba4f6c → **24f46ca**（#497 VP-18960 last_error，10-21 20:39Z）。prod ConfigMap `ORDER_VENDOR_GATE_MODE=enforce`（兩個 cluster）。staging 另有 #498 VP-18931 API-only（db4beb3），等下一個 staging → main release。
+- **LIS-transformer main**：→ 26d26a6（#991 VP-18486，10-21 22:30Z，deploy 39686968735 ✓）→ #986 dependabot、#988/#990 VP-18947 / VP-18489 / VP-18961、#992 qpdf shell fix（10-22）。
+- **kits**：prod `lis-trans-config.getKitStatusV2` 與 `transv2/lis-transv2-config.get_pns_kit_status` 10-22 18:10Z 起指向 `lis-trans-service.default.svc.cluster.local:3146/patients/v2/kits`；LIS-Sample 該路由 organic 流量歸零（剩 Phlebotomist-APP-Backend 經 192.168.60.6 與一個 Jersey/2.30 caller）。transv2 config-baseline PR LIS-transformer-v2#724。

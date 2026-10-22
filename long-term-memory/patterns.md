@@ -6,7 +6,7 @@ status: active
 score: 0.099
 base_weight: 0.8
 created: 2026-04-22
-updated: 2026-10-21
+updated: 2026-10-22
 links:
 - INCIDENT-20260528
 - INCIDENT-20260529
@@ -3025,3 +3025,11 @@ Atlassian MCP 斷線時的 fallback：`~/src/credential/atlassian-api-token.md`�
 - **「這個 log 沒被收進 Datadog」是要驗證的主張，不是解釋（VP-18486 CORRECTION）**：先說 `console.error` 沒進 Datadog，後來 raw pod log（35 分 306 次 findPatient）顯示 0 次 "Error in getWarning"、Datadog 也有其他 trans TypeError → 不是 logging gap，是真的沒觸發。查不到訊號時先對 raw pod log，再下「沒收到」或「沒發生」的結論。
 - **吞掉錯誤的 helper：rethrow with context，不要退成空值（VP-18487）**：`getFullTestMapping` catch 後回 undefined → 外層 `.map` TypeError、log 只剩無法歸因的 "reading 'map'"。退成空 mapping 會讓病人頁看起來「沒有結果」（把失敗偽裝成正常）；改成丟 `TestHierarchyUnavailableError`（帶 accession + stack），回應完全不變、只修歸因。另：票上寫「回 500」不對——外層 catch 把 `test_related` 丟掉、仍回 200；golden spec 早已 pin 住這行為。
 - **LIS-transformer `stage_test` 比 main 超前很多時（10-20：166 commits），release 只走 cherry-pick**：從 `origin/main` 開 `{branch}-main`、cherry-pick 單一 commit、跑 suite + build + pre-push DI smoke 再開 PR（VP-18487 #983）；不要開 stage_test → main。（emr-v2 相反，見 leo-working-rules 10-21：只准 staging → main。）
+
+## 【蒸餾 2026-10-22】secret 外洩票先驗「token 在哪個 cluster 有效、權限多大」、`-cleaned` 檔不一定乾淨、ConfigMap 切流量的備份與回滾、zsh glob 吃掉 `--include`、vibrant MCP 連不到 lis_emr 時的 mysql2 路徑（PO-273 / VP-18482 / VP-18960 / dream 10-22）
+- **secret 外洩票的前提要對兩個 surface 實測，不要相信票面（PO-273）**：票說「Consul token 寫死在 LIS-Sample、可從公網讀 JWT secret」。實測（全唯讀、token 只放 shell var、輸出 sed 遮蔽）：公網 `consul.vibrant-wellness.com`（AKS cluster）回 `ACL not found`——token 屬 **on-prem** cluster；LIS-Sample 自己的 key 在 on-prem 也 404（這條 code path 根本開不了機）。但 token 的 policy 是 `key_prefix "" write`（78 個 on-prem KV 全可讀可覆寫）且與 LIS-Shipping 共用。方法：無 token / 洩漏 token 各打 `/v1/acl/token/self`、`/v1/kv/<key>`、`/v1/catalog/services`，每個 cluster 都打；用 sha256 前綴（不是 UUID）在 org 內找同一個 token 的其他出處。**一張票的前提可能同時「錯」與「太小」**。
+- **檔名叫 `-cleaned` 的 k8s secret manifest 不代表清過（PO-273）**：LIS-backend-results-web `deployment/azure/k8s-secret*-cleaned.yaml` 仍有 DB 密碼、JWT_SECRET、Event Hub / Service Bus 連線字串與一個在公網有效的 cloud Consul token；三次後續 commit（含我們 VP-18796）都沒拿掉。碰到 deployment/ 目錄的 PR 順手 grep 明文 secret。
+- **Consul 公網暴露不只 hostname（PO-273 → PO-272）**：AKS `default/consul-consul-ui` 是 public LoadBalancer（4.227.28.73），直接 IP 的 http/https 都通 → 只在 Cloudflare hostname 加 Access 關不掉；要 `loadBalancerSourceRanges` 或 internal LB。anonymous policy 有 `service:read`（`/v1/catalog/services` 回整份服務清單）。
+- **用 ConfigMap 把 caller 切到新服務的標準動作（VP-18482 kits）**：先把要改的 ConfigMap 全份備份成 `{name}.backup.{UTC}.json`、只改一個 key、staging（`-st` twin）先、`rollout restart`、從**新 pod** 對同一批真實 id 做 A/B（byte-equal + 404 parity）、再看舊服務該路由的 organic traffic 歸零（排除自己 A/B 的 pod IP）。回滾 = 還原那一個 key + restart。shadow 週的判準：5 個 business day differ=0。
+- **zsh 下 `grep --include=*.ts` 不加引號會被 glob 展開成「no matches found」而靜默不搜（PO-273）**：一律 `--include='*.ts'`。
+- **lis_emr 的唯讀查詢（vibrant MCP `mysql_query` 只連 lisportalprod）**：在 `~/src/lis-backend-emr-v2` 下跑 node + mysql2，從 `.env` 的 `DATABASE_URL` 自己拆 host/user/password，**必須帶 `ssl:{rejectUnauthorized:false}`**（直接把 URL 丟給 mysql2 會因 `--require_secure_transport=ON` 被拒，且 URL 裡的 prisma 參數 sslaccept/connection_limit 會噴 warning）。`hl7_file_input` 時間欄位是 `received_time` / `updated_time`。腳本放 repo 根目錄跑完刪掉（要吃 repo 的 node_modules）。

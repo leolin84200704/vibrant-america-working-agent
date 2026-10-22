@@ -6,7 +6,7 @@ status: active
 score: 0.3712
 base_weight: 1.0
 created: 2026-04-22
-updated: 2026-10-21
+updated: 2026-10-22
 links:
 - BETA-E2E-20260729
 - BIOINSIGHTS-SFTP-KEY
@@ -149,6 +149,7 @@ links:
 - VP-18842
 - VP-18918
 - VP-18959
+- VP-18960
 - fhir-api
 tags:
 - emr
@@ -2344,3 +2345,23 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 ### 其他
 - **quarantined_orders 不會自己變 resolved**：pod 內手改 HL7 修好的單（VP-18117 / LBS-1772），quarantine 列停在 EXPIRED、resolved_at NULL——沒走 resolve API 就是這樣，非缺陷。
 - **Story type 的票沒有 Root Cause 欄位**（不在 edit 也不在 transition screen），MCP 設不了；Bug 的 close validator 則必填（customfield_10485 ADF + 10490），要先 editJiraIssue 再 transition（VP-18959 / VP-18487 / VP-18117）。
+
+## 【蒸餾 2026-10-22】vendor gate 改 enforce 後的資料修補與第一批真實攔截、integration 只能由客戶在 Website 建立、accessionId 查詢收斂成 API-only、手動預約的 contact_email（VP-18960 / VP-18931 / LBS-1849 / LBS-1852）
+### Vendor gate：shadow → enforce（VP-18960，prod 24f46ca，10-21 enforce）
+- **資料修補（Leo 核准，單一交易）**：20 筆有 MDHQ 訂單歷史的 ORDER_ONLY 列 `ehr_vendor_id` NULL → 1（MDHQ）；customer 35353 列 `cmqa5kvkn000w0x96olqitvkd` vendor 4 → 1、legacy_emr_service POWER2PRACTICE → MDHQ、sftp_result_path `/public/` → `/bliemr/results/`（result_enabled 仍 0，結果照走 clinic 列）。腳本型態：`FOR UPDATE` 守住精確的前值、備份 JSON、交易內欄位級 diff、反向稽核其他列 0 變動、先 dry-run rollback 再 `--commit`。NULL-vendor LIVE ordering 列 168 → **148（刻意保留）**。
+- **ehr_vendor_id 只影響 vendor gate**：結果路由（`findEligibleResultIntegrations`）只看 `result_enabled=1` 且 RESULT_ONLY/FULL 的 customer 列 + clinic 列（customer_id='-1'）；order-forms 的 vendor 從 folder 的 emr_service 來。所以修 result_enabled=0 列的 vendor 不會改變結果去向。
+- **enforce 開法 / 回滾**：兩個 cluster 的 `lis-emr-v2-config-prod` 都 `kubectl patch` `ORDER_VENDOR_GATE_MODE=enforce` + `rollout restart`（on-prem 走 appserver04、AKS ns emr-v2），新 pod `printenv` 確認。回滾 = 改回 shadow（或移除 key）+ restart。repo 的 configmap template 仍寫 shadow（僅文件）。
+- **誠實的範圍**：gate **擋不住 JAG 事故**（那一列是 BIOINSIGHTS+JAG FULL LIVE，vendor 相符）。JAG 類要靠「列怎麼建」來防 → 常設規則：integration 只能由客戶在 Website 建立（見 leo-working-rules）。
+- **被擋的單在 last_error 自我說明**（#496/#497）：vendor、folder/檔名、ORC-12 id+name、practice、每個候選列（id/customer/clinic/vendor/type）、修法 A（確認後的精確 UPDATE + `retry_num=3`）、修法 B（不要新增列）。4000 字上限。
+- **第一批真實攔截（dream 10-22 發現）**：hl7_file_input 7394、7395（MDHQ，`/owmwellnessehr/orders/`，10-22 19:46Z / 20:16Z）`vendor_mismatch=1982653697@MDHQ`——LEONARD KAPLAN，唯一候選列 `cmqa5kvkt005f0x96f07i7slc` customer 23336 / clinic 68405 ORDER_ONLY vendor NULL（148 筆保留列之一）。訂單未下、retry_num 0。**hl7_fail 每日 triage 沒有收這一類**（10-22 triage 檔無這兩筆）→ vendor_mismatch 目前只有人去查 DB 才看得到。148 列 NULL vendor 的 customer 每來一張新 EMR 單就會被擋一次。
+- **innatewellnessazemr 的副發現（未修）**：5362（clinic 6227）與 12944（clinic 1160）透過 MDHQ 下單，但沒有任何 result-enabled 列涵蓋他們的 clinic → 5362 的 acc 2605076862 報告已出、從未傳回 EMR；12944 的 acc 2604216463 出報告後也不會傳。
+
+### Order-status accessionId 查詢收斂為 API-only（VP-18931，PR #498 staging db4beb3）
+- PM Nan（comment 193137）覆蓋原 AC #4：非 API 下的單回 **422 `ORDER_NOT_PLACED_VIA_API`** + 她指定的文字；別的 clinic / 不存在 → 404；混用參數 → 400。「非 API」= caller 的 customer_id 底下沒有 order_intake 列 → 同 clinic 另一個 API client 的單也拿到 422（已在 comment 193150 問 Nan 要不要改 404，待答）。Cancel 只吃 orderId/placerId，不需改。
+- staging E2E（api-sandbox client 3194 / clinic 125613）：API 單三種查法 body md5 相同；5 張 Portal / peer 單 422；4 個不存在 404；5 種 400。Jenkins #273 失敗是 Docker Hub TLS timeout（infra），重跑 #274 過。
+
+### 手動預約 consult：contact_email 與 30 分鐘格（LBS-1849 / LBS-1852，延續 LBS-1848）
+- `createEventByPatient` 帶 `contact_email`（VP-17766）就把 seeker 端的信改寄到指定地址；**Event output type 沒有 `contact_email` 欄位**，在 selection set 選它會在 GraphQL validation 被拒（不寫入任何東西——先確認 0 event 再重送）。
+- 時段在 30 分鐘格上 → 「5:15 PM」永遠不會出現；回報時給最近的格。DST 結束後 ET 與 UTC 差 5 小時（11-02 5:00 PM EST = 22:00Z）。
+- 指定的 clinician 沒有該時段 → 選另一位候選（LBS-1852：Jessy 無 5 PM ET，Brown 有）。用 clinician 的 PMI 而不是新開 Zoom meeting（dominant pattern）。`isAccessionClaimable` 參數名是 `accession_id`。Postmark token：`kubectl exec -n noti deploy/notification-center-deployment -- printenv POSTMARK_KEY`。
+- LBS-1849：病人端確認信同一秒寄了兩次（LBS-1848 沒有），未查。

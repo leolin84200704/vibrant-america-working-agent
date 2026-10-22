@@ -7,7 +7,7 @@ score: 0.1615
 base_weight: 0.9
 urgency: 4
 created: 2026-08-16
-updated: 2026-10-21
+updated: 2026-10-22
 summary: Leo's working rules for this instance — reporting, ticket handling, Jira
   mechanics, and repo hygiene. The job-specific residue of the native auto-memory
   store; universal engineering discipline lives in factory ENGINEERING-LESSONS.
@@ -648,3 +648,10 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 3. **修正動作本身會在接收端產生新票**：VP-18918 的 40 筆更正重推，隔天變成 VP-18959「舊報告觸發新通知」。大量重推 / 重放前，先想接收端看到的是什麼（新 ORU、新通知、重複 import），並在動作前告知對方。
 4. **別的團隊把票轉 Done ≠ 問題修好**：PO-270 由 owner（Vinodh）以「呼叫 Blood Draw Settings API 會讓服務 crash、幾分鐘自癒、會盡快修」結案——500 會再來。reconcile 翻成 completed 時 STM 沒記結案原因。reconcile 翻狀態的票，dream 要補一行「誰、以什麼理由關的」。
 5. **Leo 授權的邊界在擴大**：staging 自己 merge（10-03）、PM 設計問題直接 comment（10-20）、結案直接關；但 main / release 仍是他（emr-v2 ruleset 也強制）。每次擴大都是一句明確的話——沒聽到那句話就照舊。
+
+## Leo 10-21 下午 → 10-22 的決定（VP-18960 / VP-18486 / VP-18482 / VP-18931 / PO-273）
+- **「現在就開」（VP-18960 enforce）**：資料修補只修有證據的 21 列，148 列 NULL 保留——Leo 接受 enforce 會擋這些 customer 的新單，處理方式是 last_error 自我說明 + 人工跟進，不是預先猜 vendor。
+- **「以後 integration 都只能由客戶在 Website 建」是流程規則，不做 code 強制（10-21，常設）**：agent 不新增 `ehr_integrations` / `order_clients` 列（含照 peer 複製）；customer_not_found → 回報 Leo、請客戶上 Website；建好後才 retry_num 重下。grandfather cutoff 提案被撤。已寫進 CLAUDE.md 與 skill（agent PR #65）。
+- **「approved, 好了就直接merge 並且測試」（VP-18486 main）**：Leo 明講時 agent 可 merge main PR；前提照舊（head SHA 確認、CI 綠、`--match-head-commit`）。Leo 自己在 GitHub 把 main merge 進分支時，先驗 `git diff origin/main <head>` 等於原 fix diff。
+- **「可以，只要不影響到終端消費者就直接改」（VP-18482 kits caller 切換）**：ConfigMap 層的 caller 切換在「終端消費者無感」前提下授權直接做；備份 + A/B + 回滾路徑要先備好。之後「我會先上線再發佈」→ Confluence 文件 + Slack 草稿由 agent 準備，Leo 發。
+- **PO-273（security，P1）**：agent 只做唯讀驗證並提出 A–D 方案；寫 code、Jira comment、rotation、開新票全部等 Leo。

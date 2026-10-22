@@ -6,7 +6,7 @@ status: active
 score: 0.0953
 base_weight: 0.7
 created: 2026-04-22
-updated: 2026-10-21
+updated: 2026-10-22
 links:
 - SANDBOX-SEED-W2W-20261005
 - rules
@@ -252,3 +252,10 @@ summary: Ticket keyword to repo/module routing table
 - **"findPatient warning / getWarning / processTNPWarningData / order.issue.filter"** → STM `VP-18486`（PR #987 在 stage_test；main PR 待 Leo）。
 - **"patientTestResultnewrange / getFullTestMapping / TestHierarchyUnavailableError"** → STM `VP-18487`。
 - **"手動預約 consult（MCP 掛掉）"** → STM `LBS-1848` + `scripts/consult-booking/`。
+
+## 2026-10-22 新增路由（dream；VP-18960 / VP-18931 / VP-18482 / PO-273 / LBS-1852）
+- **"vendor_mismatch / Order NOT placed by the EMR vendor gate / ORDER_VENDOR_GATE_MODE=enforce"** → `emr-integration.md` 10-22 + STM `VP-18960`（last_error 內有修法；agent 不加列，DB 改 vendor 需 practice 書面確認 + Leo）。
+- **"Consul token / hard-coded secret / secret-exposure / k8s-secret yaml 明文"** → STM `PO-273` + `patterns.md` 10-22。
+- **"order-status 422 ORDER_NOT_PLACED_VIA_API"** → STM `VP-18931`。
+- **"/patients/v2/kits / getKitStatusV2 / get_pns_kit_status 切 trans"** → STM `VP-18482`（截止 2026-11-05；Phlebotomist-APP-Backend 與 Jersey caller 待搬）。
+- **"手動預約 consult 指定時段 / contact_email"** → STM `LBS-1852` + `emr-integration.md` 10-22。
