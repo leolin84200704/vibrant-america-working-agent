@@ -7,7 +7,7 @@ score: 0.1737
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-10-21
+updated: 2026-10-22
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -27,6 +27,7 @@ links:
 - PO-222
 - PO-256
 - PO-270
+- PO-273
 - QH-1104
 - QH-1130
 - QH-1159
@@ -168,14 +169,14 @@ tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 129 entries across STM
+summary: Auto-aggregated failure index from 130 entries across STM
 ---
 
 # Failure Index
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-10-21 — total 129 entries
+> Last updated: 2026-10-22 — total 130 entries
 
 ## Themes
 
@@ -184,7 +185,7 @@ summary: Auto-aggregated failure index from 129 entries across STM
 - [Build / TypeScript / Tooling](#build-tooling) — 20 entries
 - [Deploy / commit / push coordination](#deploy-coordination) — 14 entries
 - [DB / migration / backfill](#db-migration) — 9 entries
-- [Error handling / throw vs log](#error-handling) — 7 entries
+- [Error handling / throw vs log](#error-handling) — 8 entries
 - [Scope / requirement / PM communication](#scope-communication) — 5 entries
 - [Redis / cache / pending list](#redis-cache) — 4 entries
 - [Auth / permission / role](#auth-permission) — 4 entries
@@ -1530,6 +1531,11 @@ Root cause: 第一次跑時我用 `tail -50` 截取 output，後段顯示 record
 
 - First probe used GET on POST-only routes and read the 404s as "service decommissioned"; corrected by replaying the real bundle calls with the real body. Lesson: when a bundle shows axios.post, probe with POST and the Origin header before concluding anything about liveness.
 - zsh does not word-split `$m` in `set -- $m`; the first :8019 probe ran curl with empty args and hung the shell 120s. macOS has no `timeout` binary; the kubectl loop silently did nothing. Use `curl -m` and explicit arrays.
+
+### **[[PO-273]]** — `2026-10-22 11:40` — - `ssh leo@192.168.60.5` (appserver04) now refuses publickey+password from this machine, so I could not check whether any on-prem pod still runs LIS-Sample / LIS-Shipping with this token. Mitigated by the 404 on LIS-Sample's keys (that path cannot boot) - LIS-Shipping on-prem remains unverified.
+
+- First zsh grep used unquoted `--include=*.ts` and silently matched nothing ("no matches found"); re-ran with quoted globs. Always quote `--include` patterns in zsh.
+- Sent the on-prem token over plain `http://192.168.60.11:8500` for the ACL self-read because 192.168.60.11:8501 is not listening; VPN-internal only, but note it.
 
 ### **[[VP-18404]]** — `2026-09-25 17:00` — Leo rejected the design as over-built; rewritten, and a bad commit caught
 
