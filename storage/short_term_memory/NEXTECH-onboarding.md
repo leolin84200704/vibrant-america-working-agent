@@ -6,7 +6,7 @@ status: active
 score: 0.2573
 base_weight: 1.0
 created: 2026-09-22
-updated: 2026-10-20
+updated: 2026-10-23
 links:
 - BIOINSIGHTS-onboarding
 - HL7-NPI-PRACTICE-MATCH-20260820
@@ -182,3 +182,9 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 - Leo sent the current-state reply 17:48Z. Keith (PM) replied 18:32Z asking Jessica: per-test (26-0018 - A) vs base (26-0018) matching; which number when one result OBR covers several ordered tests; whether unanswered per-test orders stay open; where to put our accession; which field carries the Nextech patient ID and whether to echo it in result PID-2. Also told her: another test order will be needed, hold until we say ready.
 - Leo's rule (2026-10-20): OBR-3 always = accession. OBR-2 default = accession; only vendors that specify otherwise (THM, NEXTECH) get their own placer number. Prod check: THM already OBR|1|12958|2610076237 (placer|accession); FTP/MDHQ/NEXTECH OBR-2 = OBR-3 = accession.
 - Implementation when answered: extend THM branch in result-generation buildSampleInfo (~1693) to NEXTECH, but keep file name (~2436) and PDF download (~3027) on accession. PID-2 needs a new emr_sample column (schema change, manual prod ALTER first). Waiting on Jessica's answers.
+
+### [2026-10-23] Jessica answered Keith's questions (relayed via Slack)
+- Clear: PID-2 carries Nextech patient id on all orders, echo it in result PID-2. OBR-3 may carry our accession. OBR-2 = their order number.
+- Not clear: Q1 (per-test vs base matching) not answered; she counter-proposed one order with multiple tests, no code in OBR-4.1, test name+code in NTE -> our parser places from OBR-4, would produce an empty order. Q3: every order needs a result to complete -> 26-0018 - B stays open unless a result carries B.
+- Our side today: encoder emits one ORC/OBR per result panel (hl7-encoder.service.ts ~140), all with the same placer; emr_sample.emr_order_id stores only the first OBR-2 (A). Per-test placer needs ordered-package -> placer mapping + panel -> package mapping.
+- Assessment to Leo: PID-2 + OBR-3 can proceed; OBR-2 needs one more question to Nextech (keep OBR-4 codes; per-panel OBR-2 A/B vs all-A closes B?).
