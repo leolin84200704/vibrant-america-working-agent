@@ -188,3 +188,4 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 - Not clear: Q1 (per-test vs base matching) not answered; she counter-proposed one order with multiple tests, no code in OBR-4.1, test name+code in NTE -> our parser places from OBR-4, would produce an empty order. Q3: every order needs a result to complete -> 26-0018 - B stays open unless a result carries B.
 - Our side today: encoder emits one ORC/OBR per result panel (hl7-encoder.service.ts ~140), all with the same placer; emr_sample.emr_order_id stores only the first OBR-2 (A). Per-test placer needs ordered-package -> placer mapping + panel -> package mapping.
 - Assessment to Leo: PID-2 + OBR-3 can proceed; OBR-2 needs one more question to Nextech (keep OBR-4 codes; per-panel OBR-2 A/B vs all-A closes B?).
+- Leo 10-23: Q1 (codes only in NTE) -> state plainly not supported, do not ask permission. Q2 -> demand a definitive answer. Sales negotiates with Nextech, not us.
