@@ -76,7 +76,7 @@ kubectl -n cloud-local delete cm cloud-local-proxy-config cloud-local-proxy-conf
 kubectl -n cloud-local delete secret tls-secret-dd7fz
 kubectl -n cloud-local get all,cm,ingress,secret   # expect only kube-root-ca.crt + default SA token
 ```
-Leave the `cloud-local` namespace itself (Leo 2026-10-25: 先留; deleting a namespace is the one step here that is not undone by re-applying a yaml).
+Leave the `cloud-local` namespace itself (Leo 2026-10-25: keep it; deleting a namespace is the one step here that is not undone by re-applying a yaml).
 
 On-prem (appserver04): first `kubectl -n lis get ingress k8s-ingress -o yaml > /var/tmp/vp18465/k8s-ingress-before.yaml`, then remove the two cloud-proxy path entries with a JSON patch by index (read the indices from the dump that day; do not assume), re-get to confirm the other paths are intact, then delete the two Deployments, two Services, two ConfigMaps. Stop capture2.sh and `rm -rf /var/tmp/vp18464-capture` (keep the copied evidence locally).
 
