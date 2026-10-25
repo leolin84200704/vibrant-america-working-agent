@@ -9,7 +9,7 @@
 |---|---|---|---|
 | G1 | Every caller migrated | org code search `lis/cloud-proxy` = billing dead code only; trans v2 repointed 09-14 | PASS |
 | G2 | 30 d at zero on AKS | Datadog `@event:cloud_proxy_request -@user_agent:vp184*`, 15 d window, 0 rows; AND the observer is alive (send a probe with UA `vp18465-readonly-probe/1.0`, see its line in Datadog) | PASS for 10-10 -> 10-25 (0 rows; probe line seen 05:53Z). Re-run on 11-09 to cover 10-25 -> 11-09 |
-| G3 | 30 d at zero on-prem | appserver04 `/var/tmp/vp18464-capture/cloud-proxy-access.log` (0 non-probe lines) with `heartbeat.log` continuous since 2026-10-06 19:15Z; AND `kubectl -n lis logs` of the 4 proxy pods, grep `cloud_proxy_request` minus probe UAs | NOT CHECKED (VPN down). Window ends 2026-11-05 |
+| G3 | 30 d at zero on-prem | appserver04 `/var/tmp/vp18464-capture/cloud-proxy-access.log` (0 non-probe lines) with `heartbeat.log` continuous since 2026-10-06 19:15Z and `capture.err` not growing; AND `kubectl -n lis logs` of the 4 proxy pods, grep `cloud_proxy_request` minus probe UAs | PASS for 10-06 19:15Z -> 10-25 06:03Z (12 access-log lines, all probes; heartbeat 1402-1422 polls every full day; pods 5 lines, all probes). Window ends 2026-11-05 |
 
 Probe command (read-only, leaves a log line on purpose):
 ```
@@ -38,7 +38,7 @@ On-prem access: `~/src/credential/onprem-appserver-ssh.md` (password SSH, `leo@1
 |---|---|---|
 | Deployment | `cloud-local-proxy-deployment` (3), `cloud-local-proxy-deployment-st` (1) | image `192.168.60.9:6004/vibrant/cloud-local-proxy:latest` = f017a0c9; env patched 10-08 with redis/OAuth2 keys |
 | Service | `cloud-local-proxy-service` :3047, `cloud-local-proxy-service-st` :3048 | |
-| Ingress | `k8s-ingress` — **shared**; only remove the two path rules `/v1/lis/cloud-proxy(/|$)(.*)` and `/v1/lis/cloud-proxy-st(/|$)(.*)` | never delete the Ingress object |
+| Ingress | `k8s-ingress` — **shared**, 3 paths: `/v1/lis/vw-page(/|$)(.*)` -> `vw-page-service:8444` (index 0, STAYS), `/v1/lis/cloud-proxy(/|$)(.*)` (index 1), `/v1/lis/cloud-proxy-st(/|$)(.*)` (index 2) | never delete the Ingress object; re-read the indices on the day |
 | ConfigMap | `cloud-local-proxy-config`, `cloud-local-proxy-config-st` | secrets, same as AKS |
 | Capture loop | `/var/tmp/vp18464-capture/` (capture2.sh pid 2165176) | stop after Phase 2 (`pkill` from a script file, not from a `bash -c` whose cmdline contains the pattern) |
 
@@ -76,7 +76,7 @@ kubectl -n cloud-local delete cm cloud-local-proxy-config cloud-local-proxy-conf
 kubectl -n cloud-local delete secret tls-secret-dd7fz
 kubectl -n cloud-local get all,cm,ingress,secret   # expect only kube-root-ca.crt + default SA token
 ```
-Leave the namespace itself unless Leo says otherwise (deleting a namespace is the one step here that is not undone by re-applying a yaml).
+Leave the `cloud-local` namespace itself (Leo 2026-10-25: 先留; deleting a namespace is the one step here that is not undone by re-applying a yaml).
 
 On-prem (appserver04): first `kubectl -n lis get ingress k8s-ingress -o yaml > /var/tmp/vp18465/k8s-ingress-before.yaml`, then remove the two cloud-proxy path entries with a JSON patch by index (read the indices from the dump that day; do not assume), re-get to confirm the other paths are intact, then delete the two Deployments, two Services, two ConfigMaps. Stop capture2.sh and `rm -rf /var/tmp/vp18464-capture` (keep the copied evidence locally).
 
