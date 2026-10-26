@@ -211,3 +211,11 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 - ALTER emr_sample ADD emr_patient_id VARCHAR(255) NULL, emr_placer_orders TEXT NULL (INSTANT, lock_wait_timeout=5): staging 192.168.60.11 (8.0.44, 46 ms, 965 rows all NULL), prod lisportalprod2 (8.4.9-azure — not 8.0.45 as the gate skill says; 79 ms, 2406 rows all NULL). Prod read back on the read-only MCP account. Script: mysql2 via worktree node_modules (no mysql CLI on this Mac).
 - PR https://github.com/Vibrant-America/lis-backend-emr-v2/pull/509 -> staging, head 839ad7e. Not merged yet (Leo asked only to open it).
 - Outlook reply-all draft on Jessica 10-26 13:31Z, id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABj485egAA (inline images: send from Outlook). Content: confirm PID-2 / per-test OBR-2 / accession OBR-3, we'll say when ready for the next test order. No questions asked.
+
+### [2026-10-26 20:51Z] VP-19028 merged to staging (b4a975f) and live-verified PASS
+- Pod lis-emr-v2-deployment-staging-f7cc6d94f-g6thk (image b4a975f, up 20:48:07Z), DB 192.168.60.11. Script in scratchpad verify-vp19028.js ran the DEPLOYED parser helpers / finalizer.writeEmrSample / generateHl7Content + real encoder against the real staging DB; stubbed only panel grouping, approved time, PDF (add_report=0).
+- Intake: placers {VAREQUISTION35: 26-0018 - A, VAREQUISTION36: 26-0018 - B}, PID-2 '1', written and read back from emr_sample.
+- NEXTECH ORU: PID|1|1|..., OBR|1|26-0018 - B|2610196534|VAREQUISTION36, OBR|2|26-0018 - A|2610196534|VAREQUISTION35, unmapped VATEST99 -> 26-0018 - A + WARN. MDHQ control unchanged (PID-2 empty, OBR-2 = accession).
+- Cleanup: fake row sample_id 990190280 / control_id VP19028-STG deleted, reverse count 0. Pod logs 10 min: 0 ERROR / Unknown column. /tmp/verify-vp19028.js left in the pod (rm blocked by safety check; gone on next restart).
+- Staging DB has no NEXTECH ehr_vendors row (encoder test-name mapping lookup warns); prod has vendor 47.
+- Next: release PR staging -> main (Leo merges), then send Jessica the draft and request the additional test order.
