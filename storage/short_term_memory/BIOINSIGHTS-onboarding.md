@@ -11,7 +11,7 @@ unblock_when: 'BioInsights grants account perms (test: sftp key-auth to sftp.bio
   then ls / — currently auth OK but ls/stat/put all fail); waiting on Thomas reply
   to 2026-07-21 email'
 created: 2026-07-21
-updated: 2026-10-15
+updated: 2026-10-26
 links:
 - BIOINSIGHTS-SFTP-KEY
 - HL7FAIL-20261019-PARSLEY-KHATRI
@@ -22,6 +22,7 @@ links:
 - VP-18194
 - VP-18372
 - VP-19006
+- VP-19029
 - emr-integration
 - fhir-api
 tags:
@@ -443,3 +444,16 @@ Prevention proposed to Leo (pending approval, automation -> PR):
 - L4 10-26: Aimee Duffy NPI 1528033081 has NO lis_core_v7.customer account at all (only Michele/Sarah Duffy, other NPIs). BioInsights vendor 46 has only the REJECTED JAG row; zero LIVE integrations.
 - So the chain is: Vibrant account for Dr. Duffy -> integration created on Website -> devcom resends test order with new file name. Per VP-18960 rule the agent does not create the integration.
 - Still unanswered from Olena 10-15: requisition (order summary PDF) folder (her side to tell us); per-test catalog details (Zhenhe).
+
+### [2026-10-26 13:20 PT] Ticket VP-19029 opened + Olena reply-all draft created (not sent)
+- Thread re-read from Outlook: Olena 10-20 13:02Z asked Mingxi to confirm Duffy onboarding (unanswered until 10-26); Olena 10-26 15:14Z "we are currently blocked";
+  Mingxi 10-26 19:45Z is the newest mail in the thread (reply on Leo's 10-15 branch, To Leo/Olena/Zhenhe/Keith): "Hi Britney, you can start the onboarding... coordinate with Support".
+- L4 re-verified 10-26 (lisportal ro): no lis_core_v7.customer with customer_npi_number 1528033081; vendor 46 only row cms3icsz700010xlgywfuj8do REJECTED/0/0;
+  ehr_vendors 46 sftp_order_forms_path NULL, is_public 0; no new BioInsights hl7_file_input since V00000417 (09-25).
+- No existing open Jira for BioInsights (JQL text~BioInsights: VP-18372 Done, LBS-1791 Done). Created VP-19029 (Task, P2, Leo, labels emr-integration/bioinsights):
+  owners = Duffy account + Website integration: Britney/Support; SFTP folder: Olena; catalog: Zhenhe; PDF delivery config + E2E verify of resent order: Leo.
+  https://vibrantamerica.atlassian.net/browse/VP-19029
+- Outlook reply-all draft on Olena's 10-26 15:14Z mail, id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABj485ZAAA. To Olena + Britney (moved from CC because @-mentioned),
+  CC Zhenhe/Mingxi/Keith/Paola/Lisa/Travis/Serdar/Kristina. Body: onboarding with @Britney, needs Vibrant account first; then resend under her NPI with new file name;
+  which SFTP folder for the order summary PDF. Draft quotes inline images -> Leo sends from Outlook. Not sent.
+- Open asks: SFTP folder (Olena, since 10-15); catalog details (Zhenhe, since 10-05/10-15); Duffy account + integration (Britney/Support).
