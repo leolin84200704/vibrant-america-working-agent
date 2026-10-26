@@ -219,3 +219,4 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 - Cleanup: fake row sample_id 990190280 / control_id VP19028-STG deleted, reverse count 0. Pod logs 10 min: 0 ERROR / Unknown column. /tmp/verify-vp19028.js left in the pod (rm blocked by safety check; gone on next restart).
 - Staging DB has no NEXTECH ehr_vendors row (encoder test-name mapping lookup warns); prod has vendor 47.
 - Next: release PR staging -> main (Leo merges), then send Jessica the draft and request the additional test order.
+- 10-26: release PR #510 staging -> main opened (head = staging b4a975f, only VP-19028). Waiting on Leo merge; then confirm prod pod image, send Jessica draft.
