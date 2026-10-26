@@ -7,7 +7,7 @@ score: 0.1882
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-10-22
+updated: 2026-10-26
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -28,6 +28,7 @@ links:
 - PO-256
 - PO-270
 - PO-273
+- PO-274
 - QH-1104
 - QH-1130
 - QH-1159
@@ -134,6 +135,7 @@ links:
 - VP-18462
 - VP-18463
 - VP-18464
+- VP-18465
 - VP-18466
 - VP-18474
 - VP-18480
@@ -169,27 +171,27 @@ tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 130 entries across STM
+summary: Auto-aggregated failure index from 133 entries across STM
 ---
 
 # Failure Index
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-10-22 — total 130 entries
+> Last updated: 2026-10-26 — total 133 entries
 
 ## Themes
 
 - [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 35 entries
 - [Other / uncategorized](#other) — 23 entries
-- [Build / TypeScript / Tooling](#build-tooling) — 20 entries
+- [Build / TypeScript / Tooling](#build-tooling) — 21 entries
 - [Deploy / commit / push coordination](#deploy-coordination) — 14 entries
 - [DB / migration / backfill](#db-migration) — 9 entries
 - [Error handling / throw vs log](#error-handling) — 8 entries
-- [Scope / requirement / PM communication](#scope-communication) — 5 entries
+- [Scope / requirement / PM communication](#scope-communication) — 6 entries
+- [gRPC / network / timeout](#grpc-network) — 5 entries
 - [Redis / cache / pending list](#redis-cache) — 4 entries
 - [Auth / permission / role](#auth-permission) — 4 entries
-- [gRPC / network / timeout](#grpc-network) — 4 entries
 - [Test / mock / spec](#test-mocking) — 2 entries
 - [GraphQL / API design](#graphql-api) — 1 entries
 - [Tool / cwd / branch / repo confusion](#tool-usage) — 1 entries
@@ -209,12 +211,6 @@ summary: Auto-aggregated failure index from 130 entries across STM
 - Used `app=lis-emr-v2-deployment-prod` (deployment name) as label selector — actual label is `app=lis-emr-v2-prod` (`-deployment-` not in label).
 - Tick 1 returned `FAIL pod_not_found`. Fixed by checking `--show-labels` and re-running.
 - Lesson: always confirm label keys with `kubectl get pod ... --show-labels` before selecting; deployment-name ≠ pod-label.
-
-### **[[LBS-1799]]**
-
-- `mcp__vibrant__get_jira_issue` / `search_jira_issues` return 404 / empty for the **LBS** project (LBS-1785, a ticket we previously worked, also 404). The `vibrant` MCP Jira account cannot see LBS; the claude.ai Atlassian connector can. Use the Atlassian MCP for LBS tickets.
-- `clinicians/scheduling-options` uses the LEGACY clinician_id (3, 4, 14, 19, 20, 21, 22, 23, 24), not the customer_id — guessing 5..12 returns 404. Get the ids from `clinicians/first-available`.
-- Postmark `recipient=` filter returned `TotalCount: null` for one address; `tag=calendar_prod` + reading the newest rows is the reliable query (already a known note in patterns.md).
 
 ### **[[NEXTECH-onboarding]]**
 
@@ -300,6 +296,12 @@ Wrote `WHERE id = 1 AND code = 'MDHQ'` from the prod row; staging has MDHQ at id
 UPDATE silently did nothing there (the apply script's 100% verify caught it, exit 3). Fix: key
 seed/data statements in migrations on the stable business key (`code`), never on an auto id
 copied from one environment.
+
+### **[[LBS-1799]]** — **
+
+- `mcp__vibrant__get_jira_issue` / `search_jira_issues` return 404 / empty for the **LBS** project (LBS-1785, a ticket we previously worked, also 404). The `vibrant` MCP Jira account cannot see LBS; the claude.ai Atlassian connector can. Use the Atlassian MCP for LBS tickets.
+- `clinicians/scheduling-options` uses the LEGACY clinician_id (3, 4, 14, 19, 20, 21, 22, 23, 24), not the customer_id — guessing 5..12 returns 404. Get the ids from `clinicians/first-available`.
+- Postmark `recipient=` filter returned `TotalCount: null` for one address; `tag=calendar_prod` + reading the newest rows is the reliable query (already a known note in patterns.md).
 
 ### **[[VP-16987]]** — `2026-06-16 17:55` — **
 
@@ -698,18 +700,6 @@ Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`
 
 None this session.
 
-### **[[VP-18342]]**
-
-- ~40 minutes spent searching for "ways2wellness" in logs/DB/Jira before Leo pasted the
-  actual error: the partner's own clinic has no integration, and the sandbox tenant is
-  customer 50687 — the customer name never appears in any log line. Ask for the raw error
-  text / requestId first when a partner reports an API error.
-- vibrant MCP `create_jira_issue` -> 403 on POST /issue; `list_sentry_projects` -> NoneType error.
-
-### **[[VP-18344]]**
-
-(none yet)
-
 ### **[[VP-18402]]** — `2026-09-25 16:15` — PR opened
 
 PR Vibrant-America/lis-backend-emr-v2#435 -> `staging`, head `ddba71a`. Added before opening (so the
@@ -741,6 +731,18 @@ and QA has not run — moving it would falsely signal it was tested, so it was l
 ### **[[VP-18782]]**
 
 - `git cherry-pick -q` is not a flag (usage error) -> the -dev branch was first pushed without the commit; re-ran the cherry-pick and pushed again before opening the PR.
+
+### **[[VP-18342]]** — **
+
+- ~40 minutes spent searching for "ways2wellness" in logs/DB/Jira before Leo pasted the
+  actual error: the partner's own clinic has no integration, and the sandbox tenant is
+  customer 50687 — the customer name never appears in any log line. Ask for the raw error
+  text / requestId first when a partner reports an API error.
+- vibrant MCP `create_jira_issue` -> 403 on POST /issue; `list_sentry_projects` -> NoneType error.
+
+### **[[VP-18344]]** — **
+
+(none yet)
 
 ### **[[PH-847]]** — `2026-09-11` — **
 
@@ -817,6 +819,10 @@ and QA has not run — moving it would falsely signal it was tested, so it was l
 **錯誤**：看到 prod log 還有 `Using fallback data` 就以為 fix 沒效。
 **實際**：prod pod 還沒 rollout，跑的是舊 image。Image build + push + pod restart 大約 15-20 分鐘。
 **Preventable**：是。下次 deploy 後先 `kubectl exec ... grep -c <新 marker> /app/dist/...js` 驗證 dist 真的有新 code。
+
+### **[[PO-273]]** — `2026-10-22 14:30` — - factory pre-push hook `nest build` failed with `(0 , util_1.isObject) is not a function` on BOTH the worktree and the clean master checkout: homebrew node is v24.10.0 and Node 24 removed `util.isObject`, which @nestjs/cli still calls. LIS-Sample's Dockerfile is node:22. Fix: `export PATH=~/.nvm/versions/node/v22.16.0/bin:$PATH` before pushing. Not a code problem; LBS-1842 two days ago pushed fine, so the default node moved since (brew upgrade). Worth a `.nvmrc`/engines pin in LIS-Sample or a node-version check in the hook.
+
+- DI smoke in the hook reports PASS with `TypeError: JwtStrategy requires a secret or key` as the last line - that is the containment baseline (no AUTH_JWT_SECRET provisioned), same before and after the change.
 
 ### **[[VP-18402]]** — `2026-09-26 00:10` — Functional verification on STAGING against the real service + real DB
 
@@ -1627,6 +1633,10 @@ None that cost rework. Two near-misses worth naming:
 
 ## Scope / requirement / PM communication <a id='scope-communication'></a>
 
+### **[[PO-274]]** — `2026-10-22 14:40` — - Pre-push hook failed first with `sh: rimraf: command not found`: results-web had no `node_modules` on this machine (never built here; VP-18796 only edited yamls/config). `npm ci` with node 22 (998 packages, 34 s) fixed it. Same Node-24 caveat as LIS-Sample applies: run the push with `~/.nvm/versions/node/v22.16.0/bin` first on PATH.
+
+- `gh pr create` right after the failed push errored "Head sha can't be blank" - the branch did not exist on origin yet. Harmless; re-ran after the real push.
+
 ### **[[PH-847]]** — `2026-09-01` — **
 
 - Xiaoye Li (PM, api-product) responded to comment 186020 by creating the
@@ -1670,6 +1680,51 @@ ConfigMap 快照，但那兩個檔只存在主 repo 工作目錄 → 在 worktre
 - shortcut.service: `parseShortcutCode`(VASC{id}) 取代 normalizeName；resolveShortcut 改 `s.shortcut_id === id`；非 VASC → null（不打 API）。is_practice 過濾移除（id 唯一無碰撞，a219f82 的考量被取代）。expand(tests/groups/bundles) 不變。candidatePairs(winner first + NPI fallback) 不變。
 - live 驗證 144510+40660：VASC727441→Total Baseline(MALE)[376+853]、VASC727440→(FEMALE)[853]、VASC999999→null、非VASC→null。109 tests pass。
 - **3 份 Confluence doc 現已過時**（它們寫 by-name；實際是 VASC{id}）：內部 2506326018 / 外部 2506457090 / 差異清單 2506653698。外部 vendor doc 尤其需改成「OBR-4 填 VASC{shortcut_id}」+ 提供 per-clinic shortcut_id 對照（xlsx）。待 Leo 決定如何對 vendor 呈現再更新。
+
+---
+
+## gRPC / network / timeout <a id='grpc-network'></a>
+
+### **[[VP-18465]]**
+
+- `timeout` is not on macOS; the VPN reachability test fell through to `nc -w 3` which worked. Not a real failure, noting so the runbook uses `nc -z -w 3`.
+
+### **[[VP-18593]]**
+
+- Proposed a shipping-side change before exhausting the shipping service's existing
+  surface: grep'd only core-protos/shipping.proto, not shipping-protos/shipping-service.proto.
+  Lesson: a service can serve several proto files on one gRPC server — list the
+  @GrpcMethod handlers in the controller (done later: 25 methods) before concluding
+  "the RPC does not expose X".
+
+### **[[VP-18665]]** — [2026-10-02 23:15 PDT] Staging E2E: bare list 503 — `client.listClinicCustomersByClinicID is not a function`
+
+- Deployed 9b766f3 (both PRs). patientId path PASSED (557149 -> 6 rows,
+  peer placerId null; 589232 -> 4). Bare list (no patientId) -> 503 on every
+  call: pod log `[ORDER_LIST_UPSTREAM] ListClinicCustomersByClinicID failed:
+  client.listClinicCustomersByClinicID is not a function`.
+- Root cause: @grpc/proto-loader 0.8.0 camelCases the rpc name as
+  `listClinicCustomersByClinicId` (trailing "ID" -> "Id"); the original
+  `ListClinicCustomersByClinicID` is also on the stub. I guessed the alias by
+  analogy with listSamples/getPatient. The unit spec mocked the client with
+  MY spelling -> green while wrong (lesson 70's amplifier (a): a mock
+  verifies your transcription of the contract, not the contract).
+- Fix: call the proto's ORIGINAL method name; spec now loads the real
+  clinic.proto through proto-loader and asserts the called name exists on the
+  generated stub (and that the broken alias does not). Branch
+  bugfix/leo/VP-18665-rpc-method-name off origin/staging 9b766f3.
+- Deterministic push-down candidate: for every v1 wrapper, a spec that loads
+  the real proto and asserts the method exists — cheap, no network. Only the
+  new wrapper has it for now.
+
+### **[[VP-16521]]** — `2026-05-28 17:53` — **
+
+- 試 2 次都 timeout，改跑 `npx eslint <file>` CLI 直接拿同樣結果
+- 教訓：WebStorm 抓 lint 等於 eslint + prettier；agent 端不要等 IDE diagnostics，CLI 更快更穩
+
+### **[[VP-17532]]** — **
+
+- (none blocking) setting_audit table in lis_frontend_service does not record the `timezone` setting; had to query core SettingService via gRPC (grpcurl + client-credentials OAuth token from transformer .env) — worked.
 
 ---
 
@@ -1752,47 +1807,6 @@ expect -re {[Pp]assword:} { send -- "$env(ONPREM_PW)\r" }
 `kubectl` is at `/usr/local/bin/kubectl` on appserver04 (control-plane node, k8s v1.22.3, 6 nodes
 `appserver01-06` = `192.168.60.2-7`). The password is NOT recorded here — ask Leo, or read it from
 `~/src/credential/` if he chooses to store it there.
-
----
-
-## gRPC / network / timeout <a id='grpc-network'></a>
-
-### **[[VP-18593]]**
-
-- Proposed a shipping-side change before exhausting the shipping service's existing
-  surface: grep'd only core-protos/shipping.proto, not shipping-protos/shipping-service.proto.
-  Lesson: a service can serve several proto files on one gRPC server — list the
-  @GrpcMethod handlers in the controller (done later: 25 methods) before concluding
-  "the RPC does not expose X".
-
-### **[[VP-18665]]** — [2026-10-02 23:15 PDT] Staging E2E: bare list 503 — `client.listClinicCustomersByClinicID is not a function`
-
-- Deployed 9b766f3 (both PRs). patientId path PASSED (557149 -> 6 rows,
-  peer placerId null; 589232 -> 4). Bare list (no patientId) -> 503 on every
-  call: pod log `[ORDER_LIST_UPSTREAM] ListClinicCustomersByClinicID failed:
-  client.listClinicCustomersByClinicID is not a function`.
-- Root cause: @grpc/proto-loader 0.8.0 camelCases the rpc name as
-  `listClinicCustomersByClinicId` (trailing "ID" -> "Id"); the original
-  `ListClinicCustomersByClinicID` is also on the stub. I guessed the alias by
-  analogy with listSamples/getPatient. The unit spec mocked the client with
-  MY spelling -> green while wrong (lesson 70's amplifier (a): a mock
-  verifies your transcription of the contract, not the contract).
-- Fix: call the proto's ORIGINAL method name; spec now loads the real
-  clinic.proto through proto-loader and asserts the called name exists on the
-  generated stub (and that the broken alias does not). Branch
-  bugfix/leo/VP-18665-rpc-method-name off origin/staging 9b766f3.
-- Deterministic push-down candidate: for every v1 wrapper, a spec that loads
-  the real proto and asserts the method exists — cheap, no network. Only the
-  new wrapper has it for now.
-
-### **[[VP-16521]]** — `2026-05-28 17:53` — **
-
-- 試 2 次都 timeout，改跑 `npx eslint <file>` CLI 直接拿同樣結果
-- 教訓：WebStorm 抓 lint 等於 eslint + prettier；agent 端不要等 IDE diagnostics，CLI 更快更穩
-
-### **[[VP-17532]]** — **
-
-- (none blocking) setting_audit table in lis_frontend_service does not record the `timezone` setting; had to query core SettingService via gRPC (grpcurl + client-credentials OAuth token from transformer .env) — worked.
 
 ---
 
