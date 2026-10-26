@@ -198,3 +198,11 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 - Q2: each result OBR must carry the matching per-test order number in OBR-2 (26-0018 - A / - B / - C). "Let me know when you are ready for an additional order."
 - Ball is on our side: PID-2 echo (new emr_sample column, manual prod ALTER first), OBR-3 = accession, OBR-2 per-test placer (needs ordered OBR-4 code -> placer persistence + result panel -> ordered test mapping). No Jira ticket exists for this work yet (checked 10-26).
 - 10-26: Leo asked for one ticket covering all three -> created VP-19028 (Task, Dev To Do, assignee Leo, labels emr-integration/nextech). Finding while writing it: OBR-3 already = accessionId in buildOBR, so item 2 is verify-only. Not started.
+
+### [2026-10-26] VP-19028 implemented locally (not pushed)
+- Worktree ~/src/lis-backend-emr-v2.worktrees/VP-19028, branch feature/leo/VP-19028 from origin/staging 8fe2ada, commit 839ad7e.
+- Design: new nullable emr_sample.emr_patient_id VARCHAR(255) + emr_placer_orders TEXT (JSON OBR-4.1 upper -> OBR-2.1, fallback preceding ORC-2), written for all vendors, read only when emr_service = NEXTECH. emr_order_id untouched (file name/PDF download stay on accession). Encoder: PID-2 = patient.emrPatientId; ORC-2/OBR-2 = panel.placerOrderNumber || order.emrOrderId. Unmapped panel -> first placer (emr_order_id), logged.
+- L4 evidence the mapping holds: 10-19 result for 2610196534 (result_transmission_records) has OBR-4 VAREQUISTION36 / VAREQUISTION35 = exactly the ordered OBR-4.1 codes.
+- Tests: full jest 182 suites green (fresh worktree needs `npm run prisma:generate:test` first or 5 suites fail on missing .prisma/test-client). nest build clean, migration lint 0 findings.
+- Mistake caught: symlinked worktree node_modules to the main checkout and `prisma generate` overwrote the main checkout's client; restored by re-running generate in the main checkout. Use npm ci per worktree.
+- Waiting on Leo: approve manual ALTER on staging (192.168.60.11) + prod (lisportalprod2), then push + PR to staging.
