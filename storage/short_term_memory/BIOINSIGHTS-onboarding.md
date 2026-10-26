@@ -438,3 +438,8 @@ Prevention proposed to Leo (pending approval, automation -> PR):
   or another company's deliverable gets mentioned only as their open item, never with our timeline attached,
   and never with a request routed through a third party. Leo: this is Vibrant-Wellness-level knowledge, to be
   kept — home is `leo-working-rules.md` (external communication), pending dream distillation.
+
+### [2026-10-26] Olena 10-26 15:14Z "we are currently blocked" (to Mingxi); Mingxi 19:45Z told Britney (CAM) to start onboarding via Support, no IT needed
+- L4 10-26: Aimee Duffy NPI 1528033081 has NO lis_core_v7.customer account at all (only Michele/Sarah Duffy, other NPIs). BioInsights vendor 46 has only the REJECTED JAG row; zero LIVE integrations.
+- So the chain is: Vibrant account for Dr. Duffy -> integration created on Website -> devcom resends test order with new file name. Per VP-18960 rule the agent does not create the integration.
+- Still unanswered from Olena 10-15: requisition (order summary PDF) folder (her side to tell us); per-test catalog details (Zhenhe).

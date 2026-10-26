@@ -192,3 +192,8 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 - Assessment to Leo: PID-2 + OBR-3 can proceed; OBR-2 needs one more question to Nextech (keep OBR-4 codes; per-panel OBR-2 A/B vs all-A closes B?).
 - Leo 10-23: Q1 (codes only in NTE) -> state plainly not supported, do not ask permission. Q2 -> demand a definitive answer. Sales negotiates with Nextech, not us.
 - 10-23: Leo sent the reply; Sales to get Nextech's answer on Q2. PID-2/OBR-3 not started yet.
+
+### [2026-10-26] Jessica 10-26 13:31Z: both OBR-2 questions answered, nothing missing from Nextech
+- Q1: confirmed codes-only-in-NTE is not supported; each test = own OBR with code in OBR-4.1.
+- Q2: each result OBR must carry the matching per-test order number in OBR-2 (26-0018 - A / - B / - C). "Let me know when you are ready for an additional order."
+- Ball is on our side: PID-2 echo (new emr_sample column, manual prod ALTER first), OBR-3 = accession, OBR-2 per-test placer (needs ordered OBR-4 code -> placer persistence + result panel -> ordered test mapping). No Jira ticket exists for this work yet (checked 10-26).
