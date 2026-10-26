@@ -6,7 +6,7 @@ status: active
 score: 0.3712
 base_weight: 1.0
 created: 2026-04-22
-updated: 2026-10-22
+updated: 2026-10-26
 links:
 - BETA-E2E-20260729
 - BIOINSIGHTS-SFTP-KEY
@@ -150,6 +150,9 @@ links:
 - VP-18918
 - VP-18959
 - VP-18960
+- VP-19006
+- VP-19019
+- VP-19023
 - fhir-api
 tags:
 - emr
@@ -2365,3 +2368,44 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 - 時段在 30 分鐘格上 → 「5:15 PM」永遠不會出現；回報時給最近的格。DST 結束後 ET 與 UTC 差 5 小時（11-02 5:00 PM EST = 22:00Z）。
 - 指定的 clinician 沒有該時段 → 選另一位候選（LBS-1852：Jessy 無 5 PM ET，Brown 有）。用 clinician 的 PMI 而不是新開 Zoom meeting（dominant pattern）。`isAccessionClaimable` 參數名是 `accession_id`。Postmark token：`kubectl exec -n noti deploy/notification-center-deployment -- printenv POSTMARK_KEY`。
 - LBS-1849：病人端確認信同一秒寄了兩次（LBS-1848 沒有），未查。
+
+## 【蒸餾 2026-10-26】per-order kit delivery（ZKD）、result 自動推送改看 sample 的 practice、practice-level membership API、practice ID = ORC-17.1、Cerbo TTB 合併、FZ 男性版 swap 擋住（VP-19006 / VP-19007 / VP-19019 / VP-19024 / VP-19023 / VP-16163 / VP-19008 / VP-19013 / NEXTECH-onboarding / VP-18960）
+
+### HL7 訂單的 kit delivery 改成可逐單指定（VP-19006，prod 4525ca1 10-23 22:07Z）
+- 新 Z segment `ZKD|1|<blood>|<nonblood>`，值 `SHIP_TO_PATIENT` / `SUPPLIED_BY_OFFICE`（不分大小寫），空 = 沿用 `ehr_integrations.kit_delivery_option`，多於一個 ZKD = 失敗。規格在 emr-v2 `docs/hl7-order-spec-kit-delivery.md`。
+- reason code：`KIT_DELIVERY_INVALID_VALUE` / `_MULTIPLE_ZKD` / `_PAYMENT_CONFLICT` / `_ADDRESS_INVALID` → `markTerminalFailure(kit_delivery_rejected)` → last_error + Sentry → #emr-orders-bot（PM 說的「EMR Slack bot」就是它）。
+- **付款是逐單的，沒有 integration 層級的預設**：`chargeMethodFromIn1` 看 IN1-2.1，`C` = customerPay，其他或沒有 IN1 = patientPayLater。`ehr_integrations.payment_method_id` / `business_model` 在所有 LIVE ordering 列上都是空的，只有 auto-integrate 表單會寫、下單時從不讀。
+- **對所有 partner 生效的行為變更**：integration 是 NO_DELIVERY / BLOOD_ONLY + Pay Later + 有 non-blood kit → 拒單。沒有 non-blood kit 時跳過付款檢查（與 portal `isPatientPayLaterEligible` 一致）。地址檢查只在訂單帶 ZKD 時做（缺 street/city/state/zip、City ≤ 45 UTF-8 bytes；其餘等 PH-943）。catalog 找不到的 item（例：853）當成兩種 kit 都有。
+- 影響名單（VP-19007）：LIVE+ordering 的 NO_DELIVERY 42 列 / 29 clinic，BLOOD_ONLY 0；它們歷來的 EMR 單全是 customerPay。歷史上衝突的單只有 5 筆（4 筆 ZymeBalanz 內部測試 2025-04 + MDHQ hl7 3997）。
+- 上線後（dream 10-26 查）：10-23 22:12Z → 10-26 19:30Z 共 10 筆真實單（THM 4 / MDHQ 6）全 placed，all-time `KIT_DELIVERY%` 拒單 = 0。**ZKD 路徑還沒有真實訂單觸發過**（FOLLOWTHATPATIENT 是第一個會送的）。
+
+### report_finished 自動推送優先用 sample 下單 clinic 的 integration 列（VP-19019，prod 478cb4e 10-24 00:13Z）
+- 原本 `findEligibleResultIntegrations` 只用 `customer_id` 撈 LIVE result 列、排序取第一 → 多 practice 的 provider（Next Health 43262：2930 / 8003 / 36290 / 144510 同一個 folder）每次都用 2930 那列送出，MSH-6 錯。VP-18755 只修了 preview / manual / API 的 `result-generation.service.ts`，自動推送是最後一個 customer-only 的選擇點。
+- 現在：report_finished / redraw 用 event 的 `clinic_id`；partial push 用 `resolveSampleClient` 經 `listSamplesBatch` 讀 core `order.clinic_id`；該 clinic 的列排前面（stable sort），其餘照舊；找不到就 fallback 舊行為並 warn。
+- **staging 的 emr-v2 Kafka consumer 是關的（`ENABLE_KAFKA_CONSUMER=false`），而 `KAFKA_CLOUD_TOPIC` 指向 PROD topic `general-sample-events`** → 絕不能為了測試打開。驗證方式：在 staging pod 內用部署中的 dist 建 listener，直接呼叫 `handleMessage`，stub 掉 BullMQ enqueue。
+- 殘項：43262 在非 2930 practice 的下一筆自動推送要帶自己的 MSH-6。10-24 → 10-26 19:30Z 43262 沒有任何 push，仍未觀察到。
+
+### Practice-level EHR integration API（VP-19024，prod 478cb4e）與「practice level」的定義（VP-16163）
+- Junjie 10-23 釐清：「practice level」= integration 歸 practice 所有（practice 用哪個 EMR、哪些 provider 可用，同 practice 的所有 admin 看到同一份資料），本質是 membership 表；**訂單仍然是 customer + practice ID，NPI 還是決定「誰下的單」**。只有 clinic_admin 能加 provider，provider 不能自己加。
+- 做法：membership = `ehr_integrations` 列（customer_id, clinic_id）；practice integration = 依（clinic_id, ehr_vendor_id）分組；加 provider = 複製同 clinic+vendor 的 LIVE 列成 PENDING，內部 approve。**prod 的 `practice_integrations` / `provider_integration_memberships` / `vendor_provider_fields` 是 VP-16164 在 2026-05-27 的一次性 snapshot，沒有 code 讀，不要復活**（會變成兩個 source of truth）。
+- Suspend = LIVE→REJECTED（走 `deactivateOne`，沒有 SUSPENDED enum，避開 DDL）；重新加入 = 新 PENDING 列。新成員 MSH-6：模板送 practice id 或空 → practice id；模板送自己的 customer id → 新成員自己的 customer id；其他（vendor/practice 共用碼，例 13505 全送 9075）→ 照抄。
+- 成功路徑會寄信給 `EHR_INTERNAL_TEAM_EMAILS` + 客戶真實的 SD/CAM/RSM → 不能在 staging 用 HTTP 打；在 pod 內用部署中的 service、stub 掉 email 驗證。
+- 範圍未定（等 Leo + Xiaoye 10-26 那週談）：既有 integration 要不要強制送 practice ID、沒送時的 fallback、quarantine 拿掉的前提是否還成立。PM 10-08 的前提「每張單都會帶 practice ID」可能來自誤讀：其實**所有 vendor 都用 NPI 下單**，FOLLOWTHATPATIENT 只是唯一有「一個 practice id 對到多個 customer」的。
+
+### Practice ID 欄位與全量 integration 清單（VP-19023）
+- 給 vendor 的規格：**每個 ORC 的 ORC-17 component 1 = practice_id（數字）**，與 FOLLOWTHATPATIENT 已在送的同一欄（parser 把 ORC.17 讀成 clinic_id）。不要用 MSH-4 / MSH-6：1,111 列裡有 923 列我們在 result 上送的 MSH-6 ≠ clinic_id。
+- 清單：LIVE+PENDING 1,111 列 / 596 practice / 27 vendor（`reference/ehr-integrations-practice-id-vendor-list-20261023-v3.csv`）。179 列沒有 vendor，全部來自 VP-16968 backfill（2026-06-11，ORDER_ONLY，沒有 SFTP path）；推得出 84 列，**95 列標成「VENDOR UNKNOWN — vendor 之後補」，不是停用候選**（Leo 明講）。
+- 12 個月有送單的 vendor：MDHQ 2595 / THM 665 / OPTIMANTRA 20 / FOLLOWTHATPATIENT 16 / PF 4 / BIOINSIGHTS 3 / NEXTECH 3 / Breathermae 2 / NICHOLS 1。POWER2PRACTICE / OptimalDX / GREENWAY / HARRIS / HealthMatters / PRAXISEMR / Unprescribed 從沒送過單；它們列上的 `ordering_enabled=1` 是 FULL_INTEGRATION type 帶出來的，不是真的在下單。
+- `hl7_file_input` 只有 placed 的單有 `order_input.clinic_id`；失敗的單只留 provider 名稱（customer_not_found），不存 NPI → 用它反推 vendor 幾乎都推不出來（95 列只中 1 列：customer 15540 KINNARI KHATRI，hl7 7319 是一筆遺失的單，已交給 Sales）。
+
+### Cerbo per-report：Total Tox Burden 合成一則 HL7（VP-19008，prod 3f98865 10-26 18:00Z）
+- 觸發條件 = 訂單裡有 Bundle line item 同時含 181 Heavy Metals + 196 Environmental Toxins + 719 Mycotoxins（官方 18014 與很多 practice 自建 bundle）。輸出 `{acc}_TTB.hl7` + pdf-lib 合併的 PDF；成員若已單獨送過就解散 group（不重送）。
+- Order Team `getOrderPackageAndTest` 只回 components（434/259/298），分不出 bundle 還是單點 → 要用 order-management `POST /orders/query`（line_items + sub_items）。它用靜態 `VIBRANT_API_TOKEN` 會 403，要 `mintReportServiceToken` 的 admin JWT。沒有 order 的 sample = 沒有 group（#507，避免退回 whole-order）。
+- `bookmarkPagePdfDownload type=AllReport` 會忽略 `sections`（任何值都回同一份 3.2 MB）；`type=CUSTOM` 回 500 → 只能逐份抓再合併。
+- Maristany（clinic 127660）的 result 由 on-prem pod 處理，不是 AKS。端到端證據 = 下一筆 Maristany TTB 訂單出報告時，Cerbo archive 出現 `_TTB` 檔。
+
+### 其他
+- **FZ / Foundation Baseline 男性版 swap（VP-19013，blocked on VP-18951 / VP-18952）**：男性版 item 沒有 EMR code → 只能在 assembly 後用 item_id swap（同 GZ NY 的 post-assembly 路徑）。`patient-detail-parser` 把非 F 的 PID-8 一律正規化成 Male → 解析後分不出「空」和「男」，要讀 parser.service 裡的原始 PID-8。`order-test-client.service.ts:59` 寫死 bundle 18019 → [853, 851]（舊 FZ id）。
+- **Nextech（10-23）**：PID-2 帶 Nextech patient id，result 要原樣回在 PID-2；OBR-3 可帶我們的 accession；OBR-2 = 對方 order number。對方提議「一張單多個 test、OBR-4.1 不放 code、test 寫在 NTE」→ 我們的 parser 從 OBR-4 下單，會變成空單；Leo：**直接說不支援，不要徵求同意**；與 Nextech 的談判由 Sales 負責，不是我們。
+- **VP-18960 retry 撞號修好了**：requeue jobId 改成 `hl7-<id>-r<retry_num>-u<updated_time ms>`，placement 成功會清 last_error（#499，跟著 #502 在 10-23 上 prod）。在這之前若要重下 re-place，`retry_num` 要設成沒用過的值（10-22 用 6）；`describeVendorMismatch` 文字與 skill 裡寫的「設 3」在舊 code 上會靜默失效。
+- **Cascades（customer 8180 / clinic 87739，integration `cmjxaqd8w00dp0xfq2uchhkx2` LIVE result_enabled=1）**：最後一次成功是 2026-06-01，之後 18 次全失敗（`EHOSTUNREACH 72.52.68.244:22`），最新一筆 sample 2644179（10-24）。0 次恢復，那 7 個 distinct sample 都沒送達。每日 result_fail 報表有在追，但一直沒有 owner 處理。

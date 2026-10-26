@@ -3,10 +3,10 @@ id: repos
 type: ltm
 category: technical
 status: active
-score: 0.1336
+score: 0.1448
 base_weight: 0.9
 created: 2026-04-22
-updated: 2026-10-22
+updated: 2026-10-26
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -20,6 +20,7 @@ links:
 - LIS-7882
 - PO-222
 - PO-270
+- PO-273
 - QH-1104
 - QH-1130
 - QH-1159
@@ -483,3 +484,9 @@ sudo prompt 用 `echo <pw> | sudo -S <cmd>`。Heredoc 內含 `[^...]` 之類 exp
 - **lis-backend-emr-v2 main**：5ba4f6c → **24f46ca**（#497 VP-18960 last_error，10-21 20:39Z）。prod ConfigMap `ORDER_VENDOR_GATE_MODE=enforce`（兩個 cluster）。staging 另有 #498 VP-18931 API-only（db4beb3），等下一個 staging → main release。
 - **LIS-transformer main**：→ 26d26a6（#991 VP-18486，10-21 22:30Z，deploy 39686968735 ✓）→ #986 dependabot、#988/#990 VP-18947 / VP-18489 / VP-18961、#992 qpdf shell fix（10-22）。
 - **kits**：prod `lis-trans-config.getKitStatusV2` 與 `transv2/lis-transv2-config.get_pns_kit_status` 10-22 18:10Z 起指向 `lis-trans-service.default.svc.cluster.local:3146/patients/v2/kits`；LIS-Sample 該路由 organic 流量歸零（剩 Phlebotomist-APP-Backend 經 192.168.60.6 與一個 Jersey/2.30 caller）。transv2 config-baseline PR LIS-transformer-v2#724。
+
+## 【更新 2026-10-26】emr-v2 prod 3f98865、transv2 main 669283a、trans v1 main 96bb7bf
+- **lis-backend-emr-v2 main**：24f46ca → 4525ca1（#502：VP-19006 ZKD + VP-18960 retry jobId + VP-18931 403，10-23 22:07Z）→ 478cb4e（#505：VP-19024 + VP-19019，10-24 00:13Z）→ **3f98865**（#508 VP-19008 TTB，10-26 18:00Z）。AKS + on-prem prod 都在 3f98865。部署由 Jenkins 負責。
+- **LIS-transformer-v2 main**：→ 08ea18e（#728 VP-19015，10-24）→ 6acbfdb（#732 VP-19003/19011/19009，10-26 18:01Z）→ **669283a**（#735 VIB-1781 PNS，fan-z777，10-26 18:36Z）。GHA `frontend-service-graphql` 全部 success。stage_test 008826e（VP-18990）。
+- **LIS-transformer main**：→ 86e83c6（#999 VP-18491，YFvibrant 10-23）→ 3e7333f（#1001 VP-18947）→ **96bb7bf**（#1004 VIB-1781）。stage_test 688ac41（#1010 VP-18795 /status、#1007 VP-18469 index）。main PR #1008（VP-18469）/ #1009（VP-18795）等 Leo。
+- **LIS-Sample**：master b8fb61a / dev d71613e（PO-273 CONSUL_TOKEN env）。results-web/-grpc/-core：已沒有 secret manifest，`deployment-secret-policy.yml` 守門（PO-274）。

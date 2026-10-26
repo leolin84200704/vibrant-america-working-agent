@@ -21,6 +21,7 @@ links:
 - VP-18138
 - VP-18194
 - VP-18372
+- VP-19006
 - emr-integration
 - fhir-api
 tags:
@@ -42,7 +43,7 @@ summary: 'New EMR vendor BioInsights — first key-based (non-password) SFTP int
   unaffected; AKS pod egress to bioinsights:2022 OK. 2026-07-21 email sent to Thomas
   (perms + dir layout + sample HL7). STATUS: waiting on vendor reply.'
 jira_status: none
-score: 0.1514
+score: 0.1403
 ---
 
 # BioInsights EMR vendor onboarding (SFTP, key-based auth)

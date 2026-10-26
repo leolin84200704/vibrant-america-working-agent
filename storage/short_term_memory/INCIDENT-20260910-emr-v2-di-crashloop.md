@@ -4,7 +4,7 @@ type: stm
 category: technical
 status: resolved
 follow_up: factory PRs
-score: 0.0459
+score: 0.0402
 base_weight: 0.9
 urgency: 5
 created: 2026-09-10

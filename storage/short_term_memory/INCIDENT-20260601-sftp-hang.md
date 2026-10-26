@@ -3,7 +3,7 @@ id: INCIDENT-20260601-sftp-hang
 type: stm
 category: technical
 status: active
-score: 0.0017
+score: 0.0015
 base_weight: 0.9
 urgency: 5
 created: 2026-06-01

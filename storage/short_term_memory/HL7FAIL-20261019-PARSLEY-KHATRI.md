@@ -11,9 +11,10 @@ links:
 - VP-18138
 - VP-18194
 - VP-18372
+- VP-19006
 - emr-integration
 - fhir-api
-score: 0.1629
+score: 0.1514
 ---
 
 # hl7_file_input 7319 / quarantine 23 - MDHQ Parsley, Kinnari Khatri customer_not_found

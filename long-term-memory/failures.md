@@ -3,7 +3,7 @@ id: failures
 type: ltm
 category: technical
 status: active
-score: 0.1737
+score: 0.1882
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16

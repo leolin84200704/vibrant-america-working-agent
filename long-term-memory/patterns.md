@@ -6,7 +6,7 @@ status: active
 score: 0.099
 base_weight: 0.8
 created: 2026-04-22
-updated: 2026-10-22
+updated: 2026-10-26
 links:
 - INCIDENT-20260528
 - INCIDENT-20260529
@@ -3033,3 +3033,29 @@ Atlassian MCP 斷線時的 fallback：`~/src/credential/atlassian-api-token.md`�
 - **用 ConfigMap 把 caller 切到新服務的標準動作（VP-18482 kits）**：先把要改的 ConfigMap 全份備份成 `{name}.backup.{UTC}.json`、只改一個 key、staging（`-st` twin）先、`rollout restart`、從**新 pod** 對同一批真實 id 做 A/B（byte-equal + 404 parity）、再看舊服務該路由的 organic traffic 歸零（排除自己 A/B 的 pod IP）。回滾 = 還原那一個 key + restart。shadow 週的判準：5 個 business day differ=0。
 - **zsh 下 `grep --include=*.ts` 不加引號會被 glob 展開成「no matches found」而靜默不搜（PO-273）**：一律 `--include='*.ts'`。
 - **lis_emr 的唯讀查詢（vibrant MCP `mysql_query` 只連 lisportalprod）**：在 `~/src/lis-backend-emr-v2` 下跑 node + mysql2，從 `.env` 的 `DATABASE_URL` 自己拆 host/user/password，**必須帶 `ssl:{rejectUnauthorized:false}`**（直接把 URL 丟給 mysql2 會因 `--require_secure_transport=ON` 被拒，且 URL 裡的 prisma 參數 sslaccept/connection_limit 會噴 warning）。`hl7_file_input` 時間欄位是 `received_time` / `updated_time`。腳本放 repo 根目錄跑完刪掉（要吃 repo 的 node_modules）。
+
+## 【蒸餾 2026-10-26】重複事件要在 series 自己的時區展開、per-occurrence 例外的 key 會跟著 series 時間跑、transv2 也有 contracts 快照閘、「最後一個 span 之後的時間」= 沒被 trace 的 DB、staging 無法走的路徑一律在 pod 內呼叫部署中的 dist、PM comment 會在發出後被改、secret manifest 用等值比對而不印值（VP-19015 / VP-19009 / VP-19003 / VP-19011 / VP-18469 / VP-18795 / VP-19019 / VP-18931 / PO-274 / PO-273）
+
+### VI Calendar 重複事件（LIS-transformer-v2 `src/calendar`）
+- **DST 位移的根因（VP-19015）**：`expandRecurringEvent` 對沒有 TZID 的 UTC DTSTART 跑 `RRule.between()`，`combineOccurrenceDateWithEventTime` 再把 occurrence 的 UTC 日期接上原本的 UTC 時刻 → 每次 occurrence 都固定在同一個 UTC 時間，DST 一結束本地時間就差 1 小時。同樣寫法出現在 provider-availability（衝突判斷）、meeting-request、daily-report、public booking、outlook。FE 建立時沒送 `timezone`，BE 預設 `'UTC'`。
+- 修法：`shared/zoned-rrule.ts` 在 series 自己的時區展開；建立時存 client tz，沒有就用 creator provider 的 tz 設定（不再是 `'UTC'`）；`'UTC'` 列保留舊的固定 UTC 行為。舊資料 backfill 用明確 id 清單（43 筆），在 prod pod 內用服務自己的 `DATABASE_URL_CALENDAR` 跑 Prisma interactive transaction：先 snapshot、每句 UPDATE 有 count guard、全部吻合才 COMMIT，再從**另一個 pod 開新連線**讀回，最後對全部 practice 反向查漏網（0）。
+- **per-occurrence 例外的 key 是 occurrence 的開始時間（VP-19009）**：ALL 範圍改時間會重新錨定 DTSTART → 原本的例外 key 全部孤立（已取消的 occurrence 又冒出來）。修法 `shiftOccurrenceKey`：同樣的本地日期偏移 + 新的本地開始時間；如果新規則已經不包含這個 occurrence 就丟掉；只有在這次 series 編輯**真的改了**那個欄位時才清掉 override（FE 整張表單重送不算）。prod 有 0 筆 exception 的原因是 FE 從來沒送 scope / recurrence_id（「刪一個全刪」就是這樣來的）→ 後端修好了，FE（VP-19010）不改也看不到效果。
+- 「every 2 weeks」= `FREQ=WEEKLY;INTERVAL=2`，RRULE 本來就支援，不需要 migration。prod 有 12 個 series 的第一個 occurrence 不在 start_time 上：2 筆 UNTIL 早於 DTSTART（0 個 occurrence）、10 筆是 2026-05-29 匯入的資料，有 `RRULE:` 前綴但沒有 DTSTART（dtstart = 解析當下）。都是既有問題，修資料要 Leo 決定。
+- **transv2 的 app `formatError` 會把 `code` 以外的 extensions 全部丟掉（VP-19011 #731）**：要讓 client 看到逐筆的錯誤細節（`invalid_accession_ids[]`），formatter 要用 allow-list 放行。
+- **transv2 main 也有 contracts 快照閘，stage_test 沒有（VP-19015 #728）**：GraphQL input / DTO 改了（例：`UpdateEventInput.timezone`）要跑 `npm run contracts:gen`，否則只有到 main PR 才會 fail。trans v1 也是同樣規則（10-13 那條）。
+- **從 stage_test 切出來的票，用 cherry-pick 進 main 時要帶上跨票的 main-only 修正**：VP-19015 先進 main 時拿掉了 VP-19003 的 hunk，並在 STM 註明「VP-19003 進 main 時，它呼叫 `combineOccurrenceDateWithEventTime` 的地方要補第 3 個參數」；release PR #732 照著補上。這種預告寫在**後到那張票會讀到的 STM**，才接得住。
+
+### 效能：最後一個 traced span 之後的時間就是沒被 trace 的 DB（VP-18469）
+- getTimeLine p95 1.87 s；kit 的 HTTP leg 常是最長的 child span，但請求在最後一個 span 之後還有 700–900 ms → 未被 trace 的 Prisma 查詢。`time_line` 只有 PRIMARY/id，`EXPLAIN` type=ALL + filesort，prod 2.6M 列 / 1.07 GB，一次 findMany 約 1.4 s。
+- 加 index `(sample_id, create_date, id)`：`CREATE INDEX ... ALGORITHM=INPLACE LOCK=NONE`（兩個選項之間**不能**有逗號，否則 syntax error）。staging 建 7 s，查詢 2.8 s → 25 ms。
+
+### 驗證手法
+- **staging 走不到的路徑一律在 pod 內呼叫部署中的 dist**（VP-19019 / VP-19024 / VP-19006 / VP-19011 都用了）：Kafka consumer 在 staging 是關的、成功路徑會寄真實的信、sandbox 的 shipping 沒資料、staging core 是 dev 或 prod snapshot。做法：`node -` 載入 `/app/dist/...` 的部署中 service、接真實的 Prisma client、只 stub 有外部副作用的那一層（enqueue / email），seed 的 fixture 用可辨識的 `requested_by`，結束後依 id 刪除並反向計數 0。
+- **staging 的 LIS-Sample 跑的是 dev branch，proto 落後 master（VP-18795）**：A/B 比較時 `order_unified_status` 在 A 端是空字串（dev 的 `OrderSummary_in_sample` 沒有 field 32）→ staging 的欄位差異可能是環境造成的，真正的 parity 要在 prod A/B 看。
+- **emr-v2 由 Jenkins 部署，GitHub Actions 只有 CodeQL**：closeout 驗部署要看 pod image tag（AKS + on-prem 兩邊），不要找 GHA deploy run。transv2 的 GHA `frontend-service-graphql(-st)` 才是它的部署。
+- **lis_emr 時間欄位的時區還沒定論**：VP-19006 STM 寫「DB clock = UTC + 7h」，VP-18960 寫「mysql2 讀出的 05:xxZ 要減 7h」；dream 10-26 用 mysql2 `timezone:'Z'` 讀 `NOW()` = 真實 UTC。設時間窗之前，先用一筆已知 log 時間的列校準，不要直接套 ±7h。
+
+### 流程
+- **PM 的 comment 發出後可能被編輯（VP-18931）**：Nan 在 comment 193137 發出 5 分鐘後把規格改成 `403 not_placed_via_api` + 不同文字，#498 是照編輯前的版本做的。照 PM comment 實作之前，再讀一次並比對 `updated` 和 `created`。
+- **`git am` 預設會把 subject 的 `[PO-273]` 方括號前綴剝掉**（PO-273 dev twin）：要用 `git am --keep`。
+- **committed 的 secret manifest 要對 live 做等值比對，不要印出值（PO-274）**：decode 之後只比 equality，回報「N/M keys 與 live 相同」；ticket 和 STM 都不放值、hash 或部分值。修法 = 刪檔 + README 的 out-of-band `kubectl create secret ... --dry-run=client -o yaml | kubectl apply -f -` 步驟（key 名稱取自 live Secret）+ `deployment-secret-policy.yml` workflow 守門（results-web/-grpc/-core 三個 repo 都有了）。輪替、撤銷、log review 是 owner 的事。

@@ -7,7 +7,7 @@ score: 0.1615
 base_weight: 0.9
 urgency: 4
 created: 2026-08-16
-updated: 2026-10-22
+updated: 2026-10-26
 summary: Leo's working rules for this instance — reporting, ticket handling, Jira
   mechanics, and repo hygiene. The job-specific residue of the native auto-memory
   store; universal engineering discipline lives in factory ENGINEERING-LESSONS.
@@ -655,3 +655,21 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 - **「approved, 好了就直接merge 並且測試」（VP-18486 main）**：Leo 明講時 agent 可 merge main PR；前提照舊（head SHA 確認、CI 綠、`--match-head-commit`）。Leo 自己在 GitHub 把 main merge 進分支時，先驗 `git diff origin/main <head>` 等於原 fix diff。
 - **「可以，只要不影響到終端消費者就直接改」（VP-18482 kits caller 切換）**：ConfigMap 層的 caller 切換在「終端消費者無感」前提下授權直接做；備份 + A/B + 回滾路徑要先備好。之後「我會先上線再發佈」→ Confluence 文件 + Slack 草稿由 agent 準備，Leo 發。
 - **PO-273（security，P1）**：agent 只做唯讀驗證並提出 A–D 方案；寫 code、Jira comment、rotation、開新票全部等 Leo。
+
+## Leo 10-22 傍晚 → 10-26 的決定（VP-19003 / VP-19015 / VP-19023 / VP-19024 / VP-19006 / VP-19009 / VP-19011 / VP-19008 / VP-19013 / VP-18482 / VP-18469 / VP-18795 / NEXTECH / PO-273 / PO-274）
+- **「ok 先done 19003」**：staging 驗完就可以 Done；main 由之後的 release PR 一起帶（#732）。
+- **「像主流行事曆一樣」（VP-19015）**：重複事件在 series 自己的時區重複；FE 與 BE 都改。ehr-frontend 沒有 push 權限（只有 pull）→ Leo 不走拿權限那條，改開 FE 票給 FE owner（VP-19022，Zhiheng），把那 4 行改動寫進票裡。prod backfill：「直接跑」。main PR：「改好後merge」= agent 可以用 `--match-head-commit` merge。
+- **「不是直接停用，是先標注出來，特別注意」（VP-19023）**：沒有活動的 integration 列只標記不停用；後來再改稱「vendor 之後補」。任何停用都要 Leo 明講，並以那批 id 為範圍。
+- **「直接開始做」（VP-19024）**：照 agent 提的預設做（`ehr_integrations` 當 membership、加 provider = 複製成 PENDING、內部 approve、practice admin 可以 suspend）。
+- **「merge 到main (給我pr)然後改 006 -> dev complete」（VP-19006）**：agent 開 release PR、Leo merge，同時把票轉 Dev Complete。
+- **「能做都做」（VP-19008 / VP-19009，10-24）→ 10-25「全照你的建議，comment + fix；這三張以外的先不做」**：既有、範圍外的問題（updateEvent 裡重複的 sync/Zoom 區塊、reminder 只對第一個 occurrence）只記下來，不修。
+- **「a 完 clear」（VP-18482）**：Part A 完成就轉 Dev Complete；移除舊路由（11-05 截止後 30 天）留作殘項，不必讓票一直開著。
+- **VP-19013**：先把 blocker 連起來，不要開工。**VP-18469 / VP-18795**：「能做就做」，prod 的 ALTER / ConfigMap / merge 仍然等 Leo。
+- **Nextech（NEXTECH-onboarding）**：對方的「code 只放在 NTE」直接說不支援，不要徵求同意；要對方對 OBR-2 給明確答案；與 Nextech 談判是 Sales 的事。
+- **PO-273 / PO-274**：「兩個都轉 under review，然後寫好 root cause」（Root Cause = `customfield_10485`，transition screen 上沒有，要用 editJiraIssue）；「PO-274 如果是 results-web 你就直接改了」→ 後來擴到 grpc/core；可以用 Leo 的 GitHub 帳號 approve 別人的 PR，但 results-* 的 main 是 prod，merge 仍是 Leo 的事。
+
+## Done 在 staging、殘項等自然流量、staging 走不到的路徑（cross-ticket review 2026-10-26；證據 VP-19003 / VP-18931 / VP-19015 / VP-19006 / VP-19019 / VP-19008 / VP-19009 / VP-19011 / VP-19023 / VP-19024 / VP-18482 / VP-18960）
+1. **「staging 驗完就 Done」的票，進 prod 後沒有人做 prod 探針**。VP-19003 和 VP-18931 都在 staging 驗完時轉 Done，之後才搭別的票的 release PR 進 main（#732、#502）。觸發 release 的那張票有做 prod 驗證，搭車的沒有。→ release PR 帶了幾張票，prod 驗證清單就要列幾張；STM 裡「Not done: staging → main」那一行要在 release 後補上 prod 證據或明寫「沒驗」。
+2. **殘項越來越多是「等下一筆自然流量」**：VP-19019（43262 非 2930 practice 的推送）、VP-19006（第一張帶 ZKD 的單）、VP-19008（下一筆 Maristany TTB）、VP-18960（失敗過的單 placement 後清掉 last_error）、VP-19015（11-01 DST 實際過去）。這些都需要一張「殘項 + 第一個可觀察訊號 + 查詢方式」的表，dream 每晚巡一次。10-26 開始放在 dream log 的「Residual watch」段落。
+3. **staging 走不到的路徑已經有固定解法**：在 pod 內呼叫部署中的 dist（見 patterns 10-26）。四張票各自重新發明了一次，下一張直接照做。
+4. **Done 的票數暴增，但 QA Hub 的 INACTIVE 不算結案**：10-23 Xiaoye 一次把 92 張 QH（Automation for Jira 建的 QA twin）從 To Do 清成 INACTIVE（statusCategory = Done）。closeout audit 要用 `project != QH` 把這種排除掉，另外確認是誰轉的，不要逐張驗。

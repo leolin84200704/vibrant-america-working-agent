@@ -3,7 +3,7 @@ id: NEXTECH-onboarding
 type: stm
 category: emr_integration
 status: active
-score: 0.2573
+score: 0.2715
 base_weight: 1.0
 created: 2026-09-22
 updated: 2026-10-23
@@ -20,6 +20,8 @@ links:
 - VP-18402
 - VP-18824
 - VP-18833
+- VP-19006
+- VP-19023
 - emr-integration
 - fhir-api
 relations:

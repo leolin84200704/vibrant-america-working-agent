@@ -6,7 +6,7 @@ status: active
 score: 0.0953
 base_weight: 0.7
 created: 2026-04-22
-updated: 2026-10-22
+updated: 2026-10-26
 links:
 - SANDBOX-SEED-W2W-20261005
 - rules
@@ -259,3 +259,17 @@ summary: Ticket keyword to repo/module routing table
 - **"order-status 422 ORDER_NOT_PLACED_VIA_API"** → STM `VP-18931`。
 - **"/patients/v2/kits / getKitStatusV2 / get_pns_kit_status 切 trans"** → STM `VP-18482`（截止 2026-11-05；Phlebotomist-APP-Backend 與 Jersey caller 待搬）。
 - **"手動預約 consult 指定時段 / contact_email"** → STM `LBS-1852` + `emr-integration.md` 10-22。
+
+## 2026-10-26 新增路由（dream；VP-19003 / VP-19006 / VP-19007 / VP-19008 / VP-19009 / VP-19011 / VP-19013 / VP-19015 / VP-19019 / VP-19023 / VP-19024 / VP-16163 / VP-18469 / VP-18795 / VP-18465 / PO-274）
+- **"kit delivery 逐單指定 / ZKD segment / KIT_DELIVERY_PAYMENT_CONFLICT / NO_DELIVERY + Pay Later"** → STM `VP-19006` + `emr-integration.md` 10-26；受影響 practice 名單 → STM `VP-19007`。
+- **"auto result push 用錯 practice / MSH-6 錯 / 43262 Next Health / findEligibleResultIntegrations"** → STM `VP-19019`。
+- **"practice-level integration / Provider Portal EHR 設定頁 / practice admin 加 provider / suspend"** → STM `VP-19024` + `VP-16163`（範圍：Leo + Xiaoye 那週討論）；FE 是 VP-19017。
+- **"practice ID 欄位 / ORC-17 / vendor outreach 清單 / VENDOR UNKNOWN 95 列"** → STM `VP-19023`（CSV 在 `reference/`）。
+- **"Cerbo Total Tox Burden / _TTB.hl7 / 合併 PDF / Maristany"** → STM `VP-19008`。
+- **"FZ / Foundation Baseline 男性 PSA 版 / 依性別換 item"** → STM `VP-19013`（blocked on VP-18951 / VP-18952）。
+- **"VI Calendar：DST 差一小時 / 每兩週重複 / 改單一 occurrence / 刪一個全刪 / reschedule 信 / accession 連結驗證"** → STM `VP-19015` / `VP-19009` / `VP-19003` / `VP-19011` + `patterns.md` 10-26；FE 是 VP-19010 / VP-19022。
+- **"getTimeLine 慢 / time_line index / TRANS_TIMELINE_KIT_MODE inprocess"** → STM `VP-18469`（prod ALTER 等 Leo）。
+- **"LIS-Sample GET /status 搬到 trans / get_pns_sample_status"** → STM `VP-18795` + `runbooks/lis-sample-route-migration.md`。
+- **"cloud-local-proxy 退役 / scale to zero"** → STM `VP-18465` + `runbooks/vp18465-cloud-local-proxy-retirement.md`（11-09 開始）。
+- **"results-web/grpc/core 的 k8s secret yaml / JWT_SECRET 外洩 / 輪替"** → STM `PO-274`（repo 部分已完成，輪替是 owner 的事）。
+- **"Cascades result 送不出去 / EHOSTUNREACH 72.52.68.244"** → `emr-integration.md` 10-26「其他」。
