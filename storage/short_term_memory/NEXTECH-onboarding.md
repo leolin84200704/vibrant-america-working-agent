@@ -197,3 +197,4 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 - Q1: confirmed codes-only-in-NTE is not supported; each test = own OBR with code in OBR-4.1.
 - Q2: each result OBR must carry the matching per-test order number in OBR-2 (26-0018 - A / - B / - C). "Let me know when you are ready for an additional order."
 - Ball is on our side: PID-2 echo (new emr_sample column, manual prod ALTER first), OBR-3 = accession, OBR-2 per-test placer (needs ordered OBR-4 code -> placer persistence + result panel -> ordered test mapping). No Jira ticket exists for this work yet (checked 10-26).
+- 10-26: Leo asked for one ticket covering all three -> created VP-19028 (Task, Dev To Do, assignee Leo, labels emr-integration/nextech). Finding while writing it: OBR-3 already = accessionId in buildOBR, so item 2 is verify-only. Not started.
