@@ -206,3 +206,8 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 - Tests: full jest 182 suites green (fresh worktree needs `npm run prisma:generate:test` first or 5 suites fail on missing .prisma/test-client). nest build clean, migration lint 0 findings.
 - Mistake caught: symlinked worktree node_modules to the main checkout and `prisma generate` overwrote the main checkout's client; restored by re-running generate in the main checkout. Use npm ci per worktree.
 - Waiting on Leo: approve manual ALTER on staging (192.168.60.11) + prod (lisportalprod2), then push + PR to staging.
+
+### [2026-10-26] VP-19028 DDL applied, PR #509 open, Jessica reply drafted
+- ALTER emr_sample ADD emr_patient_id VARCHAR(255) NULL, emr_placer_orders TEXT NULL (INSTANT, lock_wait_timeout=5): staging 192.168.60.11 (8.0.44, 46 ms, 965 rows all NULL), prod lisportalprod2 (8.4.9-azure — not 8.0.45 as the gate skill says; 79 ms, 2406 rows all NULL). Prod read back on the read-only MCP account. Script: mysql2 via worktree node_modules (no mysql CLI on this Mac).
+- PR https://github.com/Vibrant-America/lis-backend-emr-v2/pull/509 -> staging, head 839ad7e. Not merged yet (Leo asked only to open it).
+- Outlook reply-all draft on Jessica 10-26 13:31Z, id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABj485egAA (inline images: send from Outlook). Content: confirm PID-2 / per-test OBR-2 / accession OBR-3, we'll say when ready for the next test order. No questions asked.
