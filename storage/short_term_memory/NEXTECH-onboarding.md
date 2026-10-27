@@ -230,3 +230,8 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 ### [2026-10-27] Dream: release #510 already merged to main
 - GitHub: lis-backend-emr-v2 #510 MERGED 2026-10-26 23:47:56Z (merge commit 6edbf862). The last section above still says "waiting on Leo merge".
 - Not yet recorded: prod pod image = 6edbf862 (Jenkins deploy, AKS + on-prem), post-deploy pod log check, sending the Jessica draft, asking Nextech for the next test order.
+
+### [2026-10-27] Prod deploy verified; waiting to ask Nextech for the next test order
+- AKS prod `lis-emr-v2-deployment-prod-5dc68667b9-5m2sr` image 6edbf862 (= main, #510), up 21h, 0 restarts. 21h logs: 0 Unknown column / emr_patient_id / emr_placer_orders errors; 7 ERROR lines are unrelated (RANGE_ERROR mapper, kafkajs OffsetCommit/Fetch). On-prem prod not checked (no kube context on this Mac); Nextech integration runs on AKS.
+- VP-19028 still Dev To Do, QH-7988 To Do. Acceptance needs Nextech's next multi-test order closing every ordered test.
+- Outlook MCP needs re-auth; could not confirm whether the 10-26 reply to Jessica was sent.
