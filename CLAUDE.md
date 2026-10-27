@@ -76,6 +76,7 @@
 - **Integration 一律由客戶在 Website 自行建立**（Leo 指令 2026-10-21，VP-18960）：agent 不新增 `ehr_integrations` / `order_clients` 列，包括「照 practice peer 複製」；customer_not_found 回報給 Leo、請客戶到 Website 串接，客戶建好後才 retry_num 重下。起因：INCIDENT-20261013（agent 建錯的 BioInsights+JAG 列），訂單端的檢查擋不住建錯的設定
 - **Explore**（Step 2）= 掃相關 LIS repos；subagent patterns 見 `AGENTS.md`（本 repo）
 - Retrospective 詳細框架：`~/src/project-agent-factory/skills/work-loop/RETROSPECTIVE.md`
+- **Dev Complete 之後一併結 QA twin（Leo 指令 2026-10-26）**：VP 票轉 Dev Complete 時，查 `issuelinks` 裡 `is tested by` 的 QH（QA Hub）票；有的話由 agent 自己完成：在 QH 貼一則英文 "QA verification passed on {date} for VP-xxxx" comment（Implementation / Verification / Residual 三段，每條證據帶 PR、commit、comment id、日期），QH 轉 Done（transition 31），再把 VP 轉 Done（transition 15）。寫入一律走 Atlassian MCP（Leo 帳號）。Done 條件不變：code 在 prod + 驗過；證據不齊就不關，回報缺什麼。QH 若已被 QA 轉 INACTIVE 不算結案、照樣補 comment 後轉 Done
 
 ## Hot lessons（factory 核心紀律常駐層 — dream 每晚與 ENGINEERING-LESSONS 同步，勿手改）
 <!-- hot-lessons:begin -->
