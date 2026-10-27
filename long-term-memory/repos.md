@@ -490,3 +490,7 @@ sudo prompt 用 `echo <pw> | sudo -S <cmd>`。Heredoc 內含 `[^...]` 之類 exp
 - **LIS-transformer-v2 main**：→ 08ea18e（#728 VP-19015，10-24）→ 6acbfdb（#732 VP-19003/19011/19009，10-26 18:01Z）→ **669283a**（#735 VIB-1781 PNS，fan-z777，10-26 18:36Z）。GHA `frontend-service-graphql` 全部 success。stage_test 008826e（VP-18990）。
 - **LIS-transformer main**：→ 86e83c6（#999 VP-18491，YFvibrant 10-23）→ 3e7333f（#1001 VP-18947）→ **96bb7bf**（#1004 VIB-1781）。stage_test 688ac41（#1010 VP-18795 /status、#1007 VP-18469 index）。main PR #1008（VP-18469）/ #1009（VP-18795）等 Leo。
 - **LIS-Sample**：master b8fb61a / dev d71613e（PO-273 CONSUL_TOKEN env）。results-web/-grpc/-core：已沒有 secret manifest，`deployment-secret-policy.yml` 守門（PO-274）。
+
+## 【更新 2026-10-27】emr-v2 main 6edbf862（#510 VP-19028）、LIS-transformer main b074c689（prod deploy 10-27 18:31Z success；含 #1009 bc3eeac7 / #1016 85bdef23 / #1017 3dc86c15）、LIS-transformer-v2 main 536ab97e（#739）、ehr-frontend main 有 #387（VP-19022，10-27 16:58Z）
+- 開著的：LIS-transformer #1024（VP-18797 main，REVIEW_REQUIRED）。
+- main ruleset：1 approving review、作者不能自審 → Leo 帳號開的 PR 要別人 approve。

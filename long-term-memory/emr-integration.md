@@ -151,6 +151,7 @@ links:
 - VP-18959
 - VP-18960
 - VP-19006
+- VP-19008
 - VP-19019
 - VP-19023
 - fhir-api
@@ -2409,3 +2410,14 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 - **Nextech（10-23）**：PID-2 帶 Nextech patient id，result 要原樣回在 PID-2；OBR-3 可帶我們的 accession；OBR-2 = 對方 order number。對方提議「一張單多個 test、OBR-4.1 不放 code、test 寫在 NTE」→ 我們的 parser 從 OBR-4 下單，會變成空單；Leo：**直接說不支援，不要徵求同意**；與 Nextech 的談判由 Sales 負責，不是我們。
 - **VP-18960 retry 撞號修好了**：requeue jobId 改成 `hl7-<id>-r<retry_num>-u<updated_time ms>`，placement 成功會清 last_error（#499，跟著 #502 在 10-23 上 prod）。在這之前若要重下 re-place，`retry_num` 要設成沒用過的值（10-22 用 6）；`describeVendorMismatch` 文字與 skill 裡寫的「設 3」在舊 code 上會靜默失效。
 - **Cascades（customer 8180 / clinic 87739，integration `cmjxaqd8w00dp0xfq2uchhkx2` LIVE result_enabled=1）**：最後一次成功是 2026-06-01，之後 18 次全失敗（`EHOSTUNREACH 72.52.68.244:22`），最新一筆 sample 2644179（10-24）。0 次恢復，那 7 個 distinct sample 都沒送達。每日 result_fail 報表有在追，但一直沒有 owner 處理。
+
+## 【蒸餾 2026-10-27】Nextech PID-2 / per-test OBR-2、BioInsights 卡在 Duffy 沒帳號、Cerbo TTB prod 證據、vendor 12 個月下單盤點、FZ male 仍擋（VP-19028 / VP-19029 / BIOINSIGHTS-onboarding / VP-19008 / VP-19023 / VP-19013）
+- **Nextech result 回傳（VP-19028）**：新 nullable 欄位 `emr_sample.emr_patient_id VARCHAR(255)`（inbound PID-2）+ `emr_placer_orders TEXT`（JSON：OBR-4.1 大寫 → OBR-2.1，沒有就用前一個 ORC-2）。所有 vendor 都寫，**只有 `emr_service = NEXTECH` 讀**；`emr_order_id` 不動（檔名 / PDF 下載仍走 accession）。Encoder：PID-2 = emrPatientId；ORC-2/OBR-2 = panel.placerOrderNumber || order.emrOrderId；對不上的 panel → 第一個 placer + WARN。OBR-3 本來就是 accession（只需驗）。
+  - 依據：result 的 OBR-4（VAREQUISTION35/36）正好等於下單時的 OBR-4.1，所以 panel → placer 對得上。
+  - DDL 先手動上（INSTANT，`lock_wait_timeout=5`）：staging 192.168.60.11（8.0.44）、prod lisportalprod2 —— **prod 是 8.4.9-azure，不是 gate skill 寫的 8.0.45**。staging 10-26 20:51Z 用部署中的 helper 對真 DB 驗過（MDHQ 對照組不變）。staging 沒有 NEXTECH `ehr_vendors` 列，prod 是 vendor 47。
+  - #509 → staging b4a975f；release #510 staging → main **10-26 23:47Z merged（6edbf862）**。STM 還停在「等 Leo merge」：prod pod image 確認 + 寄 Jessica 草稿 + 要下一張測試單還沒做。
+  - Jessica 10-26：Q1 確認 code 只放 NTE 不支援；Q2 每個 result OBR 的 OBR-2 帶對應的 per-test order number（`26-0018 - A/B/C`）。
+- **BioInsights（10-26）**：卡住的不是 devcom 也不是我們——Aimee Duffy NPI 1528033081 在 `lis_core_v7.customer` **沒有帳號**；vendor 46 只有那筆 REJECTED 的 JAG 列、0 LIVE。順序：Vibrant 帳號 → 客戶在 Website 建 integration（VP-18960 規則，agent 不建）→ devcom 用新檔名重送。VP-19029 列 owner：帳號 + integration = Britney/Support；SFTP 的 order summary PDF 資料夾 = Olena（10-15 起未答）；catalog = Zhenhe；PDF 設定 + E2E = Leo。回信草稿在 Outlook，Leo 送。
+- **Cerbo TTB 合併（VP-19008）prod 證據**：sample 2649702 / acc 2610086313，`result_transmission_records` scope `REPORT_GROUP:TTB`，`{acc}_TTB.hl7` 714 KB TRANSMITTED 10-27 00:48Z，OBR MY+HM+ET + 1 VAPDF，沒有 `REPORT:*` 重複列；由 on-prem pod 處理。殘項：單一成員、TTB+其他單還沒在 prod 出現。
+- **vendor 12 個月下單盤點的方法（VP-19023）**：`hl7_file_input` by emr_service / clinic、`order_intake_records`、`result_transmission_records`、`sftp_folder_mapping`（有 polled folder ≠ 有下單）、`lis_core_v7.sample` by customer 12m。發現的形態：**ECW / Elation / Athena / ChARM 都是「0 張 EMR 下單、但大量 result 推送 + provider 在 EMR 外下單」** —— 有 result 整合不代表有 order 整合，outreach 名單要分開看。CHARMEHR 是 ChARM 的舊代碼。clinic 44210 底下 5 個 INT5 結尾的 practice 名稱共用同一 clinic_id，看起來是 legacy/test。
+- **FZ male swap（VP-19013）**：VP-18951 Dev Complete 但 org 內沒有任何 PR/commit/ticket 公布 male item ids；item catalog 不在 lisportalprod MySQL。已 comment 197933 問 Fangyuan 並轉 Dev Blocked；VP-18952（report types）仍 Dev To Do。

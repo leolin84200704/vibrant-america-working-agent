@@ -4,7 +4,7 @@ ticket: QH-CLOSEOUT-20261026
 type: journal
 tags: [qh, qa-twin, closeout, dev-complete, done, process, leo-rule]
 related: [VP-18449, VP-18450, VP-18464, VP-18481, VP-18482, VP-18673, VP-18796, VP-18798, VP-18799, VP-18800, VP-18801, VP-18802, VP-18889, VP-18960, VP-19006, VP-19007, VP-19009, VP-19011, VP-19019, VP-19023, VP-19024]
-distilled: false
+distilled: true
 ---
 
 # QH twin closeout sweep: 21 Dev Complete tickets, 13 closed, 6 not ready, 2 ownership questions

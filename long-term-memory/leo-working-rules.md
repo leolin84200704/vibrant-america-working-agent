@@ -673,3 +673,14 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 2. **殘項越來越多是「等下一筆自然流量」**：VP-19019（43262 非 2930 practice 的推送）、VP-19006（第一張帶 ZKD 的單）、VP-19008（下一筆 Maristany TTB）、VP-18960（失敗過的單 placement 後清掉 last_error）、VP-19015（11-01 DST 實際過去）。這些都需要一張「殘項 + 第一個可觀察訊號 + 查詢方式」的表，dream 每晚巡一次。10-26 開始放在 dream log 的「Residual watch」段落。
 3. **staging 走不到的路徑已經有固定解法**：在 pod 內呼叫部署中的 dist（見 patterns 10-26）。四張票各自重新發明了一次，下一張直接照做。
 4. **Done 的票數暴增，但 QA Hub 的 INACTIVE 不算結案**：10-23 Xiaoye 一次把 92 張 QH（Automation for Jira 建的 QA twin）從 To Do 清成 INACTIVE（statusCategory = Done）。closeout audit 要用 `project != QH` 把這種排除掉，另外確認是誰轉的，不要逐張驗。
+
+## Leo 10-26 晚 → 10-27 的決定（QH 雙胞胎結案 / VP-18797 / VP-19013 / VP-19008 / VP-18469 / VP-18795 / VP-18465 / VP-19023）【蒸餾 2026-10-27】
+- **「Dev Complete 後都要看看有沒有 related 的 QH ticket，有的話要一併做了然後填完後 done ticket」（10-26，常設，已進 CLAUDE.md PR #66）**：QH twin = VP `is tested by` QH（Automation for Jira 建、描述空白）。做法：QH 貼一則英文 "QA verification passed on {date} for VP-xxxx"（Implementation / Verification / Residual，每條帶 PR / merge commit / comment id / 日期；格式取自 QH-7314、QH-6706）→ QH transition 31 = Done → VP 留一行指向 QH comment → VP transition 15 = Done。QH 的 transition screen 沒有 assignee（帶 `fields.assignee` 會 400），要另外 editJiraIssue。證據不齊就不關，列缺什麼。
+  - **別人名下的 QH 不動**：QH-7340（VP-18482，Yuteng Fu）、QH-7339（VP-18481，Michael Kingsley）判定 READY 但沒 comment、沒轉，等 Leo 說關、改派或留給 QA。
+  - 10-26 首輪：21 張 Dev Complete → 13 張關掉、6 張缺證據（VP-18450 dead block 被 #792 merge 帶回來、VP-18464 步驟 1-3 未做、VP-18802 prod `DATABASE_URL_VA_INFO_MASTER` 缺、VP-19006 AC4/AC6、VP-19009 per-occurrence 沒在 prod 跑過、VP-19024 scope 變更沒記在票上）、2 張歸屬問題。之前沒有人填過 QH twin，這是第一次帶證據。
+- **「就算沒有也comment 然後轉done」（VP-19008，10-27）**：殘項（單一成員、TTB+其他）還沒在 prod 出現，但主路徑已有 prod 端到端證據 → 照樣 comment 寫明殘項然後 Done。適用條件是主要路徑有 live 證據，不是「什麼都沒驗」。
+- **「看看還有什麼現在能做的ticket, 能做直接做, 都到merge main 為止（有疑慮 comment 問 reporter 然後改 dev block）」（10-26）**：從 assigned Dev To Do 挑 blocker 已清、沒人在做的票，做到 main PR；卡在別人的交付就 comment @ 擁有者 + 轉 Dev Blocked（VP-19013：VP-18951 Dev Complete 但 male ids 沒公布 → comment 197933 + Dev To Do → In Progress → Blocked）。
+- **VP-18469 / VP-18795 prod（10-26 20:50）**：Leo 批准 prod CREATE INDEX + ConfigMap；main PR 被 ruleset 擋（1 approving review，PR 作者是 Leo 自己的帳號，不能自審）→ 等 reviewer，不繞路。
+- **VP-18465**：「2. 先留」= `cloud-local` namespace 保留；Phase 1 縮容 11-09（Leo 定的，晚於 on-prem 窗 11-05）。不另建每日 Datadog snapshot（15 天保留剛好跨到 11-09）。
+- **回 partner 前把對方最後一則 comment 的每個 ask 打勾（VP-19023）**：Junjie 197479 問的 12 個月下單檢查被 197491 漏答，三天後才補（197673/197676）。和 vendor-email-reply skill 的「列出每個未回 ask」同一條，Jira comment 也適用。
+- **STM `_index.md` 的摘要會落後 STM 本文**（QH sweep 抓到 VP-19019 / VP-18960 / VP-19024 三條過期）：引用前先讀本文或對 L4。

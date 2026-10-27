@@ -6,7 +6,8 @@ status: in_progress
 base_weight: 0.9
 created: 2026-10-27
 updated: '2026-10-27'
-links: [PH-822, VP-19009, VP-17190, VP-16943]
+links:
+- VP-19009
 tags:
 - vi-calendar
 - timezone
@@ -15,9 +16,13 @@ tags:
 - practice-150105
 - trans-v2
 - availability
-summary: 'VI Calendar DST report (Suzette Garcia 46594, clinic 150105): timezone setting was America/Anguilla (fixed UTC-4, June offset-dedupe artifact); she switched to America/New_York 2026-10-26 23:54Z. 13 provider-booked consults after 11/01 sit at Anguilla-derived instants = 1h earlier than her intended Eastern slots. Mary Beth Augustine 46604 still Anguilla.'
+summary: 'VI Calendar DST report (Suzette Garcia 46594, clinic 150105): timezone setting
+  was America/Anguilla (fixed UTC-4, June offset-dedupe artifact); she switched to
+  America/New_York 2026-10-26 23:54Z. 13 provider-booked consults after 11/01 sit
+  at Anguilla-derived instants = 1h earlier than her intended Eastern slots. Mary
+  Beth Augustine 46604 still Anguilla.'
 jira_status: none
-score: 0.5
+score: 0.1238
 ---
 
 # VI-CALENDAR-TZ-20261027 - Triage record (no ticket yet)

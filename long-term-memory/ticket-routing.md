@@ -273,3 +273,11 @@ summary: Ticket keyword to repo/module routing table
 - **"cloud-local-proxy 退役 / scale to zero"** → STM `VP-18465` + `runbooks/vp18465-cloud-local-proxy-retirement.md`（11-09 開始）。
 - **"results-web/grpc/core 的 k8s secret yaml / JWT_SECRET 外洩 / 輪替"** → STM `PO-274`（repo 部分已完成，輪替是 owner 的事）。
 - **"Cascades result 送不出去 / EHOSTUNREACH 72.52.68.244"** → `emr-integration.md` 10-26「其他」。
+
+## 2026-10-27 新增路由
+- Nextech result 要 PID-2 / per-test OBR-2 → VP-19028（emr-v2 encoder + `emr_sample.emr_patient_id` / `emr_placer_orders`）
+- BioInsights 上線（Duffy 帳號、Website integration、SFTP PDF 資料夾）→ VP-19029 + BIOINSIGHTS-onboarding
+- LIS-Sample sample-page bundle（9 GET）搬 trans v1 → VP-18797（phase 2 = aggregate + LIS-frontend 切換）；`/patients/profiles` 公開無驗證問題也在這
+- VI Calendar 使用者回報「DST 後差 1h」→ 先查 provider timezone 設定（VI-CALENDAR-TZ-20261027），series 本身的時區修正是 VP-19015 / FE VP-19022
+- cloud-local proxy 退場 → VP-18465 + runbook
+- QH twin 結案 → CLAUDE.md「Dev Complete 之後一併結 QA twin」+ journal 2026-10-26-qh-twin-closeout-sweep

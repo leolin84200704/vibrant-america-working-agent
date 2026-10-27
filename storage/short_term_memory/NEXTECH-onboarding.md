@@ -3,24 +3,30 @@ id: NEXTECH-onboarding
 type: stm
 category: emr_integration
 status: active
-score: 0.2715
+score: 0.375
 base_weight: 1.0
 created: 2026-09-22
-updated: 2026-10-23
+updated: 2026-10-27
 links:
 - BIOINSIGHTS-onboarding
 - HL7-NPI-PRACTICE-MATCH-20260820
 - HL7FAIL-20261019-PARSLEY-KHATRI
+- INCIDENT-20260817-onprem-stale-deploy
+- INCIDENT-20261013-bioinsights-jag-crossmap
+- INCIDENT-2604156666
 - LBS-1833
 - QUARANTINE-ADMIN-API-GAP-20260924
 - VP-17827
 - VP-18138
 - VP-18194
+- VP-18243
 - VP-18372
 - VP-18402
 - VP-18824
 - VP-18833
 - VP-19006
+- VP-19008
+- VP-19019
 - VP-19023
 - emr-integration
 - fhir-api
@@ -220,3 +226,7 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 - Staging DB has no NEXTECH ehr_vendors row (encoder test-name mapping lookup warns); prod has vendor 47.
 - Next: release PR staging -> main (Leo merges), then send Jessica the draft and request the additional test order.
 - 10-26: release PR #510 staging -> main opened (head = staging b4a975f, only VP-19028). Waiting on Leo merge; then confirm prod pod image, send Jessica draft.
+
+### [2026-10-27] Dream: release #510 already merged to main
+- GitHub: lis-backend-emr-v2 #510 MERGED 2026-10-26 23:47:56Z (merge commit 6edbf862). The last section above still says "waiting on Leo merge".
+- Not yet recorded: prod pod image = 6edbf862 (Jenkins deploy, AKS + on-prem), post-deploy pod log check, sending the Jessica draft, asking Nextech for the next test order.

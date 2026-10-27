@@ -3,7 +3,7 @@ date: 2026-10-25
 ticket: VP-18465
 type: journal
 tags: [vp-18465, cloud-local-proxy, retirement, zero-window, on-prem, aks]
-distilled: false
+distilled: true
 ---
 
 # VP-18465 pre-flight: both zero windows verified, nothing touched
