@@ -9,6 +9,21 @@
    "announced": "2026-10-19",
    "deadline": "2026-11-02",
    "slack": "#developers C02AQGMU422 2026-10-19 15:44 PDT"
+  },
+  "3": {
+   "announced": "2026-10-22",
+   "deadline": "2026-11-05",
+   "slack": "#developers C02AQGMU422 2026-10-22 14:09 PDT"
+  },
+  "4": {
+   "announced": "2026-10-27",
+   "deadline": "2026-11-09",
+   "slack": "#developers C02AQGMU422 2026-10-27 09:56 PDT"
+  },
+  "5": {
+   "announced": "2026-10-27",
+   "deadline": "2026-11-10",
+   "slack": "#developers C02AQGMU422 2026-10-27 15:18 PDT"
   }
  },
  "routes": [
@@ -178,7 +193,7 @@
    "path": "/patients/v2/kits",
    "family": "Kits",
    "ticket": "VP-18482",
-   "batch": 1
+   "batch": 3
   },
   {
    "method": "GET",
@@ -522,6 +537,76 @@
    "family": "Order",
    "ticket": "VP-18799",
    "batch": 2
+  },
+  {
+   "method": "GET",
+   "path": "/status",
+   "family": "Status",
+   "ticket": "VP-18795",
+   "batch": 4
+  },
+  {
+   "method": "GET",
+   "path": "/order",
+   "family": "Order",
+   "ticket": "VP-18797",
+   "batch": 5
+  },
+  {
+   "method": "GET",
+   "path": "/order/details",
+   "family": "Order",
+   "ticket": "VP-18797",
+   "batch": 5
+  },
+  {
+   "method": "GET",
+   "path": "/order/check",
+   "family": "Order",
+   "ticket": "VP-18797",
+   "batch": 5
+  },
+  {
+   "method": "GET",
+   "path": "/order/sample-level-info",
+   "family": "Order",
+   "ticket": "VP-18797",
+   "batch": 5
+  },
+  {
+   "method": "GET",
+   "path": "/patients/kits",
+   "family": "Patients",
+   "ticket": "VP-18797",
+   "batch": 5
+  },
+  {
+   "method": "GET",
+   "path": "/patients/profiles",
+   "family": "Patients",
+   "ticket": "VP-18797",
+   "batch": 5
+  },
+  {
+   "method": "GET",
+   "path": "/patients/orders/operation-settings",
+   "family": "Patients",
+   "ticket": "VP-18797",
+   "batch": 5
+  },
+  {
+   "method": "GET",
+   "path": "/tests",
+   "family": "Tests",
+   "ticket": "VP-18797",
+   "batch": 5
+  },
+  {
+   "method": "GET",
+   "path": "/tubes/history",
+   "family": "Tubes",
+   "ticket": "VP-18797",
+   "batch": 5
   }
  ]
 }
