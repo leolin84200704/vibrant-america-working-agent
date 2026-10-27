@@ -1,9 +1,17 @@
 # LIS-Sample route removal - daily check
 
-The 73 LIS-Sample routes ported to trans v1 were announced in Slack #developers
-(C02AQGMU422): batch 1 (29 routes) on 2026-10-16, deadline 2026-10-30; batch 2
-(44 routes: record-management, patients, order) on 2026-10-19, deadline
-2026-11-02. `routes.json` lists every route with its batch.
+All 83 LIS-Sample routes are ported to trans v1 and were announced in Slack
+#developers (C02AQGMU422):
+
+| Batch | Routes | Announced | Deadline |
+|---|---|---|---|
+| 1 | 28 (interaction logs, tests, tubes, coupon, phlebotomists, storage, notifications, customers) | 2026-10-16 | 2026-10-30 |
+| 2 | 44 (record-management, patients, order) | 2026-10-19 | 2026-11-02 |
+| 3 | `GET /patients/v2/kits` (re-announced with its own deadline) | 2026-10-22 | 2026-11-05 |
+| 4 | `GET /status` (VP-18795) | 2026-10-27 | 2026-11-09 |
+| 5 | 9 sample-page GET routes (VP-18797) | 2026-10-27 | 2026-11-10 |
+
+`routes.json` lists every route with its batch.
 
 Leo asked (2026-10-19) for the old endpoints to be cleared automatically once
 the deadline passes. This job does that within the removal rule of
