@@ -53,3 +53,13 @@ provider-booked consults after 11/01 show one hour earlier; "back to Anguilla" d
 2. Shift the 13 events +1h: via UI reschedule (VP-19003 sends reschedule email on time change, which providers need) or data fix
    on calendar_prod (prod UPDATE -> Leo decision, lis-prod-change-gate; external sync ids google/outlook/zoom would need re-sync).
 3. Mary must switch to Eastern before 11/01; her own post-11/01 events need a glance.
+
+### [2026-10-27 18:10] "Back to Anguilla -> Central" reproduced: not a frontend value bug
+- Audit user 1123 = Suzette's own internal_user_id (sgarcia); auto_update_timezone=0 for 46594/46604, so no login auto-sync. She did all three saves herself.
+- Repro (scratchpad tz-repro, vitest + jsdom, real SetupTimezoneCard.vue + NewLibrary/SingleSelector.vue, vue 3.5.20 / element-plus 2.11.1 / moment-timezone 0.5.48 = ehr-frontend lock):
+  A. same mount, stored Anguilla: pick Eastern -> POST New_York; pick the injected "America/Anguilla (UTC-4)" -> POST America/Anguilla. Values match the clicks.
+  B. after the Eastern save and a remount (GET now returns New_York): the injected Anguilla option is gone; list is the curated one
+     ("Central Time (US & Canada) (UTC-5)", "Eastern Time (US & Canada) (UTC-4)", ...). Nothing labeled Anguilla exists to click.
+- Conclusion: the Chicago POST at 23:49Z was a click on "Central Time" in scenario B (old_timezone=New_York in the audit confirms the card
+  was already on Eastern). Likely she tried to "undo" by picking the zone one step from Eastern. Design limitation only: a stored
+  non-curated zone cannot be re-selected once changed away from. No code change recommended; Anguilla must not be selectable anyway.
