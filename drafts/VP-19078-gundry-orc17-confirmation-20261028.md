@@ -13,3 +13,7 @@ Please confirm the format to Rob and ask for the go-live date. We turn the field
 ## Text Junjie can send to Rob Murray
 
 Confirmed. ORC-17.1 = 32351 is the right value for every Gundry provider, and the sample ORC you sent parses correctly on our side. Please let us know the go-live date; until then orders without the field keep working as they do today.
+
+## VP-19079 Jira comment draft (tracker update, not posted)
+
+Nextech (10-28): Jessica Marshall says they can send the practice ID in MSH-4; test order 26-0019 arrived with MSH-4 = 20834 and placed correctly (sample 2660850). ORC-17 is still empty. We asked, through Junjie, to move it to ORC-17.1 so every vendor uses the same field. Format not confirmed yet.
