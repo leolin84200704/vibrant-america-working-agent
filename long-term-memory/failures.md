@@ -7,7 +7,7 @@ score: 0.1882
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-10-27
+updated: 2026-10-28
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -157,6 +157,7 @@ links:
 - VP-18801
 - VP-18802
 - VP-18824
+- VP-19078
 - VP-9299
 - business-model
 - business-model-deep
@@ -171,19 +172,19 @@ tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 133 entries across STM
+summary: Auto-aggregated failure index from 134 entries across STM
 ---
 
 # Failure Index
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-10-27 — total 133 entries
+> Last updated: 2026-10-28 — total 134 entries
 
 ## Themes
 
 - [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 35 entries
-- [Other / uncategorized](#other) — 23 entries
+- [Other / uncategorized](#other) — 24 entries
 - [Build / TypeScript / Tooling](#build-tooling) — 21 entries
 - [Deploy / commit / push coordination](#deploy-coordination) — 14 entries
 - [DB / migration / backfill](#db-migration) — 9 entries
@@ -731,6 +732,11 @@ and QA has not run — moving it would falsely signal it was tested, so it was l
 ### **[[VP-18782]]**
 
 - `git cherry-pick -q` is not a flag (usage error) -> the -dev branch was first pushed without the commit; re-ran the cherry-pick and pushed again before opening the PR.
+
+### **[[VP-19078]]**
+
+- `v.name LIKE '%THM%'` pulled HealthMatters rows into the "Gundry" list for a few minutes; caught by re-querying with
+  `ehr_vendor_id=42`. Vendor lookups by id only.
 
 ### **[[VP-18342]]** — **
 
