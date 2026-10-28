@@ -25,7 +25,7 @@ related:
 - INCIDENT-20260518
 - INCIDENT-20260817-onprem-stale-deploy
 links: []
-score: 0.0374
+score: 0.0362
 ---
 
 # INCIDENT 2026-09-08 — result pushes failing: gRPC targets pointed at a dead AKS node IP

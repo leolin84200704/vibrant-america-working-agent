@@ -3,7 +3,7 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 0.3712
+score: 0.297
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-10-26
@@ -2421,3 +2421,35 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 - **Cerbo TTB 合併（VP-19008）prod 證據**：sample 2649702 / acc 2610086313，`result_transmission_records` scope `REPORT_GROUP:TTB`，`{acc}_TTB.hl7` 714 KB TRANSMITTED 10-27 00:48Z，OBR MY+HM+ET + 1 VAPDF，沒有 `REPORT:*` 重複列；由 on-prem pod 處理。殘項：單一成員、TTB+其他單還沒在 prod 出現。
 - **vendor 12 個月下單盤點的方法（VP-19023）**：`hl7_file_input` by emr_service / clinic、`order_intake_records`、`result_transmission_records`、`sftp_folder_mapping`（有 polled folder ≠ 有下單）、`lis_core_v7.sample` by customer 12m。發現的形態：**ECW / Elation / Athena / ChARM 都是「0 張 EMR 下單、但大量 result 推送 + provider 在 EMR 外下單」** —— 有 result 整合不代表有 order 整合，outreach 名單要分開看。CHARMEHR 是 ChARM 的舊代碼。clinic 44210 底下 5 個 INT5 結尾的 practice 名稱共用同一 clinic_id，看起來是 legacy/test。
 - **FZ male swap（VP-19013）**：VP-18951 Dev Complete 但 org 內沒有任何 PR/commit/ticket 公布 male item ids；item catalog 不在 lisportalprod MySQL。已 comment 197933 問 Fangyuan 並轉 Dev Blocked；VP-18952（report types）仍 Dev To Do。
+
+## 【蒸餾 2026-10-28】Cerbo per-report 改回 Classic、practice ID 欄位改存 `ehr_vendors`、五家 vendor 的 ORC-17 基準、Nextech 用 MSH-4 回答、Nextech 26-0019 prod 驗證（VP-19008 / VP-19046 / VP-19078 / VP-19079 / NEXTECH-onboarding）
+
+### Per-report PDF 的 style（VP-19008 follow-up → VP-19046，prod f63ec20 10-28 17:35Z）
+- **split=1 時 `report_option` 原本不影響 PDF**：per-report / TTB PDF 走 LIS-Report `bookmarkPagePdfDownload`，舊版 controller 不收 `style`，service 只在 `type=AllClassicReport` 才加 `&&style=classic` → 任何 style 參數都回 advanced。Classic 只拿得到「整單」(`AllClassicReport`，pdf-cache 用的那條)。
+- 修法兩邊：LIS-Report 由 Yekai 以 LIS-7986 / PR #1065 自己出（main 26ba1fa9；`style=modern` → 400）；emr-v2 #511/#512 `fetchReportPdf(acc, short, { style })` + `reportPdfStyleFor(integration)`（CLASSIC → classic，其他 advanced，URL 不變）。
+- **Leo 的 GitHub 對 LIS-Report 只有 READ 且 org 禁 fork** → agent 推不上去，只能匯出 patch 給 owner。跨 repo 修法要先確認寫入權限再寫 code。
+- 改設定的路：`PATCH .../requests/{integration_id}/report-option {CLASSIC}`（自簽 admin HS256，會寫 `ehr_integration_notes`），不要直接 UPDATE。2026-10-28 唯一 LIVE split+CLASSIC 的 integration = Maristany `cms56tk180041t807p7tt9nxm`。
+- 殘項：classic TTB 是三份 classic 單項合併（17 頁），**少了 AllClassicReport 開頭 3 頁 Total Toxins summary + disclaimer**；classic `TTS` 仍多為 advanced。10-28 前送出的報告不會變，除非 repush。結案時還沒看到切換後第一筆 live push。
+
+### Practice ID 欄位：從 env map 改成 `ehr_vendors` 欄位（VP-19079 PR #513，Leo 指令 10-28）
+- Leo：「這個 mapping 也放在 db」→ `ehr_vendors.order_practice_id_field VARCHAR(16)` + `order_practice_id_required BOOL DEFAULT 0`，`PracticeIdPolicyService` 60 s cache（不用 restart）；`ORDER_PRACTICE_ID_FIELD_MAP` env 與 code default 移除，FOLLOWTHATPATIENT 由 migration seed `ORC.17`（以 code 為 key，staging id 不同）。
+- 新的 hold 類別 `practice_id_missing=<ORC-12.1>@<vendor>`：只有 `required=1` 且欄位不可用時觸發（retryable，不標 customer_not_found）。`required=0` 時欄位空/非數字 → warn + provider-only，**所以開欄位本身對沒送值的 vendor 是 no-op，只有送錯號碼會被 hold**（Leo 曾以為「五家一起開會擋單」，已更正）。
+- 「11-16 起強制」：required 逐 vendor 開，在該 vendor live 且首批單驗過之後，不要在 11-16 當天一起開。
+- 部署順序：prisma 欄位非自動 migrate → staging / prod 都要先 ALTER 再部署（Hot lesson: schema migration before deploy）。
+- 另一個 DI 地雷：Nest provider 的 ctor 不能放 primitive 參數（`ttlMs: number` → Nest 去找 `Number` provider，pre-push DI smoke 擋下）；可調值放成 field。
+
+### 五家 order vendor 的 ORC-17 基準（2026-10-28，prod 唯讀 + on-prem archive）
+| vendor | emr_service / id | pipeline | ORC-17 今天 | MSH-4 的意義 |
+|---|---|---|---|---|
+| Gundry Health | THM / 42 | onprem | 沒有（253 份 archive 全 13 欄） | 其他 Gundry provider 的 customer id |
+| Cerbo | MDHQ / 1 | onprem | 沒有（900 ORC 全 13 欄） | Cerbo 自己的 code |
+| OptiMantra | OPTIMANTRA / 9 | onprem | 沒有 | Vibrant practice id |
+| Practice Fusion | PF / 3 | onprem | 未知（on-prem 無 archive，12 個月 4 單） | — |
+| Nextech | NEXTECH / 47 | cloud | 空；ORC-21 放 facility 名稱 | 26-0019 起 = clinic 20834 |
+- 這五家沒有任何多 practice 的 ordering provider（全 fleet 只有 FOLLOWTHATPATIENT 43262）→ 開欄位只會「確認」或「hold 錯號」。
+- **Gundry**：16 列 vendor 42 全在 clinic 32351，12 個月所有單都用 Dr. Gundry NPI 1801889050；他們提的 ORC-17.1 = 32351 格式已對 main parser 確認。go-live 當天 `UPDATE ehr_vendors SET order_practice_id_field='ORC.17' WHERE code='THM'`（PR #513 上 prod 後）。
+- **查 vendor 一律用 id**：`v.name LIKE '%THM%'` 會撈到 HealthMatters（vendor 13, clinic 73303）。
+- **MSH-4 各家意義不同** → 統一要求 ORC-17.1；Nextech 回「只能放 MSH-4」時 Leo：「會很亂，最好有一致性」，由 Junjie 回問。code 端 `extractPracticeId` 其實支援 `MSH.n`，但不主動提供給 vendor。
+
+### Nextech（VP-19028）prod 首張多 test 單
+- 26-0019（hl7_file_input 7442，AKS prod 6edbf86）：sample 2660850 / acc 2610286139，`emr_patient_id`=5（PID-2.1），`emr_placer_orders` 兩筆（OBR-4.1 → 檔內 OBR-2），test_input 單列（multi-ORC fix 成立）。下一步看 ORU 的 PID-2 / per-panel OBR-2 → Jessica 確認兩項都關單。

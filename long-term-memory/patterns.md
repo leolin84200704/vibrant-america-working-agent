@@ -3074,3 +3074,9 @@ Atlassian MCP 斷線時的 fallback：`~/src/credential/atlassian-api-token.md`�
 - **daily hl7_fail triage 看不到 `vendor_mismatch` 類（VP-18960）**；要 PR。
 - **config-drift workflow 10-27 在 LIS-transformer 與 LIS-transformer-v2 main 都 failure**（16:0xZ 排程）：已知殘留是別人的 drift（transv2 `get_pns_customer_setting` 等），VP-18469/18795 的 key 已清。
 - **cloud-local proxy 退場（VP-18465）**：Datadog 15 天 0 筆 `cloud_proxy_request`；「安靜窗不是證據」→ 每個公開入口各送一次探針看它落地後才接受 0。on-prem 共用 ingress 只有 3 條 path（vw-page + 2 條 proxy），當天重讀後按 index patch。macOS 沒有 `timeout`，用 `nc -z -w 3`。Runbook `runbooks/vp18465-cloud-local-proxy-retirement.md`（11-09 縮容、11-16 刪、之後 archive）。
+
+## 【蒸餾 2026-10-28】approved PR 被要求 up-to-date 時用 update-branch、deploy race、Nest ctor primitive（VP-18797 / VP-19079）
+- **main 規則要求 branch up-to-date 時**：`gh pr update-branch` 會產生新 head，但 repo `dismiss_stale_reviews=false` 時 approval 保留；照「一 PR 一 head」紀律在 PR 留 comment 標新 SHA 再請 Leo merge（VP-18797 #1024，54f575d1）。
+- **Deploy race**：自己的 PR merge 後別人的 PR 接著 merge，prod 最後跑的是對方的 image（內含你的 commit）→ 驗證時比對「image 是否包含你的 merge commit」，不是 image SHA 是否等於你的 merge SHA。
+- **kubectl 需要 Leo 的 az login**（MFA 過期時 agent 無法自行恢復）→ 先請 Leo 重登再做 prod 驗證。
+- **NestJS provider 建構子不能放 primitive 參數**（會被當成要注入 `Number`/`String` provider，DI 啟動失敗）；可調參數用 class field 或 injection token。pre-push DI smoke 擋得住，單元測試（直接 new）擋不住。
