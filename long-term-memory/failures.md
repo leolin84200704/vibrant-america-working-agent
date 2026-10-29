@@ -7,7 +7,7 @@ score: 0.1882
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-10-28
+updated: 2026-10-29
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -179,7 +179,7 @@ summary: Auto-aggregated failure index from 134 entries across STM
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-10-28 — total 134 entries
+> Last updated: 2026-10-29 — total 134 entries
 
 ## Themes
 
@@ -230,7 +230,29 @@ summary: Auto-aggregated failure index from 134 entries across STM
 - F2: Theorized "zombie from 5/22 cancel-and-rebook left is_canceled=false" — WRONG (git showed rescheduleClinicalConsult sets is_canceled=true, and it was deployed 6/2 anyway). The real producer was a different env entirely.
 - F3: Assumed the local `.env` calendar_prod = the only/authoritative prod DB and that all senders write there. Missed that a separate cluster could send to the same prod email topic without touching prod's DB.
 
-### **[[VP-18402]]** — `2026-09-28` — Two days live: zero rejections, zero deactivations — and what that means
+### **[[VP-18666]]** — [2026-10-05 PDT] 10-02 root cause was inverted
+
+- I concluded "core right, config wrong" because staging-svc agreed with core for
+  2512106925. Both were prod data (core = prod clone, staging-svc = prod-wired), so the
+  agreement proved nothing about staging. Never validated which backend each report
+  service talks to; one GUT5 W2W probe would have shown it. Posted comment 190459 to
+  Xiaoye on that basis -> needs a correction.
+
+### **[[VP-18704]]**
+
+- `mcp__vibrant__mysql_query` (lisportalprod) has no `lis_core_v7`; use `mcp__vibrant__lisportal_mysql_query` (lisportalprod2, read-only). `sample` has `accession_id`, not `barcode`.
+- Legacy calendar service base is `https://api.vibrant-wellness.com/v1/portal/calendar/` (CLOUD_SERVICE_BASE_URL), not api.vibrant-america.com; the minted transv2 token is accepted there too.
+- `isAccessionClaimable` argument is `accession_id`, not `accessionId`.
+- zsh: `--include=*.ts` globs must be quoted; `echo =====` fails (`=` path expansion).
+
+### **[[VP-18824]]** — `2026-10-13` — Migration UPDATE keyed on a prod-specific id
+
+Wrote `WHERE id = 1 AND code = 'MDHQ'` from the prod row; staging has MDHQ at id 106 so the
+UPDATE silently did nothing there (the apply script's 100% verify caught it, exit 3). Fix: key
+seed/data statements in migrations on the stable business key (`code`), never on an auto id
+copied from one environment.
+
+### **[[VP-18402]]** — `2026-09-28` — **
 
 Re-verified against ground truth (not memory) because two days had passed.
 
@@ -267,7 +289,7 @@ lets zsh read `:s` as a history substitute modifier and silently rewrites the pa
 `origin/${b}:src/...`. Compounded by a `git fetch ... 2>/dev/null` that hid a failure. Do not swallow
 stderr in a diagnostic command.
 
-### **[[VP-18404]]** — `2026-09-28` — Closed — transitioned to Done
+### **[[VP-18404]]** — `2026-09-28` — **
 
 VP-18404 Dev To Do -> **Done** (transition id 15). Code on prod and staging since 09-25;
 `EMR_V2_BASE_URL` set on both ConfigMaps 09-26 and still present.
@@ -275,28 +297,6 @@ Known and accepted at close: the SUCCESS path (a real removeCustomerFromClinic a
 deactivating an integration) has never fired in production — zero provider removals occurred in the
 window — so it is verified only at the unit and function level, never end-to-end. Leo chose not to
 force a trigger.
-
-### **[[VP-18666]]** — [2026-10-05 PDT] 10-02 root cause was inverted
-
-- I concluded "core right, config wrong" because staging-svc agreed with core for
-  2512106925. Both were prod data (core = prod clone, staging-svc = prod-wired), so the
-  agreement proved nothing about staging. Never validated which backend each report
-  service talks to; one GUT5 W2W probe would have shown it. Posted comment 190459 to
-  Xiaoye on that basis -> needs a correction.
-
-### **[[VP-18704]]**
-
-- `mcp__vibrant__mysql_query` (lisportalprod) has no `lis_core_v7`; use `mcp__vibrant__lisportal_mysql_query` (lisportalprod2, read-only). `sample` has `accession_id`, not `barcode`.
-- Legacy calendar service base is `https://api.vibrant-wellness.com/v1/portal/calendar/` (CLOUD_SERVICE_BASE_URL), not api.vibrant-america.com; the minted transv2 token is accepted there too.
-- `isAccessionClaimable` argument is `accession_id`, not `accessionId`.
-- zsh: `--include=*.ts` globs must be quoted; `echo =====` fails (`=` path expansion).
-
-### **[[VP-18824]]** — `2026-10-13` — Migration UPDATE keyed on a prod-specific id
-
-Wrote `WHERE id = 1 AND code = 'MDHQ'` from the prod row; staging has MDHQ at id 106 so the
-UPDATE silently did nothing there (the apply script's 100% verify caught it, exit 3). Fix: key
-seed/data statements in migrations on the stable business key (`code`), never on an auto id
-copied from one environment.
 
 ### **[[LBS-1799]]** — **
 
@@ -701,23 +701,6 @@ Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`
 
 None this session.
 
-### **[[VP-18402]]** — `2026-09-25 16:15` — PR opened
-
-PR Vibrant-America/lis-backend-emr-v2#435 -> `staging`, head `ddba71a`. Added before opening (so the
-head stays fixed per the one-PR-one-head rule): two explicit no-op tests for Leo's question — a
-provider with only non-LIVE rows, and a customer with no integration at all — asserting the OUTCOME
-(nothing written, no transaction opened) rather than just the `where` clause, so they hold if the
-query is rewritten. Suite now 12 tests; full run 85 suites / 1222 assertions.
-
-### **[[VP-18402]]** — `2026-09-28` — Closed — transitioned to Done
-
-Leo: "沒關係不需要做，把已經做完的轉done(不要轉別人的ticket)". Remaining items (end-to-end success
-path, kill switch, finding the real ConfigMap apply source) explicitly dropped.
-VP-18402 Dev In Progress -> **Done** (transition id 15).
-NOT transitioned, on the "don't touch other people's tickets" instruction: VP-18403 (FE, Siyun
-Liang), PH-917 (Xiaoye Li), QH-7271 (QA, unassigned). QH-7275 is assigned to me but is a QA Task
-and QA has not run — moving it would falsely signal it was tested, so it was left in To Do.
-
 ### **[[VP-18655]]**
 
 - First staging ALTER attempt used `ALGORITHM=INSTANT, LOCK=NONE` -> error 1221; INSTANT must stand alone.
@@ -735,8 +718,26 @@ and QA has not run — moving it would falsely signal it was tested, so it was l
 
 ### **[[VP-19078]]**
 
+- 2026-10-28: Miscounted Rob's sample ORC by hand (`||||32351` after ORC-12 = ORC-16, I wrote ORC-17) and confirmed the format to Junjie on that basis; Junjie's AI caught it. Fix going forward: never count HL7 fields by eye — split the line and print the index, or run extractPracticeId on the exact sample before saying "format confirmed". The tool was one command away and I had already used it for Nextech.
 - `v.name LIKE '%THM%'` pulled HealthMatters rows into the "Gundry" list for a few minutes; caught by re-querying with
   `ehr_vendor_id=42`. Vendor lookups by id only.
+
+### **[[VP-18402]]** — `2026-09-25 16:15` — **
+
+PR Vibrant-America/lis-backend-emr-v2#435 -> `staging`, head `ddba71a`. Added before opening (so the
+head stays fixed per the one-PR-one-head rule): two explicit no-op tests for Leo's question — a
+provider with only non-LIVE rows, and a customer with no integration at all — asserting the OUTCOME
+(nothing written, no transaction opened) rather than just the `where` clause, so they hold if the
+query is rewritten. Suite now 12 tests; full run 85 suites / 1222 assertions.
+
+### **[[VP-18402]]** — `2026-09-28` — **
+
+Leo: "沒關係不需要做，把已經做完的轉done(不要轉別人的ticket)". Remaining items (end-to-end success
+path, kill switch, finding the real ConfigMap apply source) explicitly dropped.
+VP-18402 Dev In Progress -> **Done** (transition id 15).
+NOT transitioned, on the "don't touch other people's tickets" instruction: VP-18403 (FE, Siyun
+Liang), PH-917 (Xiaoye Li), QH-7271 (QA, unassigned). QH-7275 is assigned to me but is a QA Task
+and QA has not run — moving it would falsely signal it was tested, so it was left in To Do.
 
 ### **[[VP-18342]]** — **
 
@@ -830,7 +831,7 @@ and QA has not run — moving it would falsely signal it was tested, so it was l
 
 - DI smoke in the hook reports PASS with `TypeError: JwtStrategy requires a secret or key` as the last line - that is the containment baseline (no AUTH_JWT_SECRET provisioned), same before and after the change.
 
-### **[[VP-18402]]** — `2026-09-26 00:10` — Functional verification on STAGING against the real service + real DB
+### **[[VP-18402]]** — `2026-09-26 00:10` — **
 
 Leo: "那就用 image 測試" — version confirmed by pod image tag, then exercise the real compiled
 service (`dist/...`) inside the staging pod against the live DB. This skips only the HTTP/auth layer,
@@ -886,7 +887,7 @@ STILL UNTESTED: trans -> emr-v2 end to end. Blocked on `EMR_V2_BASE_URL`, still 
 `lis-trans-config-st` and `lis-trans-config`. Until it is set, VP-18404's half is inert in both
 environments (it logs "not set" and leaves the integration LIVE).
 
-### **[[VP-18404]]** — `2026-09-25 16:15` — PR opened, and two real bugs found on the way
+### **[[VP-18404]]** — `2026-09-25 16:15` — **
 
 PR Vibrant-America/LIS-transformer#837 -> `stage_test`, head `adf2cca`.
 
@@ -909,7 +910,7 @@ stubbed. That failure was mine. Final: 26 suites / 268 assertions green.
 cannot RUN in either state. Count the suites that executed, not just the ones that changed status —
 "same failures before and after" and "same failures because both are blind" look identical.
 
-### **[[VP-18404]]** — `2026-09-25 17:45` — PR base was wrong — branch cut from main, targeted at stage_test
+### **[[VP-18404]]** — `2026-09-25 17:45` — **
 
 Leo: "PR 838 改了約20000行，這是對的嗎？而且還有conflict"
 
@@ -943,7 +944,7 @@ not the dual-track one.
 A base and a head that have diverged in both directions means the PR diff is not your change.**
 Cheaper still: cut the branch from the branch you intend to target.
 
-### **[[VP-18404]]** — `2026-09-26 00:20` — EMR_V2_BASE_URL set on BOTH environments (Leo authorised), walked through lis-prod-change-gate
+### **[[VP-18404]]** — `2026-09-26 00:20` — **
 
 **Gate 1 four-part analysis (written before touching anything, read from live state not memory):**
 - 目的: without the var, `deactivateEmrIntegration` returns at its first branch and every removal
@@ -1193,7 +1194,25 @@ VP-16760 創 `ehr_vendor_inquiry_status_history` table、migration SQL commit �
 
 LTM patterns.md 304-308 行早就有「兩 DB 都要 apply」、但實際上線時還是踩了 — 因為**沒有自動化驗證機制**、純靠人記得。已建議寫進 Jenkinsfile pre-deploy。
 
-### **[[VP-18402]]** — `2026-09-25 16:55` — Deployed; live verification + the PROD baseline that was previously unobtainable
+### **[[VP-18666]]** — [2026-10-02 22:55 PDT] First CM patch was overwritten by the next staging deploy
+
+- The #451 staging build (Jenkins, kubectl-client-side-apply 05:53Z) re-synced
+  emr-v2/lis-emr-v2-config from its SOURCE OF TRUTH = the **AKS default
+  namespace** `lis-emr-v2-config` (Jenkinsfile ~L421: `./kubectl get configmap
+  lis-emr-v2-config -o yaml` with no -n, then `-n emr-v2 apply`). I had
+  patched only the emr-v2 ns copy -> reverted to dev; FHIR 2512106925 back to
+  `registered` on the 5a65f7e pod. Assumption that broke: "the ns the pod
+  reads is the config to change". Rule: for emr-v2 staging CM changes, patch
+  `default/lis-emr-v2-config` (source) — the next build propagates it; patch
+  emr-v2 ns too only if you need it before a build.
+- Fixed 2026-10-03 06:0xZ: patched default/lis-emr-v2-config
+  VIBRANT_API_BASE_URL -> base-report-staging-service. default/-prod and
+  emr-v2/-prod are base-report-service (correct). The dev value on default
+  ns is owned by a 2026-09-08 kubectl-patch manager (INCIDENT-20260908
+  10.224.0.199->10.224.0.10 repoint touched 13 keys, VIBRANT_API_BASE_URL
+  among them by ownership only — that STM records no deliberate dev choice).
+
+### **[[VP-18402]]** — `2026-09-25 16:55` — **
 
 All four components live: emr-v2 staging (`644c3449`) and prod (`b9976cb1`, via PR #436 staging->main),
 trans staging and prod (GH Actions both green).
@@ -1259,24 +1278,6 @@ gate on the order hot path should ship behind an env-var kill switch.
 
 STILL UNTESTED: the endpoint actually executing (needs a JWT), and trans -> emr-v2 end to end
 (needs `EMR_V2_BASE_URL`, still unset in both ConfigMaps).
-
-### **[[VP-18666]]** — [2026-10-02 22:55 PDT] First CM patch was overwritten by the next staging deploy
-
-- The #451 staging build (Jenkins, kubectl-client-side-apply 05:53Z) re-synced
-  emr-v2/lis-emr-v2-config from its SOURCE OF TRUTH = the **AKS default
-  namespace** `lis-emr-v2-config` (Jenkinsfile ~L421: `./kubectl get configmap
-  lis-emr-v2-config -o yaml` with no -n, then `-n emr-v2 apply`). I had
-  patched only the emr-v2 ns copy -> reverted to dev; FHIR 2512106925 back to
-  `registered` on the 5a65f7e pod. Assumption that broke: "the ns the pod
-  reads is the config to change". Rule: for emr-v2 staging CM changes, patch
-  `default/lis-emr-v2-config` (source) — the next build propagates it; patch
-  emr-v2 ns too only if you need it before a build.
-- Fixed 2026-10-03 06:0xZ: patched default/lis-emr-v2-config
-  VIBRANT_API_BASE_URL -> base-report-staging-service. default/-prod and
-  emr-v2/-prod are base-report-service (correct). The dev value on default
-  ns is owned by a 2026-09-08 kubectl-patch manager (INCIDENT-20260908
-  10.224.0.199->10.224.0.10 repoint touched 13 keys, VIBRANT_API_BASE_URL
-  among them by ownership only — that STM records no deliberate dev choice).
 
 ### **[[VP-16166]]** — `2026-08-25 15:34` — **
 
@@ -1549,7 +1550,13 @@ Root cause: 第一次跑時我用 `tail -50` 截取 output，後段顯示 record
 - First zsh grep used unquoted `--include=*.ts` and silently matched nothing ("no matches found"); re-ran with quoted globs. Always quote `--include` patterns in zsh.
 - Sent the on-prem token over plain `http://192.168.60.11:8500` for the ACL self-read because 192.168.60.11:8501 is not listening; VPN-internal only, but note it.
 
-### **[[VP-18404]]** — `2026-09-25 17:00` — Leo rejected the design as over-built; rewritten, and a bad commit caught
+### **[[VP-18481]]** — `2026-10-13 13:20` — PR #920 CI failed on `npm ci` - lock file
+
+- Error: `npm ci` "Missing: @nestjs/platform-express@7.6.18 from lock file" (+ its express subtree). Cause: (1) `npm install @azure/service-bus` in the main worktree ran under local npm 11.6, which regenerated package-lock.json and dropped 517 lines of nested entries that the CI runner's npm 10 still requires; (2) cherry-picking that lock diff onto stage_test (whose lock differs from main's) produced a lock inconsistent with stage's package.json. My local `npm ci` passed because npm 11 tolerates what npm 10 rejects -> a local `npm ci` is not evidence for the runner.
+- Fix: restore the base branch's own lock (`git checkout origin/<base> -- package-lock.json`) and add ONLY the new dependency with the runner's npm major: `npx -y npm@10 install <pkg> --package-lock-only --ignore-scripts`; verify with `npx -y npm@10 ci --dry-run --ignore-scripts`. Stage twin: 73b3f3f (+511 lines only); main twin: same treatment. PR comment on #920 updated with the new head SHA (one-PR-one-head rule: pushed before review, comment left).
+- First attempt at the fix silently did nothing: `git checkout origin/stage_test -- file` STAGES the file, and the following `npm install --package-lock-only` (npm 11) rewrote the worktree copy back to the main-style tree, so `git add` + `commit` found index == HEAD ("no changes added") and my PR comment carried the old SHA. Always read the commit output and `git rev-parse HEAD` before quoting a SHA.
+
+### **[[VP-18404]]** — `2026-09-25 17:00` — **
 
 Leo: "LIS-transformer 有需要改這麼多嗎？不是很簡單的 url endpoint 讓 trans call 就好了嗎"
 
@@ -1586,12 +1593,6 @@ PR #837 closed (polluted head + wrong design), branch deleted locally and on ori
 **Replacement: PR Vibrant-America/LIS-transformer#838 -> `stage_test`, branch
 `feature/leo/VP-18404-call`, head `50da97f`**, cut fresh from origin/main, staged by filename.
 Tests 22 suites / 255 assertions green.
-
-### **[[VP-18481]]** — `2026-10-13 13:20` — PR #920 CI failed on `npm ci` - lock file
-
-- Error: `npm ci` "Missing: @nestjs/platform-express@7.6.18 from lock file" (+ its express subtree). Cause: (1) `npm install @azure/service-bus` in the main worktree ran under local npm 11.6, which regenerated package-lock.json and dropped 517 lines of nested entries that the CI runner's npm 10 still requires; (2) cherry-picking that lock diff onto stage_test (whose lock differs from main's) produced a lock inconsistent with stage's package.json. My local `npm ci` passed because npm 11 tolerates what npm 10 rejects -> a local `npm ci` is not evidence for the runner.
-- Fix: restore the base branch's own lock (`git checkout origin/<base> -- package-lock.json`) and add ONLY the new dependency with the runner's npm major: `npx -y npm@10 install <pkg> --package-lock-only --ignore-scripts`; verify with `npx -y npm@10 ci --dry-run --ignore-scripts`. Stage twin: 73b3f3f (+511 lines only); main twin: same treatment. PR comment on #920 updated with the new head SHA (one-PR-one-head rule: pushed before review, comment left).
-- First attempt at the fix silently did nothing: `git checkout origin/stage_test -- file` STAGES the file, and the following `npm install --package-lock-only` (npm 11) rewrote the worktree copy back to the main-style tree, so `git add` + `commit` found index == HEAD ("no changes added") and my PR comment carried the old SHA. Always read the commit output and `git rev-parse HEAD` before quoting a SHA.
 
 ### **[[VP-16987]]** — `2026-06-16 18:40` — **
 
