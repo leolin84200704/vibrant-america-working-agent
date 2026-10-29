@@ -3080,3 +3080,7 @@ Atlassian MCP 斷線時的 fallback：`~/src/credential/atlassian-api-token.md`�
 - **Deploy race**：自己的 PR merge 後別人的 PR 接著 merge，prod 最後跑的是對方的 image（內含你的 commit）→ 驗證時比對「image 是否包含你的 merge commit」，不是 image SHA 是否等於你的 merge SHA。
 - **kubectl 需要 Leo 的 az login**（MFA 過期時 agent 無法自行恢復）→ 先請 Leo 重登再做 prod 驗證。
 - **NestJS provider 建構子不能放 primitive 參數**（會被當成要注入 `Number`/`String` provider，DI 啟動失敗）；可調參數用 class field 或 injection token。pre-push DI smoke 擋得住，單元測試（直接 new）擋不住。
+
+## 【蒸餾 2026-10-29】HL7 欄位不要用眼睛數（VP-19078）
+- **確認 vendor 範例格式前，先把那一行 split 並印出 index，或直接把範例丟進真的 parser（`extractPracticeId`）**。10-28 用眼睛數 Rob 的 ORC，把 ORC-16 當成 ORC-17，就回覆「格式確認」，之後被對方的 AI 抓到才更正。工具只要一個指令就有，而且 Nextech 那次已經用過。
+- 同類地雷：連續空欄位（`||||`）最容易數錯——四個 pipe 是跳過三欄。

@@ -684,3 +684,14 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 - **VP-18465**：「2. 先留」= `cloud-local` namespace 保留；Phase 1 縮容 11-09（Leo 定的，晚於 on-prem 窗 11-05）。不另建每日 Datadog snapshot（15 天保留剛好跨到 11-09）。
 - **回 partner 前把對方最後一則 comment 的每個 ask 打勾（VP-19023）**：Junjie 197479 問的 12 個月下單檢查被 197491 漏答，三天後才補（197673/197676）。和 vendor-email-reply skill 的「列出每個未回 ask」同一條，Jira comment 也適用。
 - **STM `_index.md` 的摘要會落後 STM 本文**（QH sweep 抓到 VP-19019 / VP-18960 / VP-19024 三條過期）：引用前先讀本文或對 L4。
+
+## Leo 10-28 的回饋（VP-19078 / VP-19013）【蒸餾 2026-10-29】
+- **給內部 PM / 隊友的 Jira comment：結論 + 一個理由 + 要對方做的事，三句以內，不列證據**（「太長太多細節，要更口語化」，comment 198433）。證據留在 STM 和給 Leo 的回報。等同 ~/.claude/CLAUDE.md 對外信語氣規則套用到內部。
+- **用戶看得到的服務落差是產品決定，不是工程決定**（VP-19013）：兩個技術選項都可行時，不要替 PM 選「比較省事」的那個；把兩個選項與各自的後果講清楚，@ PM 決定（comment 198461）。
+- **寫錯了就直接更正並承認**（VP-19078 ORC-16）：改 comment 成更正版、同步 Slack 草稿、在回報裡說明是自己數錯。
+
+## Cross-ticket review 2026-10-29（VP-19008/19046、VP-18795、VP-19023、VP-19082）【蒸餾 2026-10-29】
+1. **「等下一筆自然流量」的殘項繼續累積**：VP-19046 用 Leo 的「直接結案」關掉，Maristany classic 第一筆 live push 還沒看到（10-26 review 第 2 點的同一個型態）。結案 comment 要寫明殘項是什麼、誰會看到。
+2. **對 partner / PM 的「確認」錯在輸入，不是錯在系統**：VP-19023 漏答 Junjie 197479（三天後才補）、VP-19078 用眼睛數 ORC 欄位回了錯的「格式確認」。兩次都是「沒有把對方的東西逐條、用工具過一遍」。回覆前：對方最後一則 comment 逐條打勾，對方給的範例用 parser 跑一次。
+3. **沒有 code 的結案越來越常見**（VP-19082 請客戶重下、LBS-1866 ops 工作）：closeout audit 對這種要確認 STM 有記下結案方式與殘項（VP-19082 的 12 筆 471 積壓），不是只看 PR / deploy。
+4. 這批 STM 都沒有填 `## Retrospective` / `## Lessons Learned`，教訓散在時間軸裡，dream 只能從本文撈。

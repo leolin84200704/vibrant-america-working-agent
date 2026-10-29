@@ -3,7 +3,7 @@ id: HL7FAIL-20261020-MEDSOMMA-BESTDEAL
 type: stm
 category: emr_integration
 status: blocked
-score: 0.0957
+score: 0.0926
 base_weight: 1.0
 created: 2026-10-20
 updated: '2026-10-20'

@@ -3,7 +3,7 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 0.297
+score: 0.3217
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-10-26
@@ -154,6 +154,8 @@ links:
 - VP-19008
 - VP-19019
 - VP-19023
+- VP-19078
+- VP-19079
 - fhir-api
 tags:
 - emr
@@ -2447,9 +2449,37 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 | Practice Fusion | PF / 3 | onprem | 未知（on-prem 無 archive，12 個月 4 單） | — |
 | Nextech | NEXTECH / 47 | cloud | 空；ORC-21 放 facility 名稱 | 26-0019 起 = clinic 20834 |
 - 這五家沒有任何多 practice 的 ordering provider（全 fleet 只有 FOLLOWTHATPATIENT 43262）→ 開欄位只會「確認」或「hold 錯號」。
-- **Gundry**：16 列 vendor 42 全在 clinic 32351，12 個月所有單都用 Dr. Gundry NPI 1801889050；他們提的 ORC-17.1 = 32351 格式已對 main parser 確認。go-live 當天 `UPDATE ehr_vendors SET order_practice_id_field='ORC.17' WHERE code='THM'`（PR #513 上 prod 後）。
+- **Gundry**：16 列 vendor 42 全在 clinic 32351，12 個月所有單都用 Dr. Gundry NPI 1801889050；他們提的 ORC-17.1 = 32351 格式已對 main parser 確認（**更正 10-29：只有 spec 表格對，Rob 的範例少一個 pipe、實際落在 ORC-16，見【蒸餾 2026-10-29】**）。go-live 當天 `UPDATE ehr_vendors SET order_practice_id_field='ORC.17' WHERE code='THM'`（PR #513 上 prod 後）。
 - **查 vendor 一律用 id**：`v.name LIKE '%THM%'` 會撈到 HealthMatters（vendor 13, clinic 73303）。
 - **MSH-4 各家意義不同** → 統一要求 ORC-17.1；Nextech 回「只能放 MSH-4」時 Leo：「會很亂，最好有一致性」，由 Junjie 回問。code 端 `extractPracticeId` 其實支援 `MSH.n`，但不主動提供給 vendor。
 
 ### Nextech（VP-19028）prod 首張多 test 單
 - 26-0019（hl7_file_input 7442，AKS prod 6edbf86）：sample 2660850 / acc 2610286139，`emr_patient_id`=5（PID-2.1），`emr_placer_orders` 兩筆（OBR-4.1 → 檔內 OBR-2），test_input 單列（multi-ORC fix 成立）。下一步看 ORU 的 PID-2 / per-panel OBR-2 → Jessica 確認兩項都關單。
+
+## 【蒸餾 2026-10-29】practice-id 政策上 prod、Gundry 範例少一個 pipe、Cerbo/Gundry 11-16、VAREQUISTION471 收尾、FZ male 交給 PM（VP-19079 / VP-19078 / VP-19082 / VP-19013）
+
+### VP-19079 `ehr_vendors` practice-id 政策：staging 四格全驗、prod a3513ce
+- **staging live 驗證矩陣（10-28，on-prem staging pod 34a666c，Gundry 形狀的合成檔 THM）**：欄位 from DB + 有值 → practice filter；欄位 from DB + 缺值 + required 0 → provider-only + warn；required 1 + 缺值 → `practice_id_missing` hold（retry_num 遞減、parse_finished 0、last_error 帶完整說明）；**把 required 改回 0 → 下一輪 rescan（`0 */15 * * * *`）自動重下，不用 vendor 重送**。政策直接從 DB 讀（60 s cache），沒有 env、沒有 restart。
+- 合成檔路徑：`/EMR_storage/HL7Message_prod/THM/Staging/Order/` + INSERT `hl7_file_input`（emr_service THM、sftpDir `/Staging/THM/Orders/`、retry_num 2）。staging 沒有 FOLLOWTHATPATIENT vendor 列（seed UPDATE 0 rows 是正常的）。
+- prod：ALTER 20:41Z（`SET SESSION lock_wait_timeout=5`，prod `@@lock_wait_timeout` 預設 31536000），FTP 一列 ORC.17 / required 0，其他 vendor NULL / 0；release #514 → main a3513ce，兩個 cluster 20:53Z 起跑新 image。第一筆 live：MDHQ id 7451 placed（MDHQ NULL → provider-only），證明 prod 從 DB 讀政策。
+- **on-prem pod 每 15 分鐘的 `Failed to create directory: .../archive [PERMISSION_DENIED]`（SftpFileService）是常態噪音**：`hl7-order-fetch.service.ts:514-522` 每輪對 vendor SFTP 「確保 archive 目錄存在」，部分 vendor 帳號沒有 mkdir 權限；不是 release 造成的，不要當成部署後的錯誤訊號。
+
+### 更正 10-28 那段：Gundry 的範例 ORC 其實是 ORC-16
+- Rob 的範例 `ORC|NW|2010009|||||||20220407100122|||1801889050^Gundry^Steven^||||32351`：ORC-12 後面四個 pipe → 32351 落在 **ORC-16**。用真的 `extractPracticeId` 跑：ORC.17 → null、ORC.16 → 32351。正確的要五個 pipe（`...^Steven^|||||32351`）。10-28 LTM 寫「ORC-17.1 = 32351 格式已對 main parser 確認」**只對 spec 表格成立，範例本身少一個 pipe**。Jira comment 198433 已改成更正版，請 Rob 修範例並給 go-live 日期（Junjie 那邊的 AI 抓到的）。
+- 若照範例上線、field=ORC.17、required=0：每張單都靜默退回 provider-only（Gundry 全在 32351，不會訂錯，但 practice id 永遠沒讀到、也沒有任何錯誤）——**required=0 時「欄位抓錯位置」是看不見的**，go-live 後第一批單要看到 `[practice-id] vendor=THM ... practice=32351` 這行才算通。
+
+### 11-16 上線計畫（Cerbo / Gundry）
+- **Cerbo**（Anne，Zendesk 578995，10-28）：MSH-4、PID-2（`<account>.<pt ID>`）、PID-18 已帶 Cerbo 自己的 account id；會加 ORC-17，「November 16 上 production」。Junjie：只要 ORC-17.1、放 Vibrant Practice ID（不是 Cerbo account 號碼）。風險：放成 Cerbo account → `practice_not_found` hold（retryable，正確但會卡單直到對照修好）。
+- **Gundry**：沒給日期，Junjie 的要求以 11-16 為準。
+- 計畫：11-16 當天或之前 `UPDATE ehr_vendors SET order_practice_id_field='ORC.17' WHERE code IN ('THM','MDHQ')`（提前開是 no-op）；required 各 vendor 首批 live 單驗過後才開。
+
+### VP-19082：VAREQUISTION471 是退役 code，結案方式是「請客戶重下」（Inactive 10-29）
+- Plessen/MDHQ 0000000216（hl7_file_input 7433）卡 `emr_code_not_found=VAREQUISTION471`；471 = 舊 Foundation Zoomer，已被 486（FZ 2.0，item 868）取代，`getLegacyPackagePriceMapping` / emr-v2 `TEST_GROUP_MAPPING` 都沒有 471。
+- 備選 B（加 471 → 486 alias）沒做：Leo 10-28 在 Jira 回 Zhenhe「停止提供 471 給客戶、請他們重下」；Zhenhe：9 月已把新 code 清單寄給 Cerbo，客戶端一直拿最新 code；Leo 再請她提醒 vendor 前端不要再出這個選項。票轉 Inactive（statusCategory Done），**沒有 code 變更**。
+- 殘項：471 的 12 筆積壓（Plessen 7216/7217/7218/7288/7289/7433、FollowThatPatient 7266/7400/7414/7415、/Prod/Orders/ 7370/7381）仍 parse_finished 0，quarantined_orders 33 於 11-03 過期。以後看到 471 → 直接歸「客戶重下 + vendor 前端移除舊選項」，不是 mapping 缺漏。
+- 和 VP-19013 有牽連：若當初 alias 到 486，這些單會走進 FZ 2.0 的男性版 swap。
+
+### VP-19013 FZ male：ids 有了，bundle 怎麼辦交給 PM
+- Fangyuan（198443）：FZ 2.0 868 → male **876**、Foundation Baseline 869 → male **877**（沒分 prod/staging）；新 test 一起 **11-09 release**（等於回答 VP-18952 時程）；新單不再允許空 gender，但 EMR 可以下 base FZ。
+- bundle：她的設計是 bundle id 不變、成員換成 male；emr-v2 的 orderItems 只帶 bundle id，做不到 → 兩個選項（198453）：1) 比照 GZ NY 做 male twin bundle（Rui + emr-v2 swap），2) EMR 繼續下 base 直到 VP-18842。
+- Leo 退回 agent 的「維持 base」草稿：那等於默默接受服務落差（11-09 起 EMR 男性病人沒有 PSA，portal 有，同價）——這是產品決定。comment 198461 請 Xiaoye Li + Junjie Lin 選。票仍 Dev Blocked；worktree 落後 main 29 commits，動工前 rebase。
