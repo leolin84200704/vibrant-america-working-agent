@@ -6,7 +6,7 @@ status: active
 score: 0.2339
 base_weight: 1.0
 created: 2026-09-22
-updated: 2026-10-27
+updated: 2026-10-30
 links:
 - BIOINSIGHTS-onboarding
 - INCIDENT-2604156666
@@ -239,3 +239,7 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 - Sent ORU: PID-2 = 5 OK, OBR-3 = 2610286139 OK. Panel order: Anemia (B) first, then Lipids (A), Other Markers VAREQUISTION94 (unmapped -> fallback A), VAPDF (A).
 - Leading hypothesis: hl7-encoder buildORC ORC-5 = isFirstPanel ? 'F' : 'C' (legacy Java: first panel Final, rest Corrected). With per-test placers, B's ORC got F and every A ORC got C, so A's first appearance in Nextech is a "correction" to an order with no prior result. Unconfirmed until the screenshots are seen.
 - 10-29 21:26Z Zhenhe to Jessica: "reviewed the HL7 message with our development team and confirmed that everything looks correct on our end." Leo said "done" to the agent at about the same time. ORC-5 F/C question is still open (A panels sent as C). Screenshot PDF not seen by the agent.
+
+### [2026-10-30] VP-19028 re-check: still open
+- Outlook: no Jessica reply after Zhenhe 10-29 21:26Z ("everything looks correct"). Jessica's 10-29 19:10Z body quotes our ORU: `ORC|RE|26-0019 - B|...||F` then `ORC|RE|26-0019 - A|...||C` -> confirms ORC-5 = F only on the first panel, every A panel goes out as C (Corrected). Screenshot PDF 26-0019.pdf still unreadable (image PDF; Graph extraction fails).
+- Not closed: acceptance needs Nextech to confirm both tests closed. Open decision for Leo: ORC-5 per placer (first panel of each placer number = F) and/or order OBRs by placer (A before B) for NEXTECH, vs. asking Jessica what exactly stays open.
