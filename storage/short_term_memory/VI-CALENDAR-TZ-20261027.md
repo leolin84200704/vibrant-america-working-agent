@@ -22,7 +22,7 @@ summary: 'VI Calendar DST report (Suzette Garcia 46594, clinic 150105): timezone
   at Anguilla-derived instants = 1h earlier than her intended Eastern slots. Mary
   Beth Augustine 46604 still Anguilla.'
 jira_status: none
-score: 0.1158
+score: 0.112
 ---
 
 # VI-CALENDAR-TZ-20261027 - Triage record (no ticket yet)

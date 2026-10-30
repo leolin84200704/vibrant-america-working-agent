@@ -2483,3 +2483,17 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 - Fangyuan（198443）：FZ 2.0 868 → male **876**、Foundation Baseline 869 → male **877**（沒分 prod/staging）；新 test 一起 **11-09 release**（等於回答 VP-18952 時程）；新單不再允許空 gender，但 EMR 可以下 base FZ。
 - bundle：她的設計是 bundle id 不變、成員換成 male；emr-v2 的 orderItems 只帶 bundle id，做不到 → 兩個選項（198453）：1) 比照 GZ NY 做 male twin bundle（Rui + emr-v2 swap），2) EMR 繼續下 base 直到 VP-18842。
 - Leo 退回 agent 的「維持 base」草稿：那等於默默接受服務落差（11-09 起 EMR 男性病人沒有 PSA，portal 有，同價）——這是產品決定。comment 198461 請 Xiaoye Li + Junjie Lin 選。票仍 Dev Blocked；worktree 落後 main 29 commits，動工前 rebase。
+
+## 【蒸餾 2026-10-30】Gundry THM 在 prod 開 ORC.17、Nextech 26-0019 結案、ORC-5 假設撤回（VP-19078 / VP-19028）
+
+### VP-19078 Gundry：prod 端已開，等 Rob promote
+- Rob Murray 10-29 承認 ORC-12 少一個 delimiter，已 stage 好等我們說時間。Leo OK 後 **10-29 23:18:29Z prod `UPDATE ehr_vendors SET order_practice_id_field='ORC.17' WHERE id=42 AND code='THM' AND order_practice_id_field IS NULL`**（1 row）；reverse audit：只有 THM（42）與 FTP（44）帶 ORC.17，HealthMatters（13）NULL/0，全表沒有 required=1。comment 198680 給 Junjie：我們好了，Rob 隨時 promote、告訴我們哪天。
+- **Consumer 層還沒有直接證據**：PracticeIdPolicyService 只在 reload 失敗/恢復時 log，所以第一個證明 pod 讀到 ORC.17 的訊號是下一張 THM 單的 `[practice-id] vendor=THM ... unusable — resolving on provider only`（Gundry promote 前 ORC-17 還是空）。Gundry 約 2 張/天。
+- Leo 10-29 叫轉 Dev Complete（transition 2）；**AC3（first live orders 落在 clinic 32351）未達，QH-8091 留著等 promote**。Done 條件：`[practice-id] vendor=THM ... practice=32351` + sample.clinic_id 32351 + 0 practice_not_found hold。
+- on-prem prod pod 的 image tag 叫 `lis-backend-emr-v2-staging:34a666c2…`（Merge #513 into staging），但 `git diff` 對 main a3513ce 是空的——**tag 名稱有 staging 不代表跑的是 staging code，要用 commit diff 判斷**。
+
+### VP-19028 Nextech 26-0019：result 已送，Leo 拍板結案
+- result_transmission_records 只有一列：10-29 17:09Z 建、18:15Z TRANSMITTED 到 `/965721.Vibrant/Import/2610286139.hl7`；Zhenhe 10-28 說「result 有了」早於實際送出，Jessica 10-29 15:11Z「沒收到」當下是對的。**對方說沒收到時先查 transmission record 的時間，不要信內部口頭的「已出」**。
+- ORU：PID-2=5、OBR-3=2610286139 正確；panel 順序 B（Anemia）先、A 後，Jessica 回「-B 比 -A 先到」。
+- **ORC-5 假設撤回**：曾以為「A panel 以 ORC-5=C 送出 = Corrected，所以 Nextech 不關單」。實際 ORC-5 F/C 是 legacy（EncodingHL7New.java 519-523，1e9e7a1 port），也不是 table-0038 的值；result 是否 final 看 **OBR-25（hl7-encoder.service.ts:374 寫死 F）與 OBX-11（F）**，每個 panel 都是 F。B 先 A 後無害（與 :2099 一致）。
+- 10-30 Leo「先done，有問題再開」：VP comment 198753 → Dev done → QH-7988 comment 198756 Done → VP comment 198757 Done。**沒有 Jessica 的關單確認**；Nextech 若回報 test 沒關，開新票。

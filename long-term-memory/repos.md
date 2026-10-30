@@ -494,3 +494,8 @@ sudo prompt 用 `echo <pw> | sudo -S <cmd>`。Heredoc 內含 `[^...]` 之類 exp
 ## 【更新 2026-10-27】emr-v2 main 6edbf862（#510 VP-19028）、LIS-transformer main b074c689（prod deploy 10-27 18:31Z success；含 #1009 bc3eeac7 / #1016 85bdef23 / #1017 3dc86c15）、LIS-transformer-v2 main 536ab97e（#739）、ehr-frontend main 有 #387（VP-19022，10-27 16:58Z）
 - 開著的：LIS-transformer #1024（VP-18797 main，REVIEW_REQUIRED）。
 - main ruleset：1 approving review、作者不能自審 → Leo 帳號開的 PR 要別人 approve。
+
+## 【更新 2026-10-30】LIS-transformer main 5400884b（#1061 VP-19112，Michael；deploy-prod 10-30 00:14Z success）
+- 前面依序：#1058 VP-18881 patientReportList `group_by=report`（5d578217，21:53Z ✓）、#1059 VP-18880 ordered items one-per-pick（a91ebef7，22:03Z ✓），兩張都是 fan-z777；stage_test 對應 #1057 / #1060 / #1062 deploy-staging 都 success。都不是 Leo 的票。
+- config-drift 排程（16:0xZ）10-26 起每天 failure，仍是 :3075（patterns.md）記的別人的 drift，不是新狀況。
+- emr-v2 窗口內沒有 merge；prod 仍是 a3513ce。

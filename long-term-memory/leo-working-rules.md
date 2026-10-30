@@ -695,3 +695,8 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 2. **對 partner / PM 的「確認」錯在輸入，不是錯在系統**：VP-19023 漏答 Junjie 197479（三天後才補）、VP-19078 用眼睛數 ORC 欄位回了錯的「格式確認」。兩次都是「沒有把對方的東西逐條、用工具過一遍」。回覆前：對方最後一則 comment 逐條打勾，對方給的範例用 parser 跑一次。
 3. **沒有 code 的結案越來越常見**（VP-19082 請客戶重下、LBS-1866 ops 工作）：closeout audit 對這種要確認 STM 有記下結案方式與殘項（VP-19082 的 12 筆 471 積壓），不是只看 PR / deploy。
 4. 這批 STM 都沒有填 `## Retrospective` / `## Lessons Learned`，教訓散在時間軸裡，dream 只能從本文撈。
+
+## 【蒸餾 2026-10-30】「先 done，有問題再開」與 Jira 狀態路徑
+- **VP-19028（10-30）Leo：「先done, 有問題再開」**：code 已上 prod、result 已送、對方沒有回報具體問題，只是 partner 沒有明確說「關單了」時，Leo 接受先結案；agent 照樣寫 VP + QH comment，Residual 寫明「沒有 partner 確認，回報再開新票」。這不是預設規則：沒有 Leo 這句話時，partner 確認仍是 AC 的一部分就要等。
+- **VP 狀態路徑**：Dev To Do 沒有直達 Dev Complete 的 transition，要先 Dev In Progress（3）再 Dev done（2）。VP transition 名稱：Dev done（2）、Dev blocked（4）、Inactive（8）、Done（15）；「Dev Complete」是狀態名，不是 transition 名（VP-18469 / VP-19028 / VP-19078）。
+- **Leo 說「轉 Dev Complete」不等於 Done**（VP-19078）：live AC 未達時 QH twin 留著、STM 寫明 Done 條件，等外部事件（vendor promote）再補驗證。

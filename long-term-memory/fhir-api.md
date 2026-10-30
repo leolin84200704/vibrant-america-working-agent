@@ -3,7 +3,7 @@ id: fhir-api
 type: ltm
 category: emr_integration
 status: active
-score: 0.1856
+score: 0.198
 base_weight: 1.0
 created: 2026-06-06
 updated: 2026-06-06

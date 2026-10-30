@@ -3,12 +3,13 @@ id: NEXTECH-onboarding
 type: stm
 category: emr_integration
 status: active
-score: 0.2339
+score: 0.2625
 base_weight: 1.0
 created: 2026-09-22
 updated: 2026-10-30
 links:
 - BIOINSIGHTS-onboarding
+- INCIDENT-20261013-bioinsights-jag-crossmap
 - INCIDENT-2604156666
 - LBS-1833
 - VP-18194
@@ -19,6 +20,7 @@ links:
 - VP-19023
 - VP-19079
 - emr-integration
+- fhir-api
 relations:
   unblocked_by: []
   blocks: []
