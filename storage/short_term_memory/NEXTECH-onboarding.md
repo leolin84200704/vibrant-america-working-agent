@@ -243,3 +243,7 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 ### [2026-10-30] VP-19028 re-check: still open
 - Outlook: no Jessica reply after Zhenhe 10-29 21:26Z ("everything looks correct"). Jessica's 10-29 19:10Z body quotes our ORU: `ORC|RE|26-0019 - B|...||F` then `ORC|RE|26-0019 - A|...||C` -> confirms ORC-5 = F only on the first panel, every A panel goes out as C (Corrected). Screenshot PDF 26-0019.pdf still unreadable (image PDF; Graph extraction fails).
 - Not closed: acceptance needs Nextech to confirm both tests closed. Open decision for Leo: ORC-5 per placer (first panel of each placer number = F) and/or order OBRs by placer (A before B) for NEXTECH, vs. asking Jessica what exactly stays open.
+
+### [2026-10-30] VP-19028 closed (Leo: "先done, 有問題再開")
+- Correction of the 10-29/10-30 ORC-5 hypothesis: ORC-5 F/C is legacy (EncodingHL7New.java 519-523, ported in 1e9e7a1 2025-09-16) and F/C are not table-0038 order-status values; result finality is OBR-25 (hard-coded F, hl7-encoder.service.ts:374) and OBX-11 (F), both F on every panel incl. A. So "A sent as Corrected" was overstated; Leo's 10-29 reading (B-before-A order is harmless) stands.
+- Jira: VP-19028 comment 198753 -> Dev In Progress (3) -> Dev done (2); QH-7988 comment 198756 -> Done (31); VP comment 198757 -> Done (15). No Jessica confirmation; reopen with a new ticket if Nextech reports an open test.
