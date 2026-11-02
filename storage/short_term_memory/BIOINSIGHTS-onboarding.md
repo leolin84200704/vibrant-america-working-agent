@@ -462,3 +462,4 @@ Prevention proposed to Leo (pending approval, automation -> PR):
   Leo's 10-16 line "There is no HL7 field for the draw location" is now incomplete because of ZKD.
 - Owner split: kits/ZKD = Leo (answered); draw-location list + Travalab mobile phlebotomy = Mingxi (@ in draft, moved to To). Not stated in draft: public map vibrant-america.com/blood-draw-maps/v2 (left to Mingxi).
 - Draft reply-all on Zhenhe 18:41Z, id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABk-Do4QAA. To Olena/Mingxi/Zhenhe; CC Britney/Keith/Paola/Lisa/Travis/Serdar/Kristina. Quoted inline images -> send from Outlook.
+- 11-02 19:19Z Leo SENT the reply (Sent Items verified). Open: Mingxi on draw-location list + Travalab; Olena on SFTP folder + Duffy account (Zhenhe's 18:41Z asks).
