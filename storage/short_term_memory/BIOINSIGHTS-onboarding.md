@@ -11,7 +11,7 @@ unblock_when: 'BioInsights grants account perms (test: sftp key-auth to sftp.bio
   then ls / — currently auth OK but ls/stat/put all fail); waiting on Thomas reply
   to 2026-07-21 email'
 created: 2026-07-21
-updated: 2026-10-26
+updated: 2026-11-01
 links:
 - BIOINSIGHTS-SFTP-KEY
 - NEXTECH-onboarding
@@ -448,3 +448,10 @@ Prevention proposed to Leo (pending approval, automation -> PR):
   CC Zhenhe/Mingxi/Keith/Paola/Lisa/Travis/Serdar/Kristina. Body: onboarding with @Britney, needs Vibrant account first; then resend under her NPI with new file name;
   which SFTP folder for the order summary PDF. Draft quotes inline images -> Leo sends from Outlook. Not sent.
 - Open asks: SFTP folder (Olena, since 10-15); catalog details (Zhenhe, since 10-05/10-15); Duffy account + integration (Britney/Support).
+
+### [2026-11-01] Leo's 10-26 Olena draft was NOT sent; onboarding owner moved off Britney
+- Outlook check: no mail from Leo to olena.momotko@devcom.com after 10-26 (Sent Items since 10-26 = 6 mails, none BioInsights). Drafts folder search returned nothing (could not confirm draft still exists).
+- Thread after Mingxi 19:45Z: Britney 20:24Z "I don't cover the territory that Aimee Duffy is in... no Vibrant account... shouldn't the office reach out formally?" (internal only);
+  Mingxi 20:29Z (internal) agreed, "appropriate CAM can coordinate with Support"; Mingxi 20:30Z to Olena (+BioInsights cc): the provider's office should formally contact Vibrant Support with Provider ID + Practice ID; account first, then integration.
+- So item 1 owner = Dr. Duffy's office -> Vibrant Support (not Britney). SFTP folder question for the order summary PDF has still never reached Olena since 10-15 (only in Leo's 10-15 mail; the 10-26 draft repeating it was not sent).
+- prod 11-01 unchanged: no customer NPI 1528033081; vendor 46 only REJECTED JAG row; sftp_order_forms_path NULL; last BIOINSIGHTS file id 7196 (09-25).
