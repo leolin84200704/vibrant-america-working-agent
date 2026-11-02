@@ -6,7 +6,7 @@ status: active
 score: 0.2339
 base_weight: 1.0
 created: 2026-09-22
-updated: 2026-10-30
+updated: 2026-11-02
 links:
 - BIOINSIGHTS-onboarding
 - INCIDENT-20261013-bioinsights-jag-crossmap
@@ -248,3 +248,10 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 ### [2026-10-30] VP-19028 closed (Leo: "先done, 有問題再開")
 - Correction of the 10-29/10-30 ORC-5 hypothesis: ORC-5 F/C is legacy (EncodingHL7New.java 519-523, ported in 1e9e7a1 2025-09-16) and F/C are not table-0038 order-status values; result finality is OBR-25 (hard-coded F, hl7-encoder.service.ts:374) and OBX-11 (F), both F on every panel incl. A. So "A sent as Corrected" was overstated; Leo's 10-29 reading (B-before-A order is harmless) stands.
 - Jira: VP-19028 comment 198753 -> Dev In Progress (3) -> Dev done (2); QH-7988 comment 198756 -> Done (31); VP comment 198757 -> Done (15). No Jessica confirmation; reopen with a new ticket if Nextech reports an open test.
+
+### [2026-11-02 11:05] Jessica 11-02 14:16Z re-asked "B before A, was that intended?" (OBR|1 B, OBR|2 A, OBR|3 A)
+- ORC-5 root cause corrected again: EncodingHL7.java:470/486 setORC(emrCount = sample_data.emr resend count) -> F first send, C resend, same on all ORCs. Panel-based path (EncodingHL7New 1015-1046, EncodingHL7 1379-1398, 26b72b1 2024-07-01) passes orcIdx into emrCount -> F first panel, C rest. emr-v2 1e9e7a1 ported that as isFirstPanel ? F : C (hl7-encoder.service.ts:297). It is a bug, not spec; the 10-30 "harmless legacy" note is wrong.
+- Panel order = report order; placerForPanel (result-generation ~2484) only labels. VAREQUISTION94 Other Markers -> fallback emr_order_id (A).
+- Leo: reply that we can change it. Outlook reply-all draft created (not sent): sequence not intentional, will sort by order number, asks whether Nextech accepts multiple OBRs with the same order number.
+- Jira draft (not created): sort OBR groups by placer + ORC-5 F on all groups for first send / C on resend; relates VP-19028.
+
