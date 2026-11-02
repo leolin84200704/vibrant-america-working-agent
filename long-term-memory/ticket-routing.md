@@ -281,3 +281,5 @@ summary: Ticket keyword to repo/module routing table
 - VI Calendar 使用者回報「DST 後差 1h」→ 先查 provider timezone 設定（VI-CALENDAR-TZ-20261027），series 本身的時區修正是 VP-19015 / FE VP-19022
 - cloud-local proxy 退場 → VP-18465 + runbook
 - QH twin 結案 → CLAUDE.md「Dev Complete 之後一併結 QA twin」+ journal 2026-10-26-qh-twin-closeout-sweep
+- **"只有 Cerbo/MDHQ 的 result 全掛 / PDF_COMPRESSION_FAILED / Adobe 429 QUOTA_EXCEEDED / 換 Adobe 憑證 / restart 後 job 不見 / on-prem BullMQ 失敗清單 / GenerateResultHl7 重複送"** → `emr-integration.md` §【蒸餾 2026-11-01】VP-19128（STM `VP-19128`）。
+- **"HL7 有 PDF 上沒有的值 / Framingham / Extra Score / Cognitive Health / OBR_UNREPORTED_DROPPED / REPORT_SECTIONS_UNAVAILABLE"** → 同節 VP-19110（STM `VP-19110`）。

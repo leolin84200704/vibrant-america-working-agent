@@ -3,7 +3,7 @@ id: NEXTECH-onboarding
 type: stm
 category: emr_integration
 status: active
-score: 0.2625
+score: 0.2339
 base_weight: 1.0
 created: 2026-09-22
 updated: 2026-10-30
@@ -13,7 +13,6 @@ links:
 - INCIDENT-2604156666
 - LBS-1833
 - VP-18194
-- VP-18372
 - VP-18824
 - VP-18833
 - VP-19008

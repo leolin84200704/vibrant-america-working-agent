@@ -3,10 +3,10 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 0.3217
+score: 0.3094
 base_weight: 1.0
 created: 2026-04-22
-updated: 2026-10-26
+updated: 2026-11-01
 links:
 - BETA-E2E-20260729
 - BIOINSIGHTS-SFTP-KEY
@@ -2497,3 +2497,30 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 - ORU：PID-2=5、OBR-3=2610286139 正確；panel 順序 B（Anemia）先、A 後，Jessica 回「-B 比 -A 先到」。
 - **ORC-5 假設撤回**：曾以為「A panel 以 ORC-5=C 送出 = Corrected，所以 Nextech 不關單」。實際 ORC-5 F/C 是 legacy（EncodingHL7New.java 519-523，1e9e7a1 port），也不是 table-0038 的值；result 是否 final 看 **OBR-25（hl7-encoder.service.ts:374 寫死 F）與 OBX-11（F）**，每個 panel 都是 F。B 先 A 後無害（與 :2099 一致）。
 - 10-30 Leo「先done，有問題再開」：VP comment 198753 → Dev done → QH-7988 comment 198756 Done → VP comment 198757 Done。**沒有 Jessica 的關單確認**；Nextech 若回報 test 沒關，開新票。
+
+## 【蒸餾 2026-11-01】Adobe 額度用完 = Cerbo 全面停送；restart 的隱藏代價；HL7 不再送報告外的衍生指標（VP-19128 / VP-19110 / VP-17313 / VP-17466）
+
+### VP-19128 Adobe PDF Services QUOTA_EXCEEDED（10-30 13:19Z–21:48Z）
+- **症狀分佈是判斷依據**：Adobe 429 只讓 **MDHQ/Cerbo 全部失敗**（`[PDF_COMPRESSION_FAILED]`）——VP-18832 起 MDHQ 一律壓縮、不允許送原檔；其他 vendor 壓縮失敗會退回原 PDF，看起來正常。下次看到「只有 Cerbo 一起掛」先查 Adobe 額度。
+- 新憑證：Leo 的 Adobe VIP 訂單（75K doc transaction pack），Developer Console 上的 API 名稱是「Adobe Acrobat Services API - VIP」（不是 PDF Services API）；Admin Console 的 product profile 要先把人加進去才能建 project。
+- **憑證的 source of truth 是 AKS ConfigMap**：本機 `.env`、gitignored `config-prod.yaml` 的值都是舊的、彼此也不同。要改四個 CM：`emr-v2/lis-emr-v2-config(-prod)` + `default/lis-emr-v2-config(-prod)`；`default/*` 是 Jenkins 下次 main build 同步到 on-prem 的來源 → on-prem 要等 Jenkins 跑過**再 rollout restart**（envFrom 只在 pod 啟動時讀，CM 先 sync 但 pod 早啟動的照樣拿舊值）。
+- 驗證：in-pod 壓縮探針（480,620 → 3,464 bytes）在 prod + staging 都跑；之後 Datadog 0 筆 `PDF_COMPRESSION_FAILED` / `QUOTA_EXCEEDED`（10-30 22:00Z → 11-01）。
+- **Restart 會吃掉 retry 中的 job**：BullMQ 在 pod 的 sidecar Redis（emptyDir），rollout restart 後 delayed / failed jobs 全消失、不留痕跡（本次 6 筆 mid-retry 靠 Datadog 撈回）。restart 前先列 delayed/failed jobs 存檔，restart 後補送。
+- **on-prem 的 BullMQ 不在 Datadog 裡**：兩個 cluster 都在消費 result jobs，on-prem 另有 6 筆失敗只有 ssh 進 appserver04（`leo@192.168.60.5`，ns default）才看得到。失敗清單 = Datadog（AKS）+ on-prem queue，兩邊都要掃。總計回補 51 筆。
+- **補送工具的限制**：
+  - gRPC/HTTP `GenerateResultHl7` 會 fan out 到 sample 的**每個**目的地，沒有 dedup、沒有 integration_id 參數 → 多 integration 的 sample（例：customer 8105 MDHQ + PRAXISEMR）要改 enqueue 帶 `integration_id` 的 BullMQ job，否則另一家會收到重複。
+  - `GetResultStatus` 只回該 sample **最新一筆** transmission，不分 integration → TRANSMITTED 可能是別家 vendor 的那份，不能當作「這家送到了」。
+
+### VP-19110 HL7 不送報告上沒有的衍生指標（PR #515 staging 23781bd，release #516 待 Leo merge）
+- 18 個衍生 test（Cardio / Foundation Zoomer 分數、Framingham、Cognitive Health、Extra Score…）只要 input 齊就會算出來；VA PDF 依 `testHierarchyForReports` 過濾，HL7 原本送全部 approved result → 客戶看到 PDF 沒有的值。Yekai 與 Leo 決定：不送。
+- 實作：`attachUnattributedPanels` 只留 `testHierarchyForReports` 有列的 marker，其餘 log `[OBR_UNREPORTED_DROPPED]`；hierarchy 拿不到或 0 tests → throw `[REPORT_SECTIONS_UNAVAILABLE]` 讓 job retry（Leo 選 fail+retry，不選 fail-open）。
+- 同一個衍生 test 在不同 sample 上去留不同（2610126205 列 Cardio+Foundation、2609296809 只列 Cardio）→ 不能用固定 test id 黑名單。
+- **staging 跑不了完整 result path**：AKS staging `POD_ROLE=web`；on-prem staging pusher 沒有那些客戶的 integration。驗證改在 prod pod 做唯讀 replay（live order + report API，不送出）。
+- merge #516 會觸發 on-prem prod restart → 先照上面 VP-19128 的做法清點 delayed/failed jobs。
+
+### pipeline_location 現況與 AKS egress（VP-17313 結案 comment，11-01）
+- 單一 hard cutover 沒有發生；改成逐列 `pipeline_location`：order folders **200 on-prem / 2 cloud**（BioInsights、Nextech），integrations **707 on-prem / 435 cloud**。
+- **AKS 打不到 `64.124.9.100`（FollowThatPatient 等共用 SFTP）**——7/13 的 blocker 仍在。任何 folder 要搬到 cloud 前先驗 vendor 端 egress；這件事要開新票，還沒開。
+
+### VP-17466 archive/ 的 mkdir 權限是我們自己的
+- 剩 4 個沒有 `archive/` 的 folder（OPTIMANTRA `/Prod/Orders/`、HealthMatters `/Prod/Order/`、PRAXISEMR `/Prod/Order/`、NICHOLS `/Order/`）全在 `45.24.217.155` = Vibrant 自架 SFTP → 要找內部 IT/sysadmin 建，不是等 vendor。VEJO 三個 mapping 已不在 `sftp_folder_mapping`。

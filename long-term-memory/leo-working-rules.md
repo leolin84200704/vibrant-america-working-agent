@@ -7,7 +7,7 @@ score: 0.1615
 base_weight: 0.9
 urgency: 4
 created: 2026-08-16
-updated: 2026-10-26
+updated: 2026-11-01
 summary: Leo's working rules for this instance — reporting, ticket handling, Jira
   mechanics, and repo hygiene. The job-specific residue of the native auto-memory
   store; universal engineering discipline lives in factory ENGINEERING-LESSONS.
@@ -700,3 +700,8 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 - **VP-19028（10-30）Leo：「先done, 有問題再開」**：code 已上 prod、result 已送、對方沒有回報具體問題，只是 partner 沒有明確說「關單了」時，Leo 接受先結案；agent 照樣寫 VP + QH comment，Residual 寫明「沒有 partner 確認，回報再開新票」。這不是預設規則：沒有 Leo 這句話時，partner 確認仍是 AC 的一部分就要等。
 - **VP 狀態路徑**：Dev To Do 沒有直達 Dev Complete 的 transition，要先 Dev In Progress（3）再 Dev done（2）。VP transition 名稱：Dev done（2）、Dev blocked（4）、Inactive（8）、Done（15）；「Dev Complete」是狀態名，不是 transition 名（VP-18469 / VP-19028 / VP-19078）。
 - **Leo 說「轉 Dev Complete」不等於 Done**（VP-19078）：live AC 未達時 QH twin 留著、STM 寫明 Done 條件，等外部事件（vendor promote）再補驗證。
+
+## 【蒸餾 2026-11-01】回報語言、不誇大對方說法、Jira 狀態與 STM 對不上
+- **plan 回報要在回覆本文用繁中寫**（VP-18797，11-01）：Leo「ok, but your reply should be in Chinese」——英文的 plan 欄位不算，回給 Leo 的訊息本身要中文。
+- **不替別人加話**（VP-19110）：初稿寫「客戶覺得這些有用」（客戶原話只是 "It sounds like they are useful"）、「VP-17631 刻意送這些」（那張票只決定送到哪，沒決定送不送）→ 兩句都撤回。引用客戶或舊票時照原話範圍寫。
+- **STM 寫「Done」要對 Jira 驗**（VP-19128）：STM 記「transition 15 → Done」，但 11-01 Jira 仍是 Dev Complete、QH-8219 To Do。結案時用 getJiraIssue 確認狀態真的變了，並照 QH-twin 規則一起結。
