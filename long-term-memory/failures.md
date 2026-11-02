@@ -7,7 +7,7 @@ score: 0.1882
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-10-30
+updated: 2026-11-01
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -179,7 +179,7 @@ summary: Auto-aggregated failure index from 134 entries across STM
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-10-30 — total 134 entries
+> Last updated: 2026-11-01 — total 134 entries
 
 ## Themes
 
@@ -1696,14 +1696,6 @@ ConfigMap 快照，但那兩個檔只存在主 repo 工作目錄 → 在 worktre
 
 - `timeout` is not on macOS; the VPN reachability test fell through to `nc -w 3` which worked. Not a real failure, noting so the runbook uses `nc -z -w 3`.
 
-### **[[VP-18593]]**
-
-- Proposed a shipping-side change before exhausting the shipping service's existing
-  surface: grep'd only core-protos/shipping.proto, not shipping-protos/shipping-service.proto.
-  Lesson: a service can serve several proto files on one gRPC server — list the
-  @GrpcMethod handlers in the controller (done later: 25 methods) before concluding
-  "the RPC does not expose X".
-
 ### **[[VP-18665]]** — [2026-10-02 23:15 PDT] Staging E2E: bare list 503 — `client.listClinicCustomersByClinicID is not a function`
 
 - Deployed 9b766f3 (both PRs). patientId path PASSED (557149 -> 6 rows,
@@ -1723,6 +1715,14 @@ ConfigMap 快照，但那兩個檔只存在主 repo 工作目錄 → 在 worktre
 - Deterministic push-down candidate: for every v1 wrapper, a spec that loads
   the real proto and asserts the method exists — cheap, no network. Only the
   new wrapper has it for now.
+
+### **[[VP-18593]]** — **
+
+- Proposed a shipping-side change before exhausting the shipping service's existing
+  surface: grep'd only core-protos/shipping.proto, not shipping-protos/shipping-service.proto.
+  Lesson: a service can serve several proto files on one gRPC server — list the
+  @GrpcMethod handlers in the controller (done later: 25 methods) before concluding
+  "the RPC does not expose X".
 
 ### **[[VP-16521]]** — `2026-05-28 17:53` — **
 
