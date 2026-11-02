@@ -261,3 +261,8 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 - Leo chose ORC-5 = F on every ORC for ALL vendors + VP ticket. VP-19132 created (Leo account). Prod baseline 30 d: ~3,330 TRANSMITTED msgs / 18 emr_service, ~85% contain ORC-5 = C.
 - emr-v2 worktree ~/src/lis-backend-emr-v2.worktrees/VP-19132, branch bugfix/leo/VP-19132 c5b8414 (from main a3513ce). 2 new spec cases; fail on main (2/17), pass with change; full jest 179 pass, 5 suites fail identically on main (missing .prisma/test-client). Build clean, no CJK.
 - PR #518 -> staging merged by agent (ae6fd09). Pre-deploy baseline on old staging pod 84f7dbdd66-zbt82 via scratchpad verify-vp19132.js (dist encoder): F/C/C -> FAIL as expected. Waiting for staging image ae6fd09.
+
+### [2026-11-02 11:22] VP-19132 staging PASS; release rides on existing #516
+- Staging pod ff66b5b8-6tmrd image ae6fd09: verify-vp19132.js (dist encoder) -> ORC-5 F/F/F PASS; dist has no isFirstPanel.
+- Release: #516 (staging -> main, opened 10-30 for VP-19110) head is the staging branch, now ae6fd09 incl. VP-19132; a second staging->main PR is not possible. Commented new head SHA on #516 (issuecomment-6586247906), retitled to list both. Leo merges, confirm SHA ae6fd09.
+- After release: check prod result_transmission_records created after deploy have no ORC-5 = C; VP-19110 post-release checks still apply (VP-19128 queue wipe on on-prem restart).
