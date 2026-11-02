@@ -255,3 +255,9 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 - Leo: reply that we can change it. Outlook reply-all draft created (not sent): sequence not intentional, will sort by order number, asks whether Nextech accepts multiple OBRs with the same order number.
 - Jira draft (not created): sort OBR groups by placer + ORC-5 F on all groups for first send / C on resend; relates VP-19028.
 
+
+### [2026-11-02 11:15] Leo: OBR order reply = "correct", ORC-5 fix silently, all vendors -> VP-19132
+- Outlook reply-all draft replaced (old one deleted): "Yes, that is correct. Each OBR carries its own order number in OBR-2 ... OBR 2 and OBR 3 both belong to 26-0019 - A. If this causes an issue on the Nextech side, please share the details." Not sent; ORC-5 not mentioned (Leo).
+- Leo chose ORC-5 = F on every ORC for ALL vendors + VP ticket. VP-19132 created (Leo account). Prod baseline 30 d: ~3,330 TRANSMITTED msgs / 18 emr_service, ~85% contain ORC-5 = C.
+- emr-v2 worktree ~/src/lis-backend-emr-v2.worktrees/VP-19132, branch bugfix/leo/VP-19132 c5b8414 (from main a3513ce). 2 new spec cases; fail on main (2/17), pass with change; full jest 179 pass, 5 suites fail identically on main (missing .prisma/test-client). Build clean, no CJK.
+- PR #518 -> staging merged by agent (ae6fd09). Pre-deploy baseline on old staging pod 84f7dbdd66-zbt82 via scratchpad verify-vp19132.js (dist encoder): F/C/C -> FAIL as expected. Waiting for staging image ae6fd09.
