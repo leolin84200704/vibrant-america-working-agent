@@ -11,7 +11,7 @@ unblock_when: 'BioInsights grants account perms (test: sftp key-auth to sftp.bio
   then ls / — currently auth OK but ls/stat/put all fail); waiting on Thomas reply
   to 2026-07-21 email'
 created: 2026-07-21
-updated: 2026-11-01
+updated: 2026-11-02
 links:
 - BIOINSIGHTS-SFTP-KEY
 - NEXTECH-onboarding
@@ -454,3 +454,11 @@ Prevention proposed to Leo (pending approval, automation -> PR):
   Mingxi 20:29Z (internal) agreed, "appropriate CAM can coordinate with Support"; Mingxi 20:30Z to Olena (+BioInsights cc): the provider's office should formally contact Vibrant Support with Provider ID + Practice ID; account first, then integration.
 - So item 1 owner = Dr. Duffy's office -> Vibrant Support (not Britney). SFTP folder question for the order summary PDF has still never reached Olena since 10-15 (only in Leo's 10-15 mail; the 10-26 draft repeating it was not sent).
 - prod 11-01 unchanged: no customer NPI 1528033081; vendor 46 only REJECTED JAG row; sftp_order_forms_path NULL; last BIOINSIGHTS file id 7196 (09-25).
+
+### [2026-11-02] Olena 11-02 09:29Z draw-location questions; reply-all draft created (not sent)
+- Thread after 11-01: Olena 11-02 09:29Z to Leo: "Does Vibrant supply kits? If no, testing locations? Need list of ALL testing locations. Can we use Travalab for mobile phlebotomy?"
+  Zhenhe ("Terry") 11-02 18:41Z = newest: asked Olena for Duffy account status, SFTP folder for order summary PDF, catalog receipt. Did NOT address the kit/location questions.
+- Evidence for the reply: kits shipped-to-patient vs supplied-by-office = ehr_integrations.kit_delivery_option default; per-order override ZKD segment (VP-19006, prod 4525ca1 10-23; spec emr-v2 docs/hl7-order-spec-kit-delivery.md, header still says "not yet released" = stale).
+  Leo's 10-16 line "There is no HL7 field for the draw location" is now incomplete because of ZKD.
+- Owner split: kits/ZKD = Leo (answered); draw-location list + Travalab mobile phlebotomy = Mingxi (@ in draft, moved to To). Not stated in draft: public map vibrant-america.com/blood-draw-maps/v2 (left to Mingxi).
+- Draft reply-all on Zhenhe 18:41Z, id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABk-Do4QAA. To Olena/Mingxi/Zhenhe; CC Britney/Keith/Paola/Lisa/Travis/Serdar/Kristina. Quoted inline images -> send from Outlook.
