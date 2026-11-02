@@ -14,14 +14,14 @@ All 83 LIS-Sample routes are ported to trans v1 and were announced in Slack
 `routes.json` lists every route with its batch.
 
 Leo asked (2026-10-19) for the old endpoints to be cleared automatically once
-the deadline passes. This job does that within the removal rule of
-`runbooks/lis-sample-route-migration.md` (section 0, adopted after LBS-1842):
+the deadline passes. On 2026-11-02 Leo set the cut-off to the announced
+deadline itself (`runbooks/lis-sample-route-migration.md` section 0):
 
 - runs daily at 09:00 from 2026-10-31;
-- for every route past its deadline: 14 days of LIS-Sample `caller_attribution`
-  (with a positive control) and an org-wide code search;
-- routes at zero with no code caller go into one **draft** PR on LIS-Sample;
-  routes still called are reported with who calls them;
+- every route past its deadline goes into one **draft** PR on LIS-Sample;
+- 14 days of LIS-Sample `caller_attribution` (with a positive control) and an
+  org-wide code search are still run, and every remaining caller is listed in
+  the PR as "will get 404 after deploy"; they no longer hold a route back;
 - `state.json` records what has a PR; the job disarms itself when every route
   is handled.
 

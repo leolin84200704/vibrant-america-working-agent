@@ -5,11 +5,14 @@
 > two-week Slack window are Leo's additions on 2026-10-16. Applies to every remaining family (VP-18795, VP-18797..18800)
 > and to any later "move routes from service A to service B" job.
 
-## 0. Ground rule: no route leaves the old service without a replacement
+## 0. Ground rule: no route leaves the old service without a replacement and an announcement
 
-LBS-1842 came from VP-18480 removing 18 routes on traffic evidence alone. A route is removed only when all five hold:
-replacement live; every code caller moved; 14 days at zero on the old route's `caller_attribution`; org-wide code search
-clean; announced in the LIS dev channel with the route list and date.
+LBS-1842 came from VP-18480 removing 18 routes on traffic evidence alone, with no replacement and no announcement.
+A route is removed when both hold: the replacement is live, and the removal was announced in #developers with the
+route list and a deadline that has passed. Leo, 2026-11-02 (batch 1 still had 20 routes with traffic three days after
+its deadline): "根據公告的時間直接停止" - the deadline is the cut-off. Remaining traffic and code callers are measured
+and listed in the removal PR as who will get a 404; they do not hold the route back. (Until 2026-11-02 the rule also
+required every code caller moved, 14 days at zero, and a clean code search.)
 
 ## 1. Port (per family, one ticket)
 
@@ -72,8 +75,8 @@ clean; announced in the LIS dev channel with the route list and date.
    deadline. The agent does not post to Slack. Posted so far: 2026-10-16 (29 routes, deadline 2026-10-30) and
    2026-10-19 (44 routes, deadline 2026-11-02).
 4. After the window: add the routes and the deadline to `DailyJob/lis_sample_route_removal/routes.json`. That
-   daily job checks `caller_attribution` (14 days at zero) and the org-wide code search per route and opens a
-   draft removal PR on LIS-Sample for the eligible ones; Leo merges. The ingress rewrite / scale-down stays with
+   daily job opens a draft removal PR on LIS-Sample for every route past its deadline, listing the callers
+   still found in `caller_attribution` and the org-wide code search as "will get 404 after deploy"; Leo merges. The ingress rewrite / scale-down stays with
    VP-18803. STM + journal for the ticket; this runbook updated if the process changed.
 
 ## 5. Artifacts from the first run (2026-10-16)
