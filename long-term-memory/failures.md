@@ -7,7 +7,7 @@ score: 0.1882
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-11-01
+updated: 2026-11-02
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -158,6 +158,7 @@ links:
 - VP-18802
 - VP-18824
 - VP-19078
+- VP-19131
 - VP-9299
 - business-model
 - business-model-deep
@@ -172,19 +173,19 @@ tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 134 entries across STM
+summary: Auto-aggregated failure index from 135 entries across STM
 ---
 
 # Failure Index
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-11-01 — total 134 entries
+> Last updated: 2026-11-02 — total 135 entries
 
 ## Themes
 
 - [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 35 entries
-- [Other / uncategorized](#other) — 24 entries
+- [Other / uncategorized](#other) — 25 entries
 - [Build / TypeScript / Tooling](#build-tooling) — 21 entries
 - [Deploy / commit / push coordination](#deploy-coordination) — 14 entries
 - [DB / migration / backfill](#db-migration) — 9 entries
@@ -721,6 +722,10 @@ None this session.
 - 2026-10-28: Miscounted Rob's sample ORC by hand (`||||32351` after ORC-12 = ORC-16, I wrote ORC-17) and confirmed the format to Junjie on that basis; Junjie's AI caught it. Fix going forward: never count HL7 fields by eye — split the line and print the index, or run extractPracticeId on the exact sample before saying "format confirmed". The tool was one command away and I had already used it for Nextech.
 - `v.name LIKE '%THM%'` pulled HealthMatters rows into the "Gundry" list for a few minutes; caught by re-querying with
   `ehr_vendor_id=42`. Vendor lookups by id only.
+
+### **[[VP-19131]]**
+
+- vibrant MCP disconnected and Atlassian MCP tools not loaded in this session -> could not read current sprint ids / write fields; DB read done via .env lis_emr creds (SELECT only).
 
 ### **[[VP-18402]]** — `2026-09-25 16:15` — **
 
