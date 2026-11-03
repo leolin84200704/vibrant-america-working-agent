@@ -283,3 +283,10 @@ summary: Ticket keyword to repo/module routing table
 - QH twin 結案 → CLAUDE.md「Dev Complete 之後一併結 QA twin」+ journal 2026-10-26-qh-twin-closeout-sweep
 - **"只有 Cerbo/MDHQ 的 result 全掛 / PDF_COMPRESSION_FAILED / Adobe 429 QUOTA_EXCEEDED / 換 Adobe 憑證 / restart 後 job 不見 / on-prem BullMQ 失敗清單 / GenerateResultHl7 重複送"** → `emr-integration.md` §【蒸餾 2026-11-01】VP-19128（STM `VP-19128`）。
 - **"HL7 有 PDF 上沒有的值 / Framingham / Extra Score / Cognitive Health / OBR_UNREPORTED_DROPPED / REPORT_SECTIONS_UNAVAILABLE"** → 同節 VP-19110（STM `VP-19110`）。
+
+## 2026-11-02 新增路由（dream；VP-19131 / VP-19132 / VP-19142 / VP-19013 / GETCLINIC）
+- Cerbo integration request 回「sftp folder doesn't exist」→ emr-v2 `validateCerboSftpFolders`；先唯讀登入 Cerbo SFTP 確認資料夾真的不在，再請 Cerbo 建（VP-19131，前例 VP-17842）。
+- Result HL7 ORC-5 / ORC 的 F/C → emr-v2 `hl7-encoder.service.ts`（VP-19132；legacy EncodingHL7.java setORC）。
+- EMR/API 訂單某品項不賣 NY → emr-v2 `gz-ny-routing.ts` `decideNyUnavailable` + `NY_UNAVAILABLE_PACKAGE_IDS`（VP-19142；旗標源 `lis_ordermanage.item_tags`）。
+- FZ/FB 依性別換男性版 → 等 VP-19145 bundle-members API（VP-19013 / VP-18842）。
+- transv2 GraphQL "Database or server error" 但 prod 正常 → 先查 grpc metadata 是否 undefined + pod 是否有 dd-trace 注入（GETCLINIC-UNDEFINED-METADATA-20261102）。

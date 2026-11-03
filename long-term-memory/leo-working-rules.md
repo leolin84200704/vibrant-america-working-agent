@@ -705,3 +705,12 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 - **plan 回報要在回覆本文用繁中寫**（VP-18797，11-01）：Leo「ok, but your reply should be in Chinese」——英文的 plan 欄位不算，回給 Leo 的訊息本身要中文。
 - **不替別人加話**（VP-19110）：初稿寫「客戶覺得這些有用」（客戶原話只是 "It sounds like they are useful"）、「VP-17631 刻意送這些」（那張票只決定送到哪，沒決定送不送）→ 兩句都撤回。引用客戶或舊票時照原話範圍寫。
 - **STM 寫「Done」要對 Jira 驗**（VP-19128）：STM 記「transition 15 → Done」，但 11-01 Jira 仍是 Dev Complete、QH-8219 To Do。結案時用 getJiraIssue 確認狀態真的變了，並照 QH-twin 規則一起結。
+
+## 【蒸餾 2026-11-02】新票先填點數與 sprint、@ 誰、Jira mention 要是真的、只問 Leo 指定的問題、文件進 Confluence
+- **每張新票先填 story points + sprint（Leo 11-02，常設，VP-19131）**：Bug → Urgent Request sprint；其他 → Team Yekai sprint。Leo 那次是因為 agent 沒填而被糾正（「You did not change story point / sprint」）。欄位：story points = `customfield_10016`，sprint = `customfield_10020`。ticket-watch 自動化若要照做需改 prompt → 走 PR。
+- **@ 誰（Leo 11-02，常設，VP-18797）**：排程 / 規劃 / 進度 /「backend 完成請前端切換」→ 只 @ TPM Xiaoye Li（accountId 712020:4d1e81dc-51fc-47c4-8ec5-b630883b8d93；不是 "Xiaoye Li(Bot)"）。設計 / 產品行為問題 → @ Xiaoye Li + Junjie Lin（JJ，712020:0b938c72-680e-49e6-b857-750600979272）。取代舊的「PM 不明就問 Leo」。
+- **Jira 的 @ 必須是真的 mention node（Leo 11-02，常設，VP-19142）**：「你 comment 裡的 @ 從來沒有真的 mention 到人」。純文字 / markdown 的 "@Name" 不會通知（VP-18797 199018、VP-19131 198994 都是假的）。ADF `{"type":"mention","attrs":{"id":"<accountId>","text":"@Name"}}`；Atlassian MCP html 用 `<span data-type="mention" data-user-id="...">@Name</span>`（見 patterns.md 的 `<custom>` 陷阱）；wiki `[~accountid:]` 不被 v3 解析。發出後讀回確認有 mention node（comment 不能事後改，草稿先檢查）。已知 accountId：Yuchen Wang 712020:76cc0620-84c0-47e8-82c0-419bc58ea390、Fangyuan Yang 712020:7c465523-914b-403a-9e53-71c3f8978e47、Rui Chen 712020:e683bc1d-ebef-479f-a6f5-7cb5f0e9f129。
+- **只問 Leo 指定的那個問題（VP-19142）**：Leo 說要問 PM「怎麼判斷 not available in NY」，初稿卻問了 agent 自己發現的另一個問題（NY 病人的診所自備 kit）被退回。自己發現的疑問另外回報 Leo，不要替換掉他要問的。
+- **文件一律進 Leo 的 Confluence 資料夾 2119335937「Transformer-module-rewrite」（Leo 11-02，常設，VP-18797）**：不能只放 repo 的 docs/。
+- **Release PR 一次帶多張票時，每次 staging 前進都要同步 title / body / head SHA comment（VP-19132 / VP-19142，emr-v2 #516）**：#516 的 SHA comment 寫 ae6fd09，之後 #519 merge 進 staging 把 head 推到 19e4b35（多了 VP-19142），reviewer 11-03 01:25Z 指出「描述和要 merge 的東西不符」。staging-class merge 之後，若有開著的 staging→main release PR，同一輪就更新它。
+- **Dev Complete ≠ 已上 prod**：VP-19132 11-02 轉 Dev Complete 時 release PR #516 還沒 merge（prod 仍是 a3513ce）。轉 Dev Complete 前確認 code 已在 prod，否則 STM 寫明「staging 驗過、等 release」，QH twin 不動。

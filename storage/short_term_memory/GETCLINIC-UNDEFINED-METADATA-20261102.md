@@ -3,11 +3,12 @@ id: GETCLINIC-UNDEFINED-METADATA-20261102
 type: stm
 category: technical
 status: active
-score: 0.0
+score: 0.1125
 base_weight: 0.9
 created: 2026-11-02
 updated: 2026-11-02
-links: [LIS-transformer-v2#748, LIS-transformer-v2#749]
+summary: transv2 getClinic 'Database or server error' on staging = grpc call with undefined metadata (since #451), masked where dd-trace is injected. Fix #748 stage_test verified; #749 main waits on Leo.
+links: []
 tags:
 - transv2
 - calendar

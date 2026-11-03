@@ -2496,6 +2496,7 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 - result_transmission_records 只有一列：10-29 17:09Z 建、18:15Z TRANSMITTED 到 `/965721.Vibrant/Import/2610286139.hl7`；Zhenhe 10-28 說「result 有了」早於實際送出，Jessica 10-29 15:11Z「沒收到」當下是對的。**對方說沒收到時先查 transmission record 的時間，不要信內部口頭的「已出」**。
 - ORU：PID-2=5、OBR-3=2610286139 正確；panel 順序 B（Anemia）先、A 後，Jessica 回「-B 比 -A 先到」。
 - **ORC-5 假設撤回**：曾以為「A panel 以 ORC-5=C 送出 = Corrected，所以 Nextech 不關單」。實際 ORC-5 F/C 是 legacy（EncodingHL7New.java 519-523，1e9e7a1 port），也不是 table-0038 的值；result 是否 final 看 **OBR-25（hl7-encoder.service.ts:374 寫死 F）與 OBX-11（F）**，每個 panel 都是 F。B 先 A 後無害（與 :2099 一致）。
+  - **[更正 2026-11-02，VP-19132]** 上面「ORC-5 F/C 是 legacy、無害」不成立：legacy 原本是整封依 resend 次數（首送 F、重送 C，所有 ORC 同值；EncodingHL7.java:470/486 `setORC(emrCount)`），26b72b1（2024-07-01）的 panel 路徑把 orcIdx 傳進 emrCount，才變成「第一個 panel F、其餘 C」；emr-v2 1e9e7a1 照抄成 `isFirstPanel ? F : C`。這是 bug 不是 spec。以本條為準。
 - 10-30 Leo「先done，有問題再開」：VP comment 198753 → Dev done → QH-7988 comment 198756 Done → VP comment 198757 Done。**沒有 Jessica 的關單確認**；Nextech 若回報 test 沒關，開新票。
 
 ## 【蒸餾 2026-11-01】Adobe 額度用完 = Cerbo 全面停送；restart 的隱藏代價；HL7 不再送報告外的衍生指標（VP-19128 / VP-19110 / VP-17313 / VP-17466）
@@ -2524,3 +2525,34 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 
 ### VP-17466 archive/ 的 mkdir 權限是我們自己的
 - 剩 4 個沒有 `archive/` 的 folder（OPTIMANTRA `/Prod/Orders/`、HealthMatters `/Prod/Order/`、PRAXISEMR `/Prod/Order/`、NICHOLS `/Order/`）全在 `45.24.217.155` = Vibrant 自架 SFTP → 要找內部 IT/sysadmin 建，不是等 vendor。VEJO 三個 mapping 已不在 `sftp_folder_mapping`。
+
+## 【蒸餾 2026-11-02】ORC-5 每個 ORC 都要 F、Cerbo SFTP 資料夾預檢、ZKD 讓「沒有 draw location 欄位」過時、NY 限售品、FZ/FB 男性版走 bundle-members API（VP-19132 / VP-19131 / BIOINSIGHTS / VP-19142 / VP-19013 / VP-18797）
+
+### VP-19132 ORC-5（result HL7）
+- 修法：所有 vendor、每個 ORC 都送 ORC-5 = F（Leo 11-02 決定，不另外告知 Nextech）。prod 30 天基線：約 3,330 封 TRANSMITTED / 18 個 emr_service，約 85% 帶 ORC-5 = C（多 panel 的 result 幾乎都中）。
+- 驗證方式：staging pod 內用 dist 的 encoder 跑腳本（不經 result 路徑——staging 跑不了 result 路徑，見 11-01 VP-19110 條），部署前舊 pod F/C/C → FAIL、新 pod F/F/F → PASS。
+- prod 驗證待 release：deploy 後新建的 result_transmission_records 不應再有 ORC-5 = C。
+- Nextech「B 在 A 前」：panel 順序 = report 順序，placerForPanel 只負責標籤；OBR-2 各帶自己的 order number，Leo 回 Jessica「correct」，不改排序。
+
+### VP-19131 Cerbo integration「sftp folder doesn't exist」
+- 來源：emr-v2 `integration-request.service.ts` `validateCerboSftpFolders`（VP-17079）——`/{folder}/orders/` 或 `/results/` 不是目錄就回 400；**連線 / 認證失敗也回同一句**，所以要先確認登入成功才能說「資料夾不存在」。
+- 查法（唯讀）：從 `ehr_vendors` id=1 取憑證 + ssh2-sftp-client `exists`/`list`；根目錄約 214 個資料夾，順便列前綴相近的（例：`restorativewellnesscentersemr` 是別家 practice 的 LIVE 列，不能拿來用）。
+- 解法永遠在 Cerbo 端：請 Cerbo 建資料夾（含 orders/ results/）並告知確切名稱，客戶再用那個名稱重送 integration request（前例 VP-17842 coememr）。IT 不建資料夾、不建 integration 列。
+
+### BIOINSIGHTS 抽血地點 / kit
+- Leo 10-16 說「HL7 沒有 draw location 欄位」**已不完整**：kit 寄給病人 vs 診所提供 = `ehr_integrations.kit_delivery_option` 預設 + 每張單可用 ZKD 覆寫（VP-19006，prod 10-23）。emr-v2 `docs/hl7-order-spec-kit-delivery.md` 標頭仍寫 "not yet released"，是過時的。
+- 抽血地點清單 / 行動抽血（Travalab）歸 Mingxi，不是 IT。
+
+### VP-19142 NY 限售（Gut Baseline / Gut Pathogens）
+- 旗標在 prod `lis_ordermanage.item_tags` 的 `GZ_NY_UNAVAILABLE`（package 838 / 872 / 875）；emr-v2 讀不到 lis_ordermanage，所以 id 鏡像成 `NY_UNAVAILABLE_PACKAGE_IDS`（改旗標時兩邊要同步）。
+- 判斷在 parse（inbound state）與 assembleWithNyRouting（patient_state），早於 GZ routing 和 BestDeal；NY → `NY_TEST_NOT_AVAILABLE`、沒有 state → `NY_ADDRESS_REQUIRED`。
+- **不檢查 bundle 成員**：1,011 個 customer bundle 含 838，其中 1,010 個也含 GZ（838 是 GZ 4.0 的組成），查成員會把 GZ 的 NY routing 打壞。
+- API 路徑的 test code 走 `lis_pricing.external_codes`，只有 GUT_ZOOMER→845，所以 GB 與兩個 Pathogens 根本無法經 API 下單（Leo 11-02 接受這個缺口）。
+
+### VP-19013 FZ/FB 男性版（PSA）
+- PM Nan Wu 11-02：EMR / API 下的 FZ/FB 一定要帶 PSA，「保留 base」選項取消。HZ/HB 男女共用一個 test id，FZ/FB 不是。
+- 交付路徑選 A：order team 的 bundle-members API（VP-19145，Rui Chen，due 11-04；VP-18842 也卡在它）→ emr-v2 展開成員、把 868/869 換成 876/877。待確認：展開後 bundle id 與折扣價怎麼保留、staging 的 876/877、空 gender 要用原始 PID-8（parser 目前把非 F 一律當 Male）。
+
+### VP-18797 sample-page 一次呼叫（trans v1）
+- `GET /sample-page` 在 prod（#1067 → 071bf9a6，11-02）；每個 section 回 `{ok,status,body}`，body 與 10 條 legacy route byte-identical，prod 唯讀 A/B 40/40。延遲 0.7–1.5 s vs 單條 legacy 最慢 0.7–1.0 s。已知可優化：10 個 section 各自重跑 getSampleId（每頁 11 次 shipping 查詢）。
+- 前端切換不是我們的：backend 完成後 @ TPM 並附 Confluence 文件（2763096068）。LIS-Sample 這 9 條 route 的移除跟公告走（11-10，routes.json batch 5）。
