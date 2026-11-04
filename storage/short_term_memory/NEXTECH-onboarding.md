@@ -96,6 +96,9 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 - Independent readback (MCP read-only connection): is_public=1; only 1 ehr_vendors row touched since 18:40Z; NEXTECH now in the is_active=1 AND is_public=1 set that `ehr-vendor.service.ts` default list filter returns. API call not made (needs portal auth). Integration cmufvrntc0000dq0x51sbd986 still LIVE.
 - Rollback: `UPDATE ehr_vendors SET is_public=0 WHERE id=47;`
 
+### [2026-11-04 11:00] Plan approved post-hoc (MAIL-2216263296); re-verified
+- Re-read prod: ehr_vendors 47 is_public=1, updated_at 18:43:44Z, updated_by Leo. No code change, so no branch/PR. Journal 2026-11-04-nextech-is-public-golive.md.
+
 ## Decisions Made
 ### [2026-09-22 10:36]
 - Vendor code `NEXTECH`, name `Nextech`, supported_hl7_versions `["2.3"]` (default; Nextech's actual HL7 version unconfirmed), is_public=0 until go-live (flip at go-live like BioInsights).
