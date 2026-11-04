@@ -6,7 +6,7 @@ status: active
 score: 0.2539
 base_weight: 1.0
 created: 2026-09-22
-updated: 2026-11-02
+updated: 2026-11-04
 links:
 - BIOINSIGHTS-onboarding
 - INCIDENT-20261013-bioinsights-jag-crossmap
@@ -89,6 +89,12 @@ summary: 'New EMR vendor Nextech (bi-directional, for Alzheimer''s Treatment Cen
 ## Approaches Considered
 - Followed BIOINSIGHTS-onboarding (2026-07) as the precedent for a vendor-hosted SFTP: connectivity probe -> gated ehr_vendors + sftp_folder_mapping INSERT -> wait for practice scope -> ehr_integrations. Differences: password auth (not key), and this time ALSO inserted the `ehr_vendor_sftp_templates` row so the self-service integration create flow (needs a template, else 400) works for Nextech.
 - pipeline_location=cloud (not onprem): AKS prod pod egress to interface02.nextechapp.com:22 verified; on-prem egress not verifiable from local (no SSH access to appserver04 in this session). BioInsights cloud folder has been live-scanning since 2026-07-23 with no issue. Rollback = UPDATE pipeline_location='onprem'.
+
+### [2026-11-04 10:45] Go-live: ehr_vendors 47 is_public 0 -> 1 (Leo "ok")
+- Mail thread 11-04: Jessica asked if more testing needed; Support (Zhenhe) replied ready to go live; Jessica thanked. No reply needed from Leo.
+- Runner `lis-backend-emr-v2/scripts/_nextech-public.js` (gitignored), `node -r dotenv/config` against lisportalprod2/lis_emr. Pre-check code=NEXTECH, is_active=1, is_public=0; UPDATE bound to id=47 AND code AND is_public=0, asserted 1 row; 28 other columns byte-identical in-tx. Dry-run then APPLY @ 18:43:44Z, updated_by Leo.
+- Independent readback (MCP read-only connection): is_public=1; only 1 ehr_vendors row touched since 18:40Z; NEXTECH now in the is_active=1 AND is_public=1 set that `ehr-vendor.service.ts` default list filter returns. API call not made (needs portal auth). Integration cmufvrntc0000dq0x51sbd986 still LIVE.
+- Rollback: `UPDATE ehr_vendors SET is_public=0 WHERE id=47;`
 
 ## Decisions Made
 ### [2026-09-22 10:36]
