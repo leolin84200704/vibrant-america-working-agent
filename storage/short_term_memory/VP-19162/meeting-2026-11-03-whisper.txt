@@ -1,0 +1,292 @@
+导致規议: 像我的那个乱通口的结果,但是它不会去改order的状态,所以这个是order simulator的功能,然后它的功能就是大概分为这么几类,第一个就是它可以修改order的 states,修改order的状态,它可以修改为这么,就是我们支持的这些状态,
+都可以修改为,然后可以修改它的exceptions,就是scenarios,就是比如说需要redraw,或有b0e数,可以制造这样一个情况,就是放到这个,这个它要的这个欧带上面,然后可以设置report ready的状态,就是report
+ready,或者是report partially ready的,都可以设置状态,那如果report ready的话呢,根据它买的东西,我们要提供那个真正的report的,就是fair或者pdf,能够在那个get report的那个API里面,能够返回这个report的内容,当然了,这个内容是打米的,
+或者是report partially ready 都可以设置状态
+那如果report ready的话
+根据他买的东西
+我们要提供真正的report的就是fair或者pdf
+能够在get report的API里面能够返回report的内容
+当然了这个内容是达米的
+但是比如说他在这个大标的里面买的是gatzoomer
+但是我们返回的是gatzoomer的sample report
+然后如果是他设置了的这个状态
+是按照定义来说是能够触发webhook的
+那webhook也会正常的发给他
+然后他在call这个API的时候
+他要提供这些字段
+我们才知道要给他修改哪一个订单
+就是他可以用accessionID或者placerID
+然后来identify他要改哪一个
+改哪一个sandbox的order
+那就健全的方式和其他的API是一样的
+大概就是这么一个功能吧
+然后看大家有什么要讨论的
+order这边到
+还没什么问题
+但是report那个地方
+应该是要拉一台进来讨论的
+对
+对
+因为他刚刚实在
+我看能在不在
+现在能在哪
+好像没在哪
+然后你说那个webhook提醒这个东西
+你说这个webhook提醒的
+这是一般旧的吗
+我们以前有做过这个吗
+还是这不是我handle
+webhook
+webhook已经做好了
+就是已经有了
+ok 那就没问题
+那可能
+webhook已经上线了
+ok
+那应该就没问题
+就是
+应该
+我理解
+如果你不特别的去handle的话
+他修改了order状态之后
+应该能够自动触发webhook
+那应该就是这个sandbox需要的东西
+他要一个flag
+然后如果我是用这个flag下单的话
+他要马上能够自动的产出一个dummy的report
+然后发出cafca的message说这个report已经好了
+所以才触发webhook
+然后寄可以的pdf档through api
+我理解
+那可能就是
+就是如果他发这个simulator消息说
+我要求比如说五个report里面有三个变成ready的状态
+那应该就是给这三个report的sample report
+对
+那可能会需要
+这个可能是report team
+能做吗
+就是我这边下单给
+因为我这边下单的对象还是order team嘛
+然后order team那边
+能够通知到report team说这个是dummy的吗
+这个问题应该是要回答
+你碰到叶叶凯吗
+主要是
+主要我跟report协调一下
+那因为我这边
+也只能接收那个flag
+然后用那个flag下单
+用那个label
+就是答案的simulator的label
+就是sandbox label
+叶卡能听到吗
+我可以听到
+hello 能听到吗
+可以可以听到
+ok
+就是你刚才没来
+就是我们这个大概的要求就是说
+就是客户他在sandbox里面下单了之后
+他有可能会发一个simulator的request
+然后他收到这个request之后
+我们要把他这个订单的状态推进到report ready
+或者report partially ready的状态
+然后ready的那些他会指定说
+这些report里面有
+比如说五个report里面有三个ready
+或者五个report里面五个都ready
+那这样的话
+就是需要你这边把他对应order的status
+设置成report ready
+然后就走正常的report ready的流程给他发那个report ready的webhook
+然后如果他这个时候去get report的话
+他应该能够拿到已经ready的report了
+就是 但是肯定是sandbox report
+因为是在是在那个sandbox里面
+大概是这么一个流程
+看看有没有问题
+就是要帮他做是吧
+帮他做应该是可以
+什么做
+就帮他做成这样
+对 帮他做成这样
+这个只在staging上面有
+就是只在sandbox里面有
+在生产系统里面没有这个
+对 那它是一个report的需求
+这就它一个case
+不是一个case
+就是它是一个API的
+就是未来如果它用API
+我们会单独做一个simulator的APM
+如果它用这个simulator的API
+去指定一个sandbox的orderID
+然后说你就把这个order里面的五个report
+其中三个给我变成ready的
+然后你就是相当于
+你会把那三个给它变成ready的
+然后它这个时候再来get的话
+它就能get到那三个ready的
+就这个意思
+我们先说些那种就是API forlug
+API forlug
+还是
+就我们先说是API forlug
+对API forlug
+是的
+就可以
+可以 因为它这种
+就是report的往上没钱假的
+然后它刚才给它出发什么的
+这个应该是可以的吧
+但是感觉它不是自动化流程
+就自动化流程人家不行
+但是它手动给它弄成这样
+应该是可以的
+不是手动得自动化
+因为它是拿API call的
+它call完了之后
+我们告诉它
+你这个report状态已经设置成功了
+它就会拿那个get report的API来get
+这个时候它一get
+你就应该能给它那个simple report
+你不需要往里面填那个
+你不需要往里面填那个
+假数据啊
+就直接把那个对应的产品的那个simple report
+给它就行了
+就比如说
+它下单里面固定有几个report的
+然后它所谓
+这几个东西
+固定的哪几个要追击
+它每次下单固定的
+它取决于它单里面有什么
+那我怎么知道
+它想拿几个位置
+就是它几个下单之后
+它会告诉你的
+它会告诉你
+它要哪几个ready
+那你用什么告诉我
+你知道吗
+它会在API call里面加上
+比如说这里面有五个test
+然后它说
+我要其中三个test ready
+那你就直接把前三个
+就变成ready的
+就行了
+我就不太确定
+有没有这样过
+因为下单就是下单
+它会告诉我们
+哪几个ready
+就感觉怪怪的
+它会在下单的API不变
+它会单独做一个API
+就单独做一个
+改变订单状态的API
+它会在这个API里面
+告诉你
+我要改哪个订单
+我要把那个订单里面的
+那三个改成ready
+现在好像是没有这种一种一种二十分的API
+但是如果有需求的话
+应该就可以
+这个是可以的
+OK
+那就实际上应该是需要单独做一个这样一个自动化的流程
+我理解是
+应该是没有
+现在
+因为现在有这种需求
+我们都是手工支持的
+但是未来好比说
+有四五十个客户天天要测
+你不可能手工去给它改
+对吧
+OK
+OK
+谢谢
+就是应该
+应该
+就是如果有这个需求的话
+应该是给你也溜一下
+那价值
+可以
+你跟Liu那边去商量一下
+看看怎么去解
+就是
+但是原则就是现在的
+已经用的API
+就是那个order那些API
+都不改
+就是
+只在新做的这个simulator
+这个API上面来传递这些消息
+就行
+就是问的API
+它就是破的那边
+还是说是
+是新做的
+那你们放到哪的话
+就看放到哪合适呗
+照理说order也要改吧
+嗯
+照理说order team也要改吧
+order
+它应该不需要加flag
+就是我们默认所有用sandbox下的单都可以
+不要改
+不是
+那怎么通知到report
+那report应该是要去听order的
+因为report不会直接对击到我这里的
+那就意味着你这个
+change order status的这个API要要从order那边发的
+嗯
+嗯
+大部分的order status也不在order里面
+它它不是一个
+我们现在order status不是本身有分了好几种status
+就是应该都是要比如说shipping
+要在对你们shipping
+然后
+然后也有一些report status应该是在report里
+所以我理解这个
+这一家应该是去
+可能每个service出一个类似改 status的
+endpoint
+然后
+我们对外的这个去连所有的
+听下来应该是让人
+那这样子
+就是要多一个API给
+写一个API给外部
+那这样子
+我感觉
+那这样子的话
+EMR跟order好像都不需要懂了
+对啊
+可以啊
+还有还有什么问题
+没问题
+我们就先这样往下走
+然后到走到什么地方有问题再再讨论
+好吧
+OK
+那就
+那就这样了
+谢谢
+嗯
+等等会发ticket
+大家
+所以就先这样
+谢谢大家
+拜拜
+嗯
+嗯
