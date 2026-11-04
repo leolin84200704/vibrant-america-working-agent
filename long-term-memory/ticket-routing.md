@@ -290,3 +290,7 @@ summary: Ticket keyword to repo/module routing table
 - EMR/API 訂單某品項不賣 NY → emr-v2 `gz-ny-routing.ts` `decideNyUnavailable` + `NY_UNAVAILABLE_PACKAGE_IDS`（VP-19142；旗標源 `lis_ordermanage.item_tags`）。
 - FZ/FB 依性別換男性版 → 等 VP-19145 bundle-members API（VP-19013 / VP-18842）。
 - transv2 GraphQL "Database or server error" 但 prod 正常 → 先查 grpc metadata 是否 undefined + pod 是否有 dd-trace 注入（GETCLINIC-UNDEFINED-METADATA-20261102）。
+- 切 LIS-Sample 流量／任何 ingress 改寫前 → 先 live `kubectl get cm` 確認 trans 需要的 env key 全在（VP-18803 事故；patterns.md 【蒸餾 2026-11-03】）。
+- Cerbo 客戶要把兩份 report 合成一個 → emr-v2 `report-groups.ts`（VP-19159 TBI、VP-19008 TTB），觸發看 line items 的 test group id。
+- partner FHIR DiagnosticReport 0 結果樣本 → `groupTestsByPanels([])` 必須回 []（VP-19110 #522）。
+- Sandbox simulator / 改訂單狀態的 external API → VP-19162（各服務自己的 set-status endpoint）。

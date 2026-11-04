@@ -3,7 +3,7 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 0.3094
+score: 0.3341
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-11-01
@@ -156,6 +156,8 @@ links:
 - VP-19023
 - VP-19078
 - VP-19079
+- VP-19110
+- VP-19159
 - fhir-api
 tags:
 - emr
@@ -2556,3 +2558,13 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 ### VP-18797 sample-page 一次呼叫（trans v1）
 - `GET /sample-page` 在 prod（#1067 → 071bf9a6，11-02）；每個 section 回 `{ok,status,body}`，body 與 10 條 legacy route byte-identical，prod 唯讀 A/B 40/40。延遲 0.7–1.5 s vs 單條 legacy 最慢 0.7–1.0 s。已知可優化：10 個 section 各自重跑 getSampleId（每頁 11 次 shipping 查詢）。
 - 前端切換不是我們的：backend 完成後 @ TPM 並附 Confluence 文件（2763096068）。LIS-Sample 這 9 條 route 的移除跟公告走（11-10，routes.json batch 5）。
+
+## 【蒸餾 2026-11-03】#516 上 prod（VP-19110 / VP-19132 / VP-19142）、Cerbo TB1+VA report group（VP-19159）、VP-19145 未交付即關、sandbox simulator 缺口（VP-19162）、LBS-1875 Won't Do
+- **emr-v2 prod 現況**：#516 c94d6b9（11-03 18:46Z，Leo merge）＝ VP-19110（#515/#521/#522）＋ VP-19132 ORC-5 全 F ＋ VP-19142 NY 限售＋ #517/#520 依賴升級（platform-express/core 11.2.8、prisma 6）；之後 #525 0b00f075（11-04 00:26Z，agent 依 Leo 指示 merge）＝ VP-19159。VP-19142 prod replay 通過、VP＋QH-8307 Done。VP-19132 還差 prod rtr 的 ORC-5 抽查才能結 QH-8238（emr-v2 DB 不在 vibrant MCP 的 MySQL host 上）。
+- **result_push_level 與 split_result_pdf_by_report 是正交的**（VP-19159）：push level = 何時推；HL7-only vendor（Cerbo）上 split=1 = 怎麼切成多則訊息（`resolveReportPdfDelivery` → perReportMessages）。Leo 以為 WHOLE_ORDER 就是一個檔；回答時兩欄並列＋code 行號，不要只描述。
+- **Report group 觸發要看「訂了什麼」不是「出了什麼 report」**：TB1+VA（`TICKBORNE_WITH_IMMUNOGLOBULINS`，key TBI、fileKey TB1、orderedTestGroupIds [[63],[167]]）。用「reports present」觸發會讓沒訂 VA 的 TB1 永遠被 hold；只納入確認會產出該 report 的 test group id（63 是、590 未確認→排除——未確認 id 不是無害的多餘，可能造成永久 hold）。order service line_items 確實帶頂層 TESTGROUP id（11-03 對 prod order service 驗過）。VA = Total Immunoglobulins（167 免費 add-on，永不是 bundle）。
+- **group 檔名與 key 不同時 dedup 會壞**：「已送過」查 `endsWith(_{key}.hl7)`，fileKey TB1 vs key TBI 永遠不 match → 會重送。已改用 file key 查。
+- **Maristany 是 on-prem 推送**：prod AKS image 確認不等於 on-prem 已更新；on-prem ssh（leo@192.168.60.5）只有密碼、無 key，dream/agent 無法驗。證明靠下一張 TB1+VA 訂單出現單一 REPORT_GROUP:TBI rtr 列、`_TB1.hl7`。
+- **VP-19145（bundle-members API）11-03 被 Rui 轉 Inactive、沒交付**（comment 199326 說 Fangyuan 會處理），Automation 在 VP-19013 / VP-18842 留「linked issue resolved」——那不是解除封鎖。兩張票仍 blocked，blocker 目前沒票沒 owner。done-category 的關閉 ≠ 交付；看到 linked-issue-resolved 要回去對 `unblock_when`。
+- **Sandbox simulator（VP-19162，epic VP-19045 / PRD PH-965，due 11/17）**：11/03 會議定案＝新的 external API 扇出到各服務自己的 set-status endpoint，既有 order/EMR API 不改。缺口：沒有票負責 shipping 的 set-kit endpoint；GET /orders list 讀 core `order_info.order_kit_status / order_report_status`，沒人負責 core 寫入；report_preliminary/部分出報告的狀態要 Nan 決定。
+- **LBS-1875**（Vida Integrated Health practice 127005，9 個 provider 開 Cerbo results-only）：11-03 以 Won't Do 關閉、無 comment——符合「integration 一律由客戶在 Website 自建」規則。

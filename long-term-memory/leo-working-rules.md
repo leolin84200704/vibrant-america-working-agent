@@ -714,3 +714,9 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 - **文件一律進 Leo 的 Confluence 資料夾 2119335937「Transformer-module-rewrite」（Leo 11-02，常設，VP-18797）**：不能只放 repo 的 docs/。
 - **Release PR 一次帶多張票時，每次 staging 前進都要同步 title / body / head SHA comment（VP-19132 / VP-19142，emr-v2 #516）**：#516 的 SHA comment 寫 ae6fd09，之後 #519 merge 進 staging 把 head 推到 19e4b35（多了 VP-19142），reviewer 11-03 01:25Z 指出「描述和要 merge 的東西不符」。staging-class merge 之後，若有開著的 staging→main release PR，同一輪就更新它。
 - **Dev Complete ≠ 已上 prod**：VP-19132 11-02 轉 Dev Complete 時 release PR #516 還沒 merge（prod 仍是 a3513ce）。轉 Dev Complete 前確認 code 已在 prod，否則 STM 寫明「staging 驗過、等 release」，QH twin 不動。
+
+## 【蒸餾 2026-11-03】Slack 回覆只講狀態變化、看不懂就改用白話時間軸、事故的嚴重度（VP-18803 / VP-19159）
+- **對方已在對話裡、知道哪裡壞了時，Slack 回覆只寫狀態變化**：Leo 回 Mingxi 的實際訊息是「我看看」→「我修一下」→「修好了」/「你看看」。不講原因、不講機制、不叫對方重試；解釋放 Jira 或內部報告。agent 起草的整段說明是錯的語域。（Leo：「請你記得我回slack的語氣」）
+- **Leo 說「我看不懂，請詳細介紹」= 內部代號太密**：VP-19159 第一版是一串 REPORT:TB1、test group id。第二版有效的結構：之前／之後的白話時間軸 → 為什麼既有規則不適用 → 要改什麼 → 待決事項各附建議。
+- **agent 起草並以 Leo 帳號發出的 Jira comment，不得斷言當次 session 沒有 live 驗證的事實**（comment 199217 寫「key 已在 prod」來源是同事舊 comment，導致 VP-18803 事故被判定為我方責任）。引用他人要寫明出處。
+- **Leo 授權 agent merge 到 main 的情況**：明確說「請merge然後測試」時（#525、#1095）可以 merge，用 `--match-head-commit` 鎖 head；沒有明講仍照預設不 merge main。

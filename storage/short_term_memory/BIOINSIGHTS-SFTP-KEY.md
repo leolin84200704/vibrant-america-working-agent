@@ -8,7 +8,7 @@ category: emr_integration
 created: 2026-07-20
 updated: '2026-07-23'
 links: []
-score: 0.0041
+score: 0.004
 ---
 
 # BIOINSIGHTS-SFTP-KEY — key-based SFTP auth support

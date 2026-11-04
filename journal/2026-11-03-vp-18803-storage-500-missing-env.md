@@ -4,6 +4,7 @@ tickets: [VP-18803, VP-18802, LBS-1842]
 category: process
 severity: high
 keywords: incident cut-over configmap DATABASE_URL_VA_INFO_MASTER trans prod storage 500 slack-tone verify-live prerequisite jira-comment-false
+distilled: true
 ---
 
 # VP-18803: storage routes 500 on trans prod after the batch 1 cut-over

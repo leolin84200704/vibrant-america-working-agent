@@ -4,7 +4,7 @@ ticket: VP-19159
 type: journal
 tags: [cerbo, maristany-medical, report-group, per-report, emr-v2]
 related: [VP-19008, VP-19046, VP-18833]
-distilled: false
+distilled: true
 ---
 
 # VP-19159: second report group (TB1 + VA) on the VP-19008 machinery
