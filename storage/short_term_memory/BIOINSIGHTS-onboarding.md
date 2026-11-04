@@ -11,7 +11,7 @@ unblock_when: 'BioInsights grants account perms (test: sftp key-auth to sftp.bio
   then ls / — currently auth OK but ls/stat/put all fail); waiting on Thomas reply
   to 2026-07-21 email'
 created: 2026-07-21
-updated: 2026-11-02
+updated: 2026-11-03
 links:
 - BIOINSIGHTS-SFTP-KEY
 - NEXTECH-onboarding
@@ -463,3 +463,11 @@ Prevention proposed to Leo (pending approval, automation -> PR):
 - Owner split: kits/ZKD = Leo (answered); draw-location list + Travalab mobile phlebotomy = Mingxi (@ in draft, moved to To). Not stated in draft: public map vibrant-america.com/blood-draw-maps/v2 (left to Mingxi).
 - Draft reply-all on Zhenhe 18:41Z, id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABk-Do4QAA. To Olena/Mingxi/Zhenhe; CC Britney/Keith/Paola/Lisa/Travis/Serdar/Kristina. Quoted inline images -> send from Outlook.
 - 11-02 19:19Z Leo SENT the reply (Sent Items verified). Open: Mingxi on draw-location list + Travalab; Olena on SFTP folder + Duffy account (Zhenhe's 18:41Z asks).
+
+### [2026-11-03 18:40 PT] Zhenhe sent the catalog; Olena named folder "Summaries"; Duffy account now exists
+- Thread after Leo's 11-02 19:19Z send: Zhenhe 11-02 22:36Z answered draw locations (Provider Portal > Tool Center > Blood Draw Center);
+  Olena 11-03 10:37Z replied to Zhenhe's 3 asks: 1) Duffy account "we are working on it", 2) SFTP folder = "Summaries", 3) clinical team wants more catalog detail;
+  Zhenhe 11-04 01:29Z sent "Vibrant Test and Biomarker Catalog - BioInsights - 2026-11-03.xlsx" (classification, test/element code, CPT where available, ranges incl age/sex; gaps flagged). VP-19029 item 3 = delivered.
+- prod 11-03 (lisportal ro): customer 53986 Aimee Duffy MD NPI 1528033081 signed up 2026-11-02T18:34Z, active, order_placement_allowed=1.
+  Vendor 46 integrations still only REJECTED JAG row (no Website integration yet). lis_emr.ehr_vendors 46 sftp_order_forms_path NULL; peer format vendor 44 = "/Prod/FollowThatPatient/Order/Forms/".
+- Leo's pending item: set vendor 46 sftp_order_forms_path for "Summaries" (exact path e.g. /Summaries/ not confirmed; folder existence on sftp.bioinsights.com not verified) via prod change gate. Not done, proposal only.
