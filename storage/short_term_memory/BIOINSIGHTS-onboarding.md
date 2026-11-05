@@ -11,7 +11,7 @@ unblock_when: 'BioInsights grants account perms (test: sftp key-auth to sftp.bio
   then ls / — currently auth OK but ls/stat/put all fail); waiting on Thomas reply
   to 2026-07-21 email'
 created: 2026-07-21
-updated: 2026-11-03
+updated: 2026-11-05
 links:
 - BIOINSIGHTS-SFTP-KEY
 - NEXTECH-onboarding
@@ -471,3 +471,14 @@ Prevention proposed to Leo (pending approval, automation -> PR):
 - prod 11-03 (lisportal ro): customer 53986 Aimee Duffy MD NPI 1528033081 signed up 2026-11-02T18:34Z, active, order_placement_allowed=1.
   Vendor 46 integrations still only REJECTED JAG row (no Website integration yet). lis_emr.ehr_vendors 46 sftp_order_forms_path NULL; peer format vendor 44 = "/Prod/FollowThatPatient/Order/Forms/".
 - Leo's pending item: set vendor 46 sftp_order_forms_path for "Summaries" (exact path e.g. /Summaries/ not confirmed; folder existence on sftp.bioinsights.com not verified) via prod change gate. Not done, proposal only.
+
+### [2026-11-05] Option A approved; SFTP check found no Summaries folder -> no DB write, ask Olena
+- Re-read Olena 11-03 10:37Z (internetMessageId CAPKhzmpHagq53YMCG1nZvUSyp6Xr3g3CXTTBBNM9n5zFw+ixng@mail.gmail.com): point 2 is literally "Summaries." No path given.
+- SFTP 2026-11-05 (sftp -i ~/.ssh/bioinsights_vibrant-wellness.pem -P 2022 vibrant-wellness@sftp.bioinsights.com, read-only ls; the PEM lives in ~/.ssh, not ~/Downloads):
+  `/` = incoming, outgoing only. `/incoming` = vibrant_test.txt (our 07-23 probe). `/outgoing` = archive only.
+  `/Summaries`, `/summaries`, `/incoming/Summaries`, `/outgoing/Summaries` all "not found".
+- Per approved plan: folder missing -> no write probe, no mkdir on their server, NO UPDATE of ehr_vendors 46 (sftp_order_forms_path stays NULL; not re-read today, vibrant MCP ECONNREFUSED).
+- Outlook reply-all draft on Zhenhe 11-04 01:29Z (newest in thread), id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABljQreQAA.
+  Asks Olena to create /Summaries/ at root with write access for vibrant-wellness, or give the full path. Quotes inline images -> Leo sends from Outlook. Not sent.
+- Not re-checked today (MCP down): ehr_integrations for customer 53986 / vendor 46; new BIOINSIGHTS hl7_file_input rows.
+- Next: when Olena confirms -> re-ls, put/delete probe in the folder, then gated one-row UPDATE + reverse audit. Item 1 (Website integration for 53986) still open.
