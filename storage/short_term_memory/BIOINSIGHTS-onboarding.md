@@ -482,3 +482,8 @@ Prevention proposed to Leo (pending approval, automation -> PR):
   Asks Olena to create /Summaries/ at root with write access for vibrant-wellness, or give the full path. Quotes inline images -> Leo sends from Outlook. Not sent.
 - Not re-checked today (MCP down): ehr_integrations for customer 53986 / vendor 46; new BIOINSIGHTS hl7_file_input rows.
 - Next: when Olena confirms -> re-ls, put/delete probe in the folder, then gated one-row UPDATE + reverse audit. Item 1 (Website integration for 53986) still open.
+
+### [2026-11-05 17:55] Ask to Olena sent by Leo
+- /outgoing/archive holds V00000416.hl7 (09-22), V00000417.hl7 (09-25), vibrant-test-order.hl7 (09-17), vibrant_test.txt (07-23); no Summaries under it.
+- Leo checked Olena had only answered "Summaries." (no path, nothing newer), then sent the reply-all himself: Sent Items 2026-11-05T17:48:40Z, subject "RE: [Vibrant Wellness] Integration with Vibrant Wellness", internetMessageId IA2PR22MB5423E197CAD2887562E09615F2772@IA2PR22MB5423.namprd22.prod.outlook.com. Wording kept "only sees /incoming/ and /outgoing/".
+- Waiting on Olena: create /Summaries/ (write access for vibrant-wellness) or give the full path. Then: re-ls, put/delete probe, gated UPDATE ehr_vendors 46 sftp_order_forms_path, reverse audit.
