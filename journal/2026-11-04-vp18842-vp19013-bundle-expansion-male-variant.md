@@ -1,6 +1,7 @@
 ---
 date: 2026-11-04
 tickets: [VP-18842, VP-19013, VP-19145]
+distilled: true
 tags: [emr-v2, place-order-api, bundle, pricing, getLegacyBundleDetails, male-variant, staging-e2e, grounding]
 ---
 

@@ -4,7 +4,7 @@ ticket: VP-18336
 type: journal
 tags: [nextech, ehr-vendors, is_public, go-live, prod-data]
 related: [NEXTECH-onboarding, BIOINSIGHTS-onboarding]
-distilled: false
+distilled: true
 ---
 
 # Nextech go-live: vendor 47 is_public 0 -> 1

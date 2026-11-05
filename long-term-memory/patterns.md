@@ -3107,3 +3107,12 @@ Atlassian MCP 斷線時的 fallback：`~/src/credential/atlassian-api-token.md`�
 - **剩餘非瀏覽器 caller**：Phlebotomist-APP-Backend `services/patientService.js:79-82` 無 token 打 `GET /patients/profiles`（Jun Zhang，VP-19158；trans 要 Bearer）；jun.z Jersey `GET /patients/v2/kits`；Vibrant Oauth2 httpx `GET /order`、`/order/details`。Leo：只點名過了公告 deadline 還有流量的 caller；離職者（zichenzheng）靠 ingress 改寫涵蓋，不點名；deadline 不往後延。
 - **guard 要分「本來就沒東西送」與「全部被丟掉」（VP-19110）**：#521 在 `groupTestsByPanels` panels 為空就 throw `[OBR_NO_PANELS]`，把 0 結果樣本的 partner FHIR on-demand pull（customer 17943 每 ~4h 輪詢，prod 305 次/14d）從 registered DiagnosticReport 變成空殼＋error log。#522 改成「panels 空且 testResults > 0」才 throw。加「失敗而非送空」的 guard 前，先在 Datadog 查既有的空情況在 prod 多常發生、誰依賴它。
 - **emr-v2 worktree 機制**：main checkout 的 node_modules 缺 pdf-lib（在別的分支）→ 從 VP-19008 worktree symlink node_modules 再 `prisma generate`；`npx jest` 會跳過 pretest hook，有 5 個 suite 要先 `npm run prisma:generate:test`。LIS-transformer worktree 沒 node_modules 時 pre-push hook 會用全域 Prisma 7 → 先 `npm ci`。
+
+## 【蒸餾 2026-11-04】DB row 是「欠送」的真相、prod-pod dry run、資料-only 變更的流程（VP-19171 / VP-18842 / NEXTECH）
+
+- **Queue 與 DB 對帳，而不是把 queue 變 durable**：DB 列是「還欠什麼」的耐久紀錄，Redis 不是。persistent Redis 在 Redis 本身被換掉時照樣丟 job；改成 sweep「列未完成 + job 不在 queue」才封得住。每一道 guard 都是防重送：只看自己 location（每個 cluster 各自一個 Redis）、已有更新的成功列就跳過、requeue 上限、boot delay（rolling update 時新 pod 不要去判舊 pod 還在跑的 job）。
+- **staging 跑不到的路徑（POD_ROLE=web 沒有 pusher）→ prod pod 內 dry run**：把 staging image 的 compiled service 帶進 prod pod，真 DB + Redis 唯讀、enqueue/update stub；結果要「剛好等於」預期集合（12 筆 cloud 遺失列、已補送的被跳過），才算驗過。
+- **臨時 prod 設定變更的收尾是自己的事**：CM key 臨時放大 → 先存 snapshot（`~/src/credential/*-cm-before.yaml`，600）→ 用完移除、比對 snapshot、restart、確認 queue 空。Leo 11-04：「這件事應該可以自己判斷處理」——用既有安全工具補送明確欠的 result、清掉自己的臨時變更，都不需要再問。
+- **data-only prod 變更（如 is_public flip）的模板**：pre-check `SELECT *` 快照 → UPDATE 綁 id + code + 舊值 → assert 1 row → 交易內比對其他欄位不變 → 先丟 sentinel exception 做 dry-run rollback → `APPLY=1` → 用 MCP 唯讀連線二次讀。沒有 code 就不開空 PR。emr-v2 runner script 要 `node -r dotenv/config`（Prisma 不會自己讀 .env）。
+- **已 push 的 branch 要追 staging → merge origin/staging（merge commit），不 rebase**（禁 force-push）。staging 新增 dependency（pdf-lib）時 worktree 要重新 `npm install`。
+- **Session handoff 的 "Verified facts" 可能是舊 context**：VP-19013 11-05 02:03 的 handoff 寫「無 release PR、staging E2E 沒證據」，但 #530 已在 23:38Z merge、STM 15:40 有 E2E 結果。handoff 與 STM 衝突時以 STM 時間戳較新的段落 + gh/Jira ground truth 為準。

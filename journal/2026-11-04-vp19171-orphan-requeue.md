@@ -4,7 +4,7 @@ ticket: VP-19171
 type: journal
 tags: [emr-v2, bullmq, sidecar-redis, rollout, lost-jobs, cerbo, causenta, orphan-requeue]
 related: [VP-19128]
-distilled: false
+distilled: true
 ---
 
 # VP-19171: a Causenta result missing in Cerbo traced to jobs lost on redeploy

@@ -720,3 +720,12 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 - **Leo 說「我看不懂，請詳細介紹」= 內部代號太密**：VP-19159 第一版是一串 REPORT:TB1、test group id。第二版有效的結構：之前／之後的白話時間軸 → 為什麼既有規則不適用 → 要改什麼 → 待決事項各附建議。
 - **agent 起草並以 Leo 帳號發出的 Jira comment，不得斷言當次 session 沒有 live 驗證的事實**（comment 199217 寫「key 已在 prod」來源是同事舊 comment，導致 VP-18803 事故被判定為我方責任）。引用他人要寫明出處。
 - **Leo 授權 agent merge 到 main 的情況**：明確說「請merge然後測試」時（#525、#1095）可以 merge，用 `--match-head-commit` 鎖 head；沒有明講仍照預設不 merge main。
+
+## 【蒸餾 2026-11-04】每個判斷要有當下的真實世界依據、Bug 結案欄位先備好、Slack 中文 casual（VP-18842 / VP-19171 / VP-19013）
+
+- **「所有未來在 comment 和下判斷都需要真實世界做理論依據」**（Leo 11-04，已寫入 ~/.claude/CLAUDE.md 原則 5）：起因 199351 用舊表推 pricing 行為被 Rui 指正。寫進 Jira 前當場讀該服務自己的 code/DB/log，不能沿用 STM 舊結論。
+- **VP Bug 提議 Done 前，Root Cause（customfield_10485，ADF）+ Root Cause Category（customfield_10490）要一起備好**（Leo 11-04「你有東西沒有填...記起來這個」）。patterns.md VP-16954 早有此規則，這次仍漏——提議結案的訊息裡直接附兩欄的擬稿。VP-19171 Category 用 Infrastructure / Environment。
+- **能自己判斷的收尾不要問**：清掉自己做的臨時 prod 變更、用既有安全工具補送明確欠的 result（Leo 11-04「這件事應該可以自己判斷處理」）。
+- **Leo 的 ship 判斷：上游沒到位不等於擋住**——「不管有沒有 876/877 都可以進 prod，寫一個 fallback」。設計成 feature 依外部資料存在與否自動啟用，比等上游 release 好。
+- **Slack 一律中文、casual，一兩句只問要的東西**（v1 英文被退、v2 還帶背景又被退）；已寫入 CLAUDE.md。
+- **Leo 要求開票但 session 沒有建票工具時，要明講沒建**：VP-19171 的「另開一張票」到結案都沒建（headless session 無 create tool），只在 handoff 裡提到——下次 work session 要問 Leo 還要不要。

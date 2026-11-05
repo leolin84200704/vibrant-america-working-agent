@@ -294,3 +294,6 @@ summary: Ticket keyword to repo/module routing table
 - Cerbo 客戶要把兩份 report 合成一個 → emr-v2 `report-groups.ts`（VP-19159 TBI、VP-19008 TTB），觸發看 line items 的 test group id。
 - partner FHIR DiagnosticReport 0 結果樣本 → `groupTestsByPanels([])` 必須回 []（VP-19110 #522）。
 - Sandbox simulator / 改訂單狀態的 external API → VP-19162（各服務自己的 set-status endpoint）。
+- EMR 報告「沒送到」且 rtr 卡 PENDING、retry_count 0、時間點在 emr-v2 rollout 前後 → redeploy 丟 job（VP-19171）；orphan requeue sweep 已在 prod（8254fca），30 分鐘後應自動補；不行再 in-pod gRPC `GenerateResultHl7 send_result=true`。
+- HL7 bundle 展開 / place-order sub_items / x-choose-y → VP-18842（pricing `getLegacyBundleDetails`）；FZ/FB 男版 → VP-19013（catalog 有 876/877 才換）。
+- staging 下的單要讀回 → order-staging API，不是 prod lis_ordermanage。

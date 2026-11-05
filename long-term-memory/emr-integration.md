@@ -2568,3 +2568,21 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 - **VP-19145（bundle-members API）11-03 被 Rui 轉 Inactive、沒交付**（comment 199326 說 Fangyuan 會處理），Automation 在 VP-19013 / VP-18842 留「linked issue resolved」——那不是解除封鎖。兩張票仍 blocked，blocker 目前沒票沒 owner。done-category 的關閉 ≠ 交付；看到 linked-issue-resolved 要回去對 `unblock_when`。
 - **Sandbox simulator（VP-19162，epic VP-19045 / PRD PH-965，due 11/17）**：11/03 會議定案＝新的 external API 扇出到各服務自己的 set-status endpoint，既有 order/EMR API 不改。缺口：沒有票負責 shipping 的 set-kit endpoint；GET /orders list 讀 core `order_info.order_kit_status / order_report_status`，沒人負責 core 寫入；report_preliminary/部分出報告的狀態要 Nan 決定。
 - **LBS-1875**（Vida Integrated Health practice 127005，9 個 provider 開 Cerbo results-only）：11-03 以 Won't Do 關閉、無 comment——符合「integration 一律由客戶在 Website 自建」規則。
+
+## 【蒸餾 2026-11-04】Place Order API 上 prod（VP-18842）、FZ/FB 男版 fallback（VP-19013）、redeploy 丟 result job 的 orphan requeue（VP-19171）、Nextech is_public 上線
+
+- **emr-v2 prod 現況（main 099ca3b，#530 = #528 + #529，2026-11-04 23:38Z merge；AKS + on-prem prod 兩邊 pod 都驗過 image）**：HL7 order 預設走 Place Order API（`hl7PlacementMode()` 除非 `HL7_ORDER_PLACEMENT_MODE=legacy`；prod 未設）。第一批 prod 單 hl7_file_input 7501-7503（MDHQ customer 4953，bundle 112328 → 48 members、112326 → 1）全 parse_finished 無錯。
+- **Bundle 展開來源 = pricing `GET /item/promotion/getLegacyBundleDetails?bundle_id=`**（不是 order team 新 API；VP-19145 Inactive 未交付）。官方 bundle 在 `lis_pricing.promotions` 存 `customer_id = -1`，客製/clinic bundle 也都可查；回傳只有 items（GROUP/TEST），無巢狀。`resolveBundleMembers()` 在 placeOrderApi try 內：pricing 失敗或展開為空 → placementFailed（可 retry），絕不送出沒有 test 的單。
+  - 殘餘：x-choose-y 官方 bundle（18008/18009/18010/18020/18022/18029/18030/18031）回傳全部選項、沒有 selection flag，emr-v2 會全展開；60 天 HL7 0 筆，無追蹤票。
+  - meta_data 放在 order-management 讀的位置：`is_x_choose_y` 在 bundle line、`is_supplement` 在每個 sub item。
+- **錯誤推論的來源（Leo 定版規則的起點）**：10-15 記「官方 bundle owner null → pricing 不支援」是讀舊表 `lis_re.official_bundle_details` 推出來的；pricing 自己的表才是真相。跨系統判斷一律讀「那個服務自己的」code/DB。
+- **VP-19013 FZ/FB 男版 swap**：868→876（FZ 2.0）、869→877（Foundation Baseline），只在 twin id 存在於 pricing catalog cache 時才換，否則送 base id（Leo：「不管有沒有 876/877 都可以進 prod，寫 fallback」）。只在 placeOrderApi 路徑生效（finalizer 對 loose line 與 bundle sub item 各做一次）。prod pricing 目前無 876/877，Ray 預計 11-09 release 建；建好後 30 分鐘 cache refresh 自動啟用 → 11-09 後看 prod log `[VP-19013] male patient` + package 492/493 才 Dev Complete。order-staging 已跑 Fangyuan 的 `feature/fz-male-variant`（order-management main 仍 revert 77c6212），staging 的男單已是 PSA 版。
+- **order-staging 有自己的 lis_ordermanage（2026-05 snapshot）**：staging 下的單要從 order-staging API（`/orders/info`、`/orders/package-tests`，在 staging pod 用 JWT_SECRET_DEV 簽 token）讀回，不能查 prod DB——同 sample_id 在 prod 是別的單。
+- **VP-19171：redeploy 會把剛 enqueue 的 result job 一起殺掉**（不只是 VP-19128 的 retry 中 job）。BullMQ 在 pod sidecar Redis（emptyDir）；10-19 19:38Z（#487）、10-20 03:44Z（#491）兩次 rollout 留下 22 列 PENDING/GENERATING 永不處理的 rtr（15 cloud / 7 onprem）。
+  - 修法 `ResultOrphanRequeueService`（#526 → #527，main 8254fca）：pusher pod 每 10 分鐘、boot 後延 5 分鐘、未動 30 分鐘、72h lookback、每輪 20、每列最多 3 次（`updated_by orphan-requeue:n`）、只看自己 `PIPELINE_LOCATION` 的 LIVE/result_enabled integration、已有更新的 TRANSMITTED 列就跳過。`RESULT_ORPHAN_LOOKBACK_HOURS` 可臨時放大補 backlog（11-04 用 408 補了 12 筆 cloud，之後已移除）。
+  - generator 會寫**新的** rtr 列；舊 orphan 列停在 GENERATING/PENDING（cosmetic，guard 防重送）。
+  - 數「還欠幾筆」用 sweep 本身的 predicate（含被砍在半路的 GENERATING），不要只數 generation_status=PENDING（第一次少算成 16）。
+  - staging AKS 是 POD_ROLE=web，pusher-only 功能在 staging 跑不起來 → 用 prod pod 跑 staging image 的 compiled code、真 DB/Redis 讀、寫入 stub 的 dry run。
+  - 對照：failures.md INCIDENT-20260518 當年「Redis emptyDir wipe」被判為錯誤假設；VP-19171 這次有 Datadog「Killing: Stopping container redis」事件 + 時間對齊佐證，是確認過的機制，兩者不矛盾（當時那個症狀另有原因）。
+  - 票面「8104 沒有 Cerbo integration」錯：三個 accession 是 customer 8105（Kristy Anderson，clinic 124500），8104/8105 都 LIVE MDHQ `/causentaemr/results/`；8105 另有 PRAXISEMR。
+- **Nextech（vendor 47）`is_public` 0 → 1，2026-11-04 18:43:44Z**（Leo ok）。is_public 只影響 Website vendor 清單（`ehr-vendor.service.ts` 預設 is_active=1 AND is_public=1），已 LIVE integration 的路由不讀它 → 低風險、跟 practice 自己 go-live 無關。Rollback `UPDATE ehr_vendors SET is_public=0 WHERE id=47;`。BioInsights vendor 46 仍 0。
