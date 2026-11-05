@@ -7,7 +7,7 @@ score: 0.1882
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-11-03
+updated: 2026-11-04
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -22,6 +22,7 @@ links:
 - LBS-1799
 - LIS-7690
 - LIS-7882
+- LIS-7993
 - NEXTECH-onboarding
 - PH-847
 - PO-222
@@ -173,18 +174,18 @@ tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 135 entries across STM
+summary: Auto-aggregated failure index from 136 entries across STM
 ---
 
 # Failure Index
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-11-03 — total 135 entries
+> Last updated: 2026-11-04 — total 136 entries
 
 ## Themes
 
-- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 35 entries
+- [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 36 entries
 - [Other / uncategorized](#other) — 25 entries
 - [Build / TypeScript / Tooling](#build-tooling) — 21 entries
 - [Deploy / commit / push coordination](#deploy-coordination) — 14 entries
@@ -213,6 +214,11 @@ summary: Auto-aggregated failure index from 135 entries across STM
 - Used `app=lis-emr-v2-deployment-prod` (deployment name) as label selector — actual label is `app=lis-emr-v2-prod` (`-deployment-` not in label).
 - Tick 1 returned `FAIL pod_not_found`. Fixed by checking `--show-labels` and re-running.
 - Lesson: always confirm label keys with `kubectl get pod ... --show-labels` before selecting; deployment-name ≠ pod-label.
+
+### **[[LIS-7993]]**
+
+- `mcp__vibrant__lisportal_mysql_query` needs schema-qualified table names (`lis_emr.`), "No database selected" otherwise. `mcp__vibrant__mysql_query` (lisportalprod) has no `lis_emr` database; core sample/customer tables are not in MySQL `lis` either (ClickHouse / core v1), so per-sample customer checks went through `query_general_sample_events` one sample at a time.
+- zsh: `echo ======` fails (`=` prefix triggers path expansion); quote separators.
 
 ### **[[NEXTECH-onboarding]]**
 
