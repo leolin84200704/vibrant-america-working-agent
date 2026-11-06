@@ -493,3 +493,4 @@ Prevention proposed to Leo (pending approval, automation -> PR):
 - SFTP re-ls 11-06 18:47Z (read-only): `/` = incoming, outgoing only; /Summaries, /summaries, /SUMMARIES not found; /incoming and /outgoing unchanged.
 - No DB write. Reply-all draft on Olena 14:28Z, id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABljSE2QAA: still not visible, tell us once created with write access for vibrant-wellness.
 - prod (vibrant MCP down today) not re-read: Website integration for customer 53986 unknown.
+- 11-06 Leo: Olena's line means the folder is still not created, so no follow-up needed. Draft AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABljSE2QAA NOT to be sent (agent has no delete tool; Leo deletes it in Outlook). Waiting on Olena to create /Summaries/.
