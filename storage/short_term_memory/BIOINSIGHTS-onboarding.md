@@ -11,7 +11,7 @@ unblock_when: 'BioInsights grants account perms (test: sftp key-auth to sftp.bio
   then ls / — currently auth OK but ls/stat/put all fail); waiting on Thomas reply
   to 2026-07-21 email'
 created: 2026-07-21
-updated: 2026-11-05
+updated: 2026-11-06
 links:
 - BIOINSIGHTS-SFTP-KEY
 - NEXTECH-onboarding
@@ -487,3 +487,9 @@ Prevention proposed to Leo (pending approval, automation -> PR):
 - /outgoing/archive holds V00000416.hl7 (09-22), V00000417.hl7 (09-25), vibrant-test-order.hl7 (09-17), vibrant_test.txt (07-23); no Summaries under it.
 - Leo checked Olena had only answered "Summaries." (no path, nothing newer), then sent the reply-all himself: Sent Items 2026-11-05T17:48:40Z, subject "RE: [Vibrant Wellness] Integration with Vibrant Wellness", internetMessageId IA2PR22MB5423E197CAD2887562E09615F2772@IA2PR22MB5423.namprd22.prod.outlook.com. Wording kept "only sees /incoming/ and /outgoing/".
 - Waiting on Olena: create /Summaries/ (write access for vibrant-wellness) or give the full path. Then: re-ls, put/delete probe, gated UPDATE ehr_vendors 46 sftp_order_forms_path, reverse audit.
+
+### [2026-11-06 18:50Z] Olena: "it had not yet been created"; folder still absent; follow-up draft
+- Olena 11-06 14:28Z reply to Leo's 11-05 ask: "My apologies, it had not yet been created." (ambiguous: no confirmation it now exists).
+- SFTP re-ls 11-06 18:47Z (read-only): `/` = incoming, outgoing only; /Summaries, /summaries, /SUMMARIES not found; /incoming and /outgoing unchanged.
+- No DB write. Reply-all draft on Olena 14:28Z, id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABljSE2QAA: still not visible, tell us once created with write access for vibrant-wellness.
+- prod (vibrant MCP down today) not re-read: Website integration for customer 53986 unknown.
