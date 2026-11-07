@@ -7,7 +7,7 @@ score: 0.1882
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-11-04
+updated: 2026-11-07
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -181,7 +181,7 @@ summary: Auto-aggregated failure index from 136 entries across STM
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-11-04 — total 136 entries
+> Last updated: 2026-11-07 — total 136 entries
 
 ## Themes
 
@@ -237,14 +237,6 @@ summary: Auto-aggregated failure index from 136 entries across STM
 - F2: Theorized "zombie from 5/22 cancel-and-rebook left is_canceled=false" — WRONG (git showed rescheduleClinicalConsult sets is_canceled=true, and it was deployed 6/2 anyway). The real producer was a different env entirely.
 - F3: Assumed the local `.env` calendar_prod = the only/authoritative prod DB and that all senders write there. Missed that a separate cluster could send to the same prod email topic without touching prod's DB.
 
-### **[[VP-18666]]** — [2026-10-05 PDT] 10-02 root cause was inverted
-
-- I concluded "core right, config wrong" because staging-svc agreed with core for
-  2512106925. Both were prod data (core = prod clone, staging-svc = prod-wired), so the
-  agreement proved nothing about staging. Never validated which backend each report
-  service talks to; one GUT5 W2W probe would have shown it. Posted comment 190459 to
-  Xiaoye on that basis -> needs a correction.
-
 ### **[[VP-18704]]**
 
 - `mcp__vibrant__mysql_query` (lisportalprod) has no `lis_core_v7`; use `mcp__vibrant__lisportal_mysql_query` (lisportalprod2, read-only). `sample` has `accession_id`, not `barcode`.
@@ -258,6 +250,14 @@ Wrote `WHERE id = 1 AND code = 'MDHQ'` from the prod row; staging has MDHQ at id
 UPDATE silently did nothing there (the apply script's 100% verify caught it, exit 3). Fix: key
 seed/data statements in migrations on the stable business key (`code`), never on an auto id
 copied from one environment.
+
+### **[[VP-18666]]** — **
+
+- I concluded "core right, config wrong" because staging-svc agreed with core for
+  2512106925. Both were prod data (core = prod clone, staging-svc = prod-wired), so the
+  agreement proved nothing about staging. Never validated which backend each report
+  service talks to; one GUT5 W2W probe would have shown it. Posted comment 190459 to
+  Xiaoye on that basis -> needs a correction.
 
 ### **[[VP-18402]]** — `2026-09-28` — **
 
@@ -1205,7 +1205,7 @@ VP-16760 創 `ehr_vendor_inquiry_status_history` table、migration SQL commit �
 
 LTM patterns.md 304-308 行早就有「兩 DB 都要 apply」、但實際上線時還是踩了 — 因為**沒有自動化驗證機制**、純靠人記得。已建議寫進 Jenkinsfile pre-deploy。
 
-### **[[VP-18666]]** — [2026-10-02 22:55 PDT] First CM patch was overwritten by the next staging deploy
+### **[[VP-18666]]** — **
 
 - The #451 staging build (Jenkins, kubectl-client-side-apply 05:53Z) re-synced
   emr-v2/lis-emr-v2-config from its SOURCE OF TRUTH = the **AKS default
@@ -1707,7 +1707,7 @@ ConfigMap 快照，但那兩個檔只存在主 repo 工作目錄 → 在 worktre
 
 - `timeout` is not on macOS; the VPN reachability test fell through to `nc -w 3` which worked. Not a real failure, noting so the runbook uses `nc -z -w 3`.
 
-### **[[VP-18665]]** — [2026-10-02 23:15 PDT] Staging E2E: bare list 503 — `client.listClinicCustomersByClinicID is not a function`
+### **[[VP-18665]]** — `client.listClinicCustomersByClinicID is not a function` — **
 
 - Deployed 9b766f3 (both PRs). patientId path PASSED (557149 -> 6 rows,
   peer placerId null; 589232 -> 4). Bare list (no patientId) -> 503 on every
