@@ -2,8 +2,9 @@
 id: FHIR-ONDEMAND-RESULT
 type: stm
 category: emr_integration
+archived: '2026-11-07'
 status: done
-score: 0.0021
+score: 0.0019
 base_weight: 1.0
 created: 2026-07-02
 updated: 2026-07-05

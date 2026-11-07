@@ -3116,3 +3116,8 @@ Atlassian MCP 斷線時的 fallback：`~/src/credential/atlassian-api-token.md`�
 - **data-only prod 變更（如 is_public flip）的模板**：pre-check `SELECT *` 快照 → UPDATE 綁 id + code + 舊值 → assert 1 row → 交易內比對其他欄位不變 → 先丟 sentinel exception 做 dry-run rollback → `APPLY=1` → 用 MCP 唯讀連線二次讀。沒有 code 就不開空 PR。emr-v2 runner script 要 `node -r dotenv/config`（Prisma 不會自己讀 .env）。
 - **已 push 的 branch 要追 staging → merge origin/staging（merge commit），不 rebase**（禁 force-push）。staging 新增 dependency（pdf-lib）時 worktree 要重新 `npm install`。
 - **Session handoff 的 "Verified facts" 可能是舊 context**：VP-19013 11-05 02:03 的 handoff 寫「無 release PR、staging E2E 沒證據」，但 #530 已在 23:38Z merge、STM 15:40 有 E2E 結果。handoff 與 STM 衝突時以 STM 時間戳較新的段落 + gh/Jira ground truth 為準。
+
+## 【蒸餾 2026-11-06】Cross-ticket review（VP-19128 / VP-19131 / VP-19142 / VP-18842 / VP-19171 / VP-18797 / VP-19159 / VP-17466）
+- **8 張裡有 4 張「Done 的時候還有東西沒落地」**：VP-19159（沒有 live TB1+VA 交付）、VP-17466（4 個資料夾缺 archive/）、VP-18842（Done 之後又兩次 release 上 prod，並留下一個沒開票的 Plessen $600 regression 與 charging 的 Stripe confirm 缺口）、VP-19132（Dev Complete 時 release PR 還沒 merge）。共同點：residual 寫在 comment 或 STM 裡，但**沒有一個仍開著的 ticket 擁有它**，之後只能靠記憶找。
+- 做法：結案時把每個 residual 標上「掛在哪」——開著的票號、或明寫「掛在已 Done 票 X 的 comment Y，無 tracker」——讓 dream 與之後的 session 能從 STM 直接找到。Done 之後若又有 release 進 prod（VP-18842 #532/#534），STM 照樣寫部署證據，dream 會把它當窗口內的 merge 稽核。
+- 另一個重複出現的點（VP-18803 comment 199217、VP-19013 comment 199351）：以 Leo 帳號發出的 comment 引用了沒有當場驗證的事實，兩次都被同事指正。規則已在 CLAUDE.md 原則 5 與 leo-working-rules 2026-11-03/11-04，這裡只記錄它在這一輪又出現。

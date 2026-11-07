@@ -2586,3 +2586,17 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
   - 對照：failures.md INCIDENT-20260518 當年「Redis emptyDir wipe」被判為錯誤假設；VP-19171 這次有 Datadog「Killing: Stopping container redis」事件 + 時間對齊佐證，是確認過的機制，兩者不矛盾（當時那個症狀另有原因）。
   - 票面「8104 沒有 Cerbo integration」錯：三個 accession 是 customer 8105（Kristy Anderson，clinic 124500），8104/8105 都 LIVE MDHQ `/causentaemr/results/`；8105 另有 PRAXISEMR。
 - **Nextech（vendor 47）`is_public` 0 → 1，2026-11-04 18:43:44Z**（Leo ok）。is_public 只影響 Website vendor 清單（`ehr-vendor.service.ts` 預設 is_active=1 AND is_public=1），已 LIVE integration 的路由不讀它 → 低風險、跟 practice 自己 go-live 無關。Rollback `UPDATE ehr_vendors SET is_public=0 WHERE id=47;`。BioInsights vendor 46 仍 0。
+
+## 【蒸餾 2026-11-06】unpaid customerPay 改走 Place Order API（VP-18842 後續）、SFTP archive 收尾（VP-17466）、2026 intake 統計口徑（LIS-7993）、on-prem pod 取 Key Vault（VP-17756）
+- **VP-18842 結案後的兩次 release（#532 fc3b96a 11-05、#534 43688ef 11-06）**：
+  - #532：扣款改用「卡的擁有者」帳號（clinic 卡就 as clinic），Stripe ownership error 消失；但 Stripe card 的 PaymentIntent 停在 `requires_confirmation`（charging `payWithCardViaStripePI` 的 `params.Confirm` 被註解掉 = VP-17411 scope 2a，charging team 的缺口），emr-v2 依 VP-17411 規則視為未付。Plessen order 7505 → accession 2611056567，$600 unpaid，交給 sales/billing。
+  - order-management #255：`placeOrderElegibilityCheck` 在 `Source == "EMR" && len(Payments) == 0` 時跳過付款檢查（只限 customerPay；patientPayNow 照查）。
+  - #534：拿掉 chargeOutstanding → legacy fallback，所有 HL7 order 都走 Place Order API；未付的 customerPay 打 warn `[CUSTOMER_PAY_UNPAID]`，訂單留在 order-management（billing 在那裡看，不看 hl7_file_input.order_input 的 fail reason）。AKS 與 on-prem prod 都確認在 43688ef。截至 11-06 prod 還沒出現扣款失敗的 customerPay，API 路徑上的 `[CUSTOMER_PAY_UNPAID]` 尚未在 prod 觀察到。
+  - 判斷一張 staging/prod 訂單是 API 下的還是 legacy 下的：order service `GET /orders/info?sample_id=` 回 UUID order id = Place Order API；數字 id = legacy。on-prem log 拿不到時可用這招。
+  - charging `pay` 帶 new_sample=true 失敗時會保留一個 sample id（不進 lis_core_v7.sample），不用清。
+- **VP-17466 結案（Leo 11-06 轉 Done）**：fetch 後移到 archive/ 的機制 7/21 起就在 prod。剩 4 個資料夾沒有 archive/（OPTIMANTRA /Prod/Orders/、HealthMatters /Prod/Order/、PRAXISEMR /Prod/Order/、NICHOLS /Order/），都在自家 SFTP 45.24.217.155，帳號不能 mkdir → 走 degrade path（檔案留在 pickup、不會重複 ingest）。建資料夾的請求在 VP-17466 comment 199856（內部 sysadmin 的事，不是 vendor）；NICHOLS 還留有 probe 檔 /Order/vp17466-archive-probe.txt 等人刪。
+- **LIS-7993（2026 年 HL7 order intake 統計）**：
+  - 「這筆 order 有下成功」的 ground truth 是 `hl7_file_input.sample_id`，不是 `parse_finished`（2026 有 4 筆已下單的 row parse_finished 是 0/5），也不是 flag 欄位（Java 時代成功時寫 `''`）。
+  - `sftpDir='problematic'` 和 pod `manual-processor` 的 row 是重跑產物，不是收到的 order，算 intake 時一律排除。
+  - 「需要人工介入」只有 7/29 之後（`last_error`）與 8/25 之後（`quarantined_orders`/`resolution_logs`）才看得到；2026 的嚴格比率只能當下限，2027 才有完整資料。
+- **VP-17756（emr-v2 prod secrets 搬進 Key Vault）**：on-prem prod pod 在 Azure 外、沒有 IMDS，不能用 managed identity，需要一個對 vibrant-app-secret 有 secret get 權限的 service principal（AKS pod 已經用 MI）。昊哥 11-06 回「應該用 MI 不是 SP」——是針對 Azure 內的情境；on-prem 正是他說的「Azure 外」情況。目前卡在等 Leo 決定要不要回覆澄清／改找 Ray。

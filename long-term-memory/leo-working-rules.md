@@ -729,3 +729,8 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 - **Leo 的 ship 判斷：上游沒到位不等於擋住**——「不管有沒有 876/877 都可以進 prod，寫一個 fallback」。設計成 feature 依外部資料存在與否自動啟用，比等上游 release 好。
 - **Slack 一律中文、casual，一兩句只問要的東西**（v1 英文被退、v2 還帶背景又被退）；已寫入 CLAUDE.md。
 - **Leo 要求開票但 session 沒有建票工具時，要明講沒建**：VP-19171 的「另開一張票」到結案都沒建（headless session 無 create tool），只在 handoff 裡提到——下次 work session 要問 Leo 還要不要。
+
+## 【蒸餾 2026-11-06】對老闆的稱呼與發問管道、結案留 residual 的處理（VP-17756 / VP-17466 / VP-19159）
+- **Tianhao Wang 是老闆：一律稱「昊哥」，不寫名字；找他要東西走 Slack、不寫 Jira comment；問句只寫要什麼，不解釋為什麼**（Leo 11-06，VP-17756）。Leo 自己寫的定稿樣式：「昊哥，請幫忙建一個 service principal，給它 vibrant-app-secret 這個 Key Vault 的 secret get 權限（可以的話只開個別 secret）。建好再把 tenant ID、client ID、client secret 給我，謝謝」。
+- **Leo 會自己帶著 residual 結案**：VP-17466（4 個自家 SFTP 資料夾仍缺 archive/）、VP-19159（還沒有 live TB1+VA 交付）都是 Leo 直接轉 Done，QH comment 的 Residual 段寫清楚未完成項。agent 不要把「residual 未清」當成重開的理由；要做的是在 STM 記下 residual 現在掛在哪（例：VP-17466 的資料夾請求在已 Done 票的 comment 199856，沒有獨立 tracker），之後有人問起才知道去哪追。
+- **QA twin 結案時 QH 的「QA verification passed」comment 不能省**：QH-8363（VP-19159）11-06 轉 Done 時沒有這則 comment（STM 草稿停在等 Leo review），QH-6474（VP-17466）有。dream closeout audit 會把缺 comment 的 QH 標 FLAG。
