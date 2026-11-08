@@ -3121,3 +3121,8 @@ Atlassian MCP 斷線時的 fallback：`~/src/credential/atlassian-api-token.md`�
 - **8 張裡有 4 張「Done 的時候還有東西沒落地」**：VP-19159（沒有 live TB1+VA 交付）、VP-17466（4 個資料夾缺 archive/）、VP-18842（Done 之後又兩次 release 上 prod，並留下一個沒開票的 Plessen $600 regression 與 charging 的 Stripe confirm 缺口）、VP-19132（Dev Complete 時 release PR 還沒 merge）。共同點：residual 寫在 comment 或 STM 裡，但**沒有一個仍開著的 ticket 擁有它**，之後只能靠記憶找。
 - 做法：結案時把每個 residual 標上「掛在哪」——開著的票號、或明寫「掛在已 Done 票 X 的 comment Y，無 tracker」——讓 dream 與之後的 session 能從 STM 直接找到。Done 之後若又有 release 進 prod（VP-18842 #532/#534），STM 照樣寫部署證據，dream 會把它當窗口內的 merge 稽核。
 - 另一個重複出現的點（VP-18803 comment 199217、VP-19013 comment 199351）：以 Leo 帳號發出的 comment 引用了沒有當場驗證的事實，兩次都被同事指正。規則已在 CLAUDE.md 原則 5 與 leo-working-rules 2026-11-03/11-04，這裡只記錄它在這一輪又出現。
+
+## 【蒸餾 2026-11-08】Watch daemon 連三次「工具不可用」就停擺（VP-18465 / VP-18803）
+- **vibrant MCP 掛掉不等於 Datadog / Jira 讀不到**：VP-18465 的 AKS 零流量 watch 第 4–6 次（11-06~11-07）全部記成「沒跑成」，理由是 vibrant MCP EADDRINUSE / 連線逾時、Atlassian MCP 沒出現。但 fallback 早已在本檔（上方「vibrant MCP 需要 VPN」那條）：Datadog 走 claude.ai Datadog connector（`search_datadog_logs`），Jira 走 `.env` 的 REST 憑證（reconcile-jira.py 同款，唯讀）。dream 11-07、11-08 兩晚都是靠 `.env` REST 跑完 closeout JQL。watch 在宣告「這次沒跑成」之前要先試完 fallback。
+- **連續失敗要升級，不是累積**：同一個 watch 連兩次因工具不可用而空轉，就該在 STM / digest 頂端告訴 Leo「watch 已失明 N 天、需要 reconnect」，而不是在 daemon state 裡把 checked 計數往上加。11-05 之後到 11-08 的零流量條件因此是「未確認」，不是「已達成」——11-09 scale-to-zero 前要補查整段 now-15d。
+- 同一晚 VP-18803 等的 VP-19172（Jun Zhang 切 Jersey client 的 `GET /patients/v2/kits`）已過 11-07 期限，提醒 comment 停在 draft 等 Leo；11-10 是最後一批 LIS-Sample route 移除截止日。
