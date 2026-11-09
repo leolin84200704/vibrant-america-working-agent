@@ -3,7 +3,7 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 0.3341
+score: 0.3217
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-11-01
@@ -2577,6 +2577,8 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
   - meta_data 放在 order-management 讀的位置：`is_x_choose_y` 在 bundle line、`is_supplement` 在每個 sub item。
 - **錯誤推論的來源（Leo 定版規則的起點）**：10-15 記「官方 bundle owner null → pricing 不支援」是讀舊表 `lis_re.official_bundle_details` 推出來的；pricing 自己的表才是真相。跨系統判斷一律讀「那個服務自己的」code/DB。
 - **VP-19013 FZ/FB 男版 swap**：868→876（FZ 2.0）、869→877（Foundation Baseline），只在 twin id 存在於 pricing catalog cache 時才換，否則送 base id（Leo：「不管有沒有 876/877 都可以進 prod，寫 fallback」）。只在 placeOrderApi 路徑生效（finalizer 對 loose line 與 bundle sub item 各做一次）。prod pricing 目前無 876/877，Ray 預計 11-09 release 建；建好後 30 分鐘 cache refresh 自動啟用 → 11-09 後看 prod log `[VP-19013] male patient` + package 492/493 才 Dev Complete。order-staging 已跑 Fangyuan 的 `feature/fz-male-variant`（order-management main 仍 revert 77c6212），staging 的男單已是 PSA 版。
+  - **[結案 2026-11-09]** vp_3.107.0 release 後 prod pricing 有 876（orderTypeId 492）/ 877（493）。驗證在 on-prem staging pod 做（它讀 prod pricing）：M/486 → log `[VP-19013] male patient: package 868 -> male variant 876`、order_input item 876（original_item_id 868）、package [492]；M/487 → 877/[493]；F/486 → 不換、868/[486]；三單皆 cancel。Done（VP 200039、QH-7936 200046）。殘餘：真實 prod 男性 FZ/FB EMR 單尚未出現，由 `com.lis.vp19013-prod-watch`（PR #71，已載入）盯。
+  - **驗 gender swap 不能只看 placed package**：order-staging 自己也依性別換 FZ 版本，男單的 package 本來就會是 492——要看 emr-v2 的 swap log 與 order_input 的 item_id/original_item_id 才知道是哪一層換的。
 - **order-staging 有自己的 lis_ordermanage（2026-05 snapshot）**：staging 下的單要從 order-staging API（`/orders/info`、`/orders/package-tests`，在 staging pod 用 JWT_SECRET_DEV 簽 token）讀回，不能查 prod DB——同 sample_id 在 prod 是別的單。
 - **VP-19171：redeploy 會把剛 enqueue 的 result job 一起殺掉**（不只是 VP-19128 的 retry 中 job）。BullMQ 在 pod sidecar Redis（emptyDir）；10-19 19:38Z（#487）、10-20 03:44Z（#491）兩次 rollout 留下 22 列 PENDING/GENERATING 永不處理的 rtr（15 cloud / 7 onprem）。
   - 修法 `ResultOrphanRequeueService`（#526 → #527，main 8254fca）：pusher pod 每 10 分鐘、boot 後延 5 分鐘、未動 30 分鐘、72h lookback、每輪 20、每列最多 3 次（`updated_by orphan-requeue:n`）、只看自己 `PIPELINE_LOCATION` 的 LIVE/result_enabled integration、已有更新的 TRANSMITTED 列就跳過。`RESULT_ORPHAN_LOOKBACK_HOURS` 可臨時放大補 backlog（11-04 用 408 補了 12 筆 cloud，之後已移除）。

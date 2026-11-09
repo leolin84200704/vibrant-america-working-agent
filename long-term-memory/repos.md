@@ -3,7 +3,7 @@ id: repos
 type: ltm
 category: technical
 status: active
-score: 0.1448
+score: 0.2005
 base_weight: 0.9
 created: 2026-04-22
 updated: 2026-10-26

@@ -4,12 +4,16 @@ type: stm
 category: technical
 status: resolved
 follow_up: factory PRs
-score: 0.026
+score: 0.0302
 base_weight: 0.9
 urgency: 5
 created: 2026-09-10
 updated: '2026-09-11'
-links: []
+links:
+- VP-18481
+- VP-18771
+- failures
+- repos
 tags:
 - incident
 - emr-v2

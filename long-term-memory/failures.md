@@ -3,11 +3,11 @@ id: failures
 type: ltm
 category: technical
 status: active
-score: 0.1882
+score: 0.2606
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-11-08
+updated: 2026-11-09
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -181,7 +181,7 @@ summary: Auto-aggregated failure index from 136 entries across STM
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-11-08 — total 136 entries
+> Last updated: 2026-11-09 — total 136 entries
 
 ## Themes
 
@@ -237,19 +237,19 @@ summary: Auto-aggregated failure index from 136 entries across STM
 - F2: Theorized "zombie from 5/22 cancel-and-rebook left is_canceled=false" — WRONG (git showed rescheduleClinicalConsult sets is_canceled=true, and it was deployed 6/2 anyway). The real producer was a different env entirely.
 - F3: Assumed the local `.env` calendar_prod = the only/authoritative prod DB and that all senders write there. Missed that a separate cluster could send to the same prod email topic without touching prod's DB.
 
-### **[[VP-18704]]**
-
-- `mcp__vibrant__mysql_query` (lisportalprod) has no `lis_core_v7`; use `mcp__vibrant__lisportal_mysql_query` (lisportalprod2, read-only). `sample` has `accession_id`, not `barcode`.
-- Legacy calendar service base is `https://api.vibrant-wellness.com/v1/portal/calendar/` (CLOUD_SERVICE_BASE_URL), not api.vibrant-america.com; the minted transv2 token is accepted there too.
-- `isAccessionClaimable` argument is `accession_id`, not `accessionId`.
-- zsh: `--include=*.ts` globs must be quoted; `echo =====` fails (`=` path expansion).
-
 ### **[[VP-18824]]** — `2026-10-13` — Migration UPDATE keyed on a prod-specific id
 
 Wrote `WHERE id = 1 AND code = 'MDHQ'` from the prod row; staging has MDHQ at id 106 so the
 UPDATE silently did nothing there (the apply script's 100% verify caught it, exit 3). Fix: key
 seed/data statements in migrations on the stable business key (`code`), never on an auto id
 copied from one environment.
+
+### **[[VP-18704]]** — **
+
+- `mcp__vibrant__mysql_query` (lisportalprod) has no `lis_core_v7`; use `mcp__vibrant__lisportal_mysql_query` (lisportalprod2, read-only). `sample` has `accession_id`, not `barcode`.
+- Legacy calendar service base is `https://api.vibrant-wellness.com/v1/portal/calendar/` (CLOUD_SERVICE_BASE_URL), not api.vibrant-america.com; the minted transv2 token is accepted there too.
+- `isAccessionClaimable` argument is `accession_id`, not `accessionId`.
+- zsh: `--include=*.ts` globs must be quoted; `echo =====` fails (`=` path expansion).
 
 ### **[[VP-18666]]** — **
 
@@ -704,21 +704,6 @@ Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`
 
 
 
-### **[[VP-17827]]**
-
-None this session.
-
-### **[[VP-18655]]**
-
-- First staging ALTER attempt used `ALGORITHM=INSTANT, LOCK=NONE` -> error 1221; INSTANT must stand alone.
-- Linter cannot tell per-env sections apart inside one file -> split into two files.
-
-### **[[VP-18714]]**
-
-- First create_jira_issue 400: VP Bug requires customfield_10082 (Portal Affected System/Page),
-  10487 Impact, 10489 Detection Method, 10492 Environment and duedate; VP Task needs only
-  summary. Fetch create_fields (writes a 140 KB file; parse with python) before creating a Bug.
-
 ### **[[VP-18782]]**
 
 - `git cherry-pick -q` is not a flag (usage error) -> the -dev branch was first pushed without the commit; re-ran the cherry-pick and pushed again before opening the PR.
@@ -732,6 +717,21 @@ None this session.
 ### **[[VP-19131]]**
 
 - vibrant MCP disconnected and Atlassian MCP tools not loaded in this session -> could not read current sprint ids / write fields; DB read done via .env lis_emr creds (SELECT only).
+
+### **[[VP-17827]]** — **
+
+None this session.
+
+### **[[VP-18655]]** — **
+
+- First staging ALTER attempt used `ALGORITHM=INSTANT, LOCK=NONE` -> error 1221; INSTANT must stand alone.
+- Linter cannot tell per-env sections apart inside one file -> split into two files.
+
+### **[[VP-18714]]** — **
+
+- First create_jira_issue 400: VP Bug requires customfield_10082 (Portal Affected System/Page),
+  10487 Impact, 10489 Detection Method, 10492 Environment and duedate; VP Task needs only
+  summary. Fetch create_fields (writes a 140 KB file; parse with python) before creating a Bug.
 
 ### **[[VP-18402]]** — `2026-09-25 16:15` — **
 
