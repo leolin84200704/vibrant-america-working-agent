@@ -494,3 +494,10 @@ Prevention proposed to Leo (pending approval, automation -> PR):
 - No DB write. Reply-all draft on Olena 14:28Z, id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABljSE2QAA: still not visible, tell us once created with write access for vibrant-wellness.
 - prod (vibrant MCP down today) not re-read: Website integration for customer 53986 unknown.
 - 11-06 Leo: Olena's line means the folder is still not created, so no follow-up needed. Draft AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABljSE2QAA NOT to be sent (agent has no delete tool; Leo deletes it in Outlook). Waiting on Olena to create /Summaries/.
+
+### [2026-11-09] Olena 11-09 13:05Z: 3 developer questions; reply-all draft (not sent)
+- Asks: (1) may they delete files in Summaries after reading or move them; (2) requisition file name; (3) where ZKD goes (after ORC or after last OBR).
+- Verified emr-v2 origin/main: order-forms-delivery.service.ts buildOrderSummaryFileName -> `{ORC-2}_{barcode}_ordersummary.pdf`, fallback `{barcode}_ordersummary.pdf` (ORC-2 empty / not [A-Za-z0-9._-] / >64); SftpService.uploadVendorFile only puts (no read-back, no mkdir).
+  kit-delivery.ts reads ZKD by segment name, >1 ZKD -> KIT_DELIVERY_MULTIPLE_ZKD reject; spec docs/hl7-order-spec-kit-delivery.md recommends after PID/IN1, before first ORC.
+- SFTP 11-08/11-09 read-only: root = failed, incoming, outgoing (new /failed; our 07-23 vibrant_test.txt moved there 11-06 23:05). /Summaries still absent.
+- Reply-all draft id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABmFeBmgAA answers 1-3. Not sent.
