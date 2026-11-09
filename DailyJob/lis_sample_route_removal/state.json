@@ -1,367 +1,417 @@
 {
- "handled": {
-  "GET /interaction-logs": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /interaction-logs": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /interaction-logs/:id/details": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /interaction-logs/resolution": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /tests/rerun": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /tests/tnp/partial-spun": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "PATCH /tubes/info": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /coupon": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /phlebotomists": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /storage/racks": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /storage/racks": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "PUT /storage/racks/:rack_serial_number": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "DELETE /storage/racks/:rack_serial_number": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /storage/racks/type-list": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /storage/racks/dimension-list": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /storage/racks/suggestions": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /storage/racks/:rack_serial_number/samples/tubes": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /storage/racks/samples/tubes": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "PUT /storage/racks/samples/tubes/:storage_record_index": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "DELETE /storage/racks/samples/tubes/:storage_record_index": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /storage/records": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /storage/records/batch/removal": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /storage/records/samples/retrieval": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /notifications/active": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /notifications": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "PATCH /notifications/:id": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "DELETE /notifications/:id": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /record-management/merge-patients": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /record-management/patients/search": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /record-management/patients/:patient_id/order-total": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /record-management/practices/search": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /record-management/clinics/:clinic_id": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /record-management/providers/search": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /record-management/providers/:customer_id/clinics": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /record-management/providers/:customer_id/patients": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /record-management/providers/:customer_id/samples": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /record-management/transfer-provider-practice": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /record-management/transfer-all-patients": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /record-management/transfer-all-orders": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /record-management/transfer-selected-patients": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /record-management/transfer-selected-orders": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /patients": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /patients/duplicate-check": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /patients/complete-reports": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /patients/kits/resend": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /patients/resend-tubes": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /patients/portal-jwt": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /patients/pns-jwt": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /patients/orders/nutriproz-skincare-qnr": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /patients/orders/hormone-qnr": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /patients/orders/hormone-zoomer-qnr": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /patients/orders/gut-zoomer-qnr": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /patients/orders/cardio-zoomer-qnr": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /patients/orders/ny-waiver-form": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /patients/orders/disclosure-restricted-notif": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /patients/orders/notif-email": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /patients/orders/batch/notif-email": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /patients/orders/shipping-address/confirmation-email": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /patients/orders/reset-questionnaire": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /customers": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /order/check": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /order/overviews": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /order/overviews/export": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /order/attribute-value-check": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /order/attribute-value-check/batch": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /order/patient-emails": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "POST /order/sample/validation": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /order/audit-logs": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "PATCH /order/sample-level-info": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /order/clients": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "GET /order/clinics": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232",
-   "date": "2026-11-05",
-   "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run"
-  },
-  "PATCH /patients/profiles": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/235",
-   "date": "2026-11-08"
-  },
-  "GET /patients/v2/kits": {
-   "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/235",
-   "date": "2026-11-08"
+  "handled": {
+    "DELETE /notifications/:id": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "DELETE /storage/racks/:rack_serial_number": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "DELETE /storage/racks/samples/tubes/:storage_record_index": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "GET /coupon": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "GET /customers": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "GET /interaction-logs": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "GET /interaction-logs/:id/details": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "GET /notifications/active": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "GET /order": {
+      "date": "2026-11-09",
+      "note": "service retired outside this job: /v1/lis/samples/* rewritten to trans v1 by ingress, LIS-Sample scaled to 0 and deleted (VP-18803)",
+      "pr": null
+    },
+    "GET /order/audit-logs": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "GET /order/check": {
+      "date": "2026-11-09",
+      "note": "service retired outside this job: /v1/lis/samples/* rewritten to trans v1 by ingress, LIS-Sample scaled to 0 and deleted (VP-18803)",
+      "pr": null
+    },
+    "GET /order/clients": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "GET /order/clinics": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "GET /order/details": {
+      "date": "2026-11-09",
+      "note": "service retired outside this job: /v1/lis/samples/* rewritten to trans v1 by ingress, LIS-Sample scaled to 0 and deleted (VP-18803)",
+      "pr": null
+    },
+    "GET /order/overviews": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "GET /order/patient-emails": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "GET /order/sample-level-info": {
+      "date": "2026-11-09",
+      "note": "service retired outside this job: /v1/lis/samples/* rewritten to trans v1 by ingress, LIS-Sample scaled to 0 and deleted (VP-18803)",
+      "pr": null
+    },
+    "GET /patients": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "GET /patients/kits": {
+      "date": "2026-11-09",
+      "note": "service retired outside this job: /v1/lis/samples/* rewritten to trans v1 by ingress, LIS-Sample scaled to 0 and deleted (VP-18803)",
+      "pr": null
+    },
+    "GET /patients/orders/operation-settings": {
+      "date": "2026-11-09",
+      "note": "service retired outside this job: /v1/lis/samples/* rewritten to trans v1 by ingress, LIS-Sample scaled to 0 and deleted (VP-18803)",
+      "pr": null
+    },
+    "GET /patients/pns-jwt": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "GET /patients/portal-jwt": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "GET /patients/profiles": {
+      "date": "2026-11-09",
+      "note": "service retired outside this job: /v1/lis/samples/* rewritten to trans v1 by ingress, LIS-Sample scaled to 0 and deleted (VP-18803)",
+      "pr": null
+    },
+    "GET /patients/resend-tubes": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "GET /patients/v2/kits": {
+      "date": "2026-11-08",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/235"
+    },
+    "GET /phlebotomists": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "GET /record-management/clinics/:clinic_id": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "GET /record-management/patients/:patient_id/order-total": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "GET /record-management/patients/search": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "GET /record-management/practices/search": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "GET /record-management/providers/:customer_id/clinics": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "GET /record-management/providers/:customer_id/patients": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "GET /record-management/providers/:customer_id/samples": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "GET /record-management/providers/search": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "GET /status": {
+      "date": "2026-11-09",
+      "note": "service retired outside this job: /v1/lis/samples/* rewritten to trans v1 by ingress, LIS-Sample scaled to 0 and deleted (VP-18803)",
+      "pr": null
+    },
+    "GET /storage/racks": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "GET /storage/racks/:rack_serial_number/samples/tubes": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "GET /storage/racks/dimension-list": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "GET /storage/racks/suggestions": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "GET /storage/racks/type-list": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "GET /storage/records": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "GET /tests": {
+      "date": "2026-11-09",
+      "note": "service retired outside this job: /v1/lis/samples/* rewritten to trans v1 by ingress, LIS-Sample scaled to 0 and deleted (VP-18803)",
+      "pr": null
+    },
+    "GET /tubes/history": {
+      "date": "2026-11-09",
+      "note": "service retired outside this job: /v1/lis/samples/* rewritten to trans v1 by ingress, LIS-Sample scaled to 0 and deleted (VP-18803)",
+      "pr": null
+    },
+    "PATCH /notifications/:id": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "PATCH /order/sample-level-info": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "PATCH /patients/profiles": {
+      "date": "2026-11-08",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/235"
+    },
+    "PATCH /tubes/info": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "POST /interaction-logs": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "POST /interaction-logs/resolution": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "POST /notifications": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "POST /order/attribute-value-check": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /order/attribute-value-check/batch": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /order/check": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /order/overviews/export": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /order/sample/validation": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /patients/complete-reports": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /patients/duplicate-check": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /patients/kits/resend": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /patients/orders/batch/notif-email": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /patients/orders/cardio-zoomer-qnr": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /patients/orders/disclosure-restricted-notif": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /patients/orders/gut-zoomer-qnr": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /patients/orders/hormone-qnr": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /patients/orders/hormone-zoomer-qnr": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /patients/orders/notif-email": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /patients/orders/nutriproz-skincare-qnr": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /patients/orders/ny-waiver-form": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /patients/orders/reset-questionnaire": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /patients/orders/shipping-address/confirmation-email": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /record-management/merge-patients": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /record-management/transfer-all-orders": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /record-management/transfer-all-patients": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /record-management/transfer-provider-practice": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /record-management/transfer-selected-orders": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /record-management/transfer-selected-patients": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/232"
+    },
+    "POST /storage/racks": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "POST /storage/racks/samples/tubes": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "POST /storage/records/batch/removal": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "POST /storage/records/samples/retrieval": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "POST /tests/rerun": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "POST /tests/tnp/partial-spun": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "PUT /storage/racks/:rack_serial_number": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    },
+    "PUT /storage/racks/samples/tubes/:storage_record_index": {
+      "date": "2026-11-05",
+      "note": "removed outside this job (VP-18803, merged to master 2026-11-03); recorded by the 2026-11-05 run",
+      "pr": "https://github.com/Vibrant-America/LIS-Sample/pull/229"
+    }
   }
- }
 }
