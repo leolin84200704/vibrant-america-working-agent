@@ -501,3 +501,15 @@ Prevention proposed to Leo (pending approval, automation -> PR):
   kit-delivery.ts reads ZKD by segment name, >1 ZKD -> KIT_DELIVERY_MULTIPLE_ZKD reject; spec docs/hl7-order-spec-kit-delivery.md recommends after PID/IN1, before first ORC.
 - SFTP 11-08/11-09 read-only: root = failed, incoming, outgoing (new /failed; our 07-23 vibrant_test.txt moved there 11-06 23:05). /Summaries still absent.
 - Reply-all draft id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABmFeBmgAA answers 1-3. Not sent.
+
+### [2026-11-10] Leo sent the 11-09 answers; Olena 11-10 15:16Z new asks; reply-all draft (not sent)
+- Sent Items: Leo sent the 11-09 reply (answers 1-3) at 2026-11-09T17:24:16Z, reply-all, internetMessageId IA2PR22MB5423D05AFDE6D255F129C8D7F2732.
+- Olena 11-10 15:16Z (follow-up on her own 11-09 mail): how to map provider settings in HL7: Collection method (In office / Phlebotomy service / self-coordinated),
+  Fulfillment method (office pick up / ship to patient / BioInsights shipped); and "do you need our requisition sent with the order?"
+- Verified emr-v2 origin/main (43688ef): no HL7 field for collection/draw method (no parser read); ZKD-2 blood / ZKD-3 non-blood accept only SHIP_TO_PATIENT / SUPPLIED_BY_OFFICE;
+  kit-delivery.service.ts L89 non-blood suppliedByClient + PATIENT_PAY_LATER -> KIT_DELIVERY_PAYMENT_CONFLICT; L97-113 ZKD present + ships -> PID-11 street/city/state/zip required.
+  No ingestion of partner PDFs (order created from HL7 only).
+- Draft reply-all id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABmFfZrwAA: collection = not needed; fulfillment -> ZKD same value both fields
+  (ship to patient = SHIP_TO_PATIENT; office pick up + BioInsights shipped = SUPPLIED_BY_OFFICE); payment rule; requisition not needed.
+- Open for Leo: "BioInsights shipped" mapped to SUPPLIED_BY_OFFICE assumes BioInsights stocks Vibrant kits — kit supply to BioInsights is Mingxi's/business, not stated in draft.
+- /Summaries still waiting on Olena (not re-checked today).
