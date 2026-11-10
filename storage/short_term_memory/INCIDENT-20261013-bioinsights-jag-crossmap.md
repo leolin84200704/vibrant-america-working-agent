@@ -190,3 +190,8 @@ reversal with Mingxi; BioInsights provider confirmation draft pending Leo; close
 - Re-checked prod 11-10 (lisportalprod2 ro, the 200 accessions -> lis_re.order_table -> lis_core_v7.patient): 200 rows, 195 patients; last_name numeric on all 200; legal_lastname/legal_firstname null; MRN 0; order email = 1 distinct address, domain jaghp.com (JAG office); cell_phone on 3 orders (2 distinct numbers). No other patient name or contact source in our data.
 - CHANGE since 10-19: patient 3061012 (accession 2609236273), which was "Patrick^Susan" in the sent HL7 and in the CSV, now reads 50000085 / 20250501 in lis_core_v7.patient. Someone recoded it after 10-19 (who was not checked). The CSV still carries the real name for that row.
 - Slack draft Dr0CGK2UR58E in D0922NF9RPD: we only have what JAG entered; JAG can map its own codes; email is the JAG office address; phone on 3 only. Not sent; waiting on Leo.
+
+### [2026-11-10 15:20] Junjie: add email + phone to the CSV, plus mechanism text for Francesco's incident note to JAG
+- Re-checked prod (lisportalprod2 ro): 200 accessions, all customer 30248; order email = ahalfacre@jaghp.com on all 200; cell_phone on 3 (2606046399 / 2607146364 = 18506071444, 2609236273 = 2039807008). ehr_integrations cms3icsz700010xlgywfuj8do still REJECTED, result/ordering 0.
+- New CSV ~/Downloads/JAG-results-delivered-to-BioInsights-SFTP-2026-07-29_2026-10-13_with-contact.csv (201 lines): original 5 columns + "email_on_order (not in files sent)" + "phone_on_order (not in files sent)". PHI, not in repo.
+- Slack draft Dr0CGGHJ0N3X in DM D0922NF9RPD (Chinese note + English mechanism / file-content paragraphs). Not sent; Leo attaches CSV and sends.
