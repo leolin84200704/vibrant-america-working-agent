@@ -6,7 +6,7 @@ status: active
 base_weight: 1.0
 urgency: 5
 created: 2026-10-13
-updated: '2026-10-20'
+updated: 2026-11-10
 links:
 - INCIDENT-20260817-onprem-stale-deploy
 - INCIDENT-2604156666
@@ -183,3 +183,10 @@ reversal with Mingxi; BioInsights provider confirmation draft pending Leo; close
 - Leo decision on (1): engineers will no longer set up customer integrations; all integrations configured by the customer/vendor themselves, enforced in the system. (Commitment made by Leo; implementation not yet scoped/ticketed.)
 - Leo decision on (4): Francesco sends the signed-letter request to Lisa Bond (lisa@bioinsights.com), cc Leo; ask included: number of files downloaded/copied.
 - Reply-all draft created on Francesco's mail, id AAkALgAAAAAAHYQDEapmEc2byACqAC-EWg0AJgEEG39__0mH_2569j02fwABi9g9GQAA. Not sent.
+
+### [2026-11-10 14:05] Junjie (Keith) for the JAG meeting: patient list re-sent; "can we pull real names / email / phone"
+- 11-10 20:37Z Leo forwarded the 10-19 CSV to Junjie (FW: Update Regarding "John Doe"). JAG asked about Healthie: we never had it as a vendor (Leo answered "沒有").
+- Junjie 13:53-13:55 PT: names are all numbers, can we pull real names plus email/phone so JAG can contact its patients.
+- Re-checked prod 11-10 (lisportalprod2 ro, the 200 accessions -> lis_re.order_table -> lis_core_v7.patient): 200 rows, 195 patients; last_name numeric on all 200; legal_lastname/legal_firstname null; MRN 0; order email = 1 distinct address, domain jaghp.com (JAG office); cell_phone on 3 orders (2 distinct numbers). No other patient name or contact source in our data.
+- CHANGE since 10-19: patient 3061012 (accession 2609236273), which was "Patrick^Susan" in the sent HL7 and in the CSV, now reads 50000085 / 20250501 in lis_core_v7.patient. Someone recoded it after 10-19 (who was not checked). The CSV still carries the real name for that row.
+- Slack draft Dr0CGK2UR58E in D0922NF9RPD: we only have what JAG entered; JAG can map its own codes; email is the JAG office address; phone on 3 only. Not sent; waiting on Leo.
