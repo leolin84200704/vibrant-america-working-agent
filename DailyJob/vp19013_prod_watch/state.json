@@ -1,7 +1,7 @@
 {
   "status": "watching",
   "twins_seen_in_prod": "2026-11-09T18:15:00Z",
-  "checked_through_utc": "2026-11-10T02:13:00Z",
+  "checked_through_utc": "2026-11-10T21:15:00Z",
   "orders_checked": [
     7525,
     7526,
@@ -14,7 +14,12 @@
     7533,
     7534,
     7535,
-    7536
+    7536,
+    7537,
+    7538,
+    7539,
+    7540,
+    7541
   ],
   "verified_order": null
 }
