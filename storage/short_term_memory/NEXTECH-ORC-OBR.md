@@ -8,7 +8,7 @@ updated: 2026-10-19
 related:
 - NEXTECH-EMPTY-ORDER
 - NEXTECH-onboarding
-score: 0.0559
+score: 0.054
 ---
 
 ## Ticket Analysis
