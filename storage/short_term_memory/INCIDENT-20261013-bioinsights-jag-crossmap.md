@@ -208,3 +208,10 @@ reversal with Mingxi; BioInsights provider confirmation draft pending Leo; close
   9 PDFs have a second-format section with a patient "Street Address". It is filled on 3: 2607146364 and 2609026522 (Cincinnati OH, with zip) and 2607236332 (the JAG clinic).
 - So two lines of Leo's 15:53 write-up are wrong: "Patient email and phone were not included in the files" (the PDF prints them), and the write-up does not mention the address.
 - Slack draft Dr0CGL1UDHUN in D0922NF9RPD answers the address question and corrects the email/phone line. Not sent.
+
+### [2026-11-10 16:30] Junjie: address in the files? -> full scan of all 204 sent files; two earlier statements were WRONG
+- Source: lis_emr.result_transmission_records (ehr_vendor_id=46, TRANSMITTED) has PID but PDF stripped ("[PDF_CONTENT_REMOVED_FOR_DB_STORAGE]"); the full sent files are still on the emr-v2 prod pod at file_path under /EMR_storage/HL7Result_prod/<id>/<accession>.hl7. All 204 copied (read-only kubectl exec cat) to the session scratchpad, PDF decoded + pdftotext.
+- HL7 PID-11 carries an address on 6 files (10-19 "PID-11 empty" was a 2-file spot check, wrong): 2606046399 Ocala Rd N Palm Beach; 2607146364 7995 Ayers Rd Cincinnati; 2609026522 7886 Ayers Rd Cincinnati; 2609236267 c/o Eric Jones LUMA Hotel SF; 2607236332 + 2609236176 = JAG office 25 W Cedar St Pensacola. PID-11 has no zip; PDF "Street Address" section (some reports) shows zip.
+- PDF page 1 patient block prints EMAIL (all 204 = ahalfacre@jaghp.com) and TELEPHONE (3: 2606046399 / 2607146364 = +1-8506071444 = JAG office phone; 2609236273 = 2039807008). Provider block = JAG practice address + phone on every file. So the 15:53 Slack line "Patient email and phone were not included in the files" (sent by Leo) and the CSV header "(not in files sent)" were wrong.
+- New CSV ~/Downloads/...2026-07-29_2026-10-13_v2.csv (+ patient_email_in_file / patient_phone_in_file / patient_address_in_file); _with-contact.csv deleted. Correction Slack draft Dr0CGPUN1B17 (D0922NF9RPD), not sent.
+- Lesson: "what was in the file" is answered from the sent file itself (all of them), not from PID spot checks or the DB copy.
