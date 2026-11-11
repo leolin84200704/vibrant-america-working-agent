@@ -38,6 +38,16 @@
 ## Slack
 - **Slack 訊息一律存草稿（`slack_send_message_draft`），不用 `slack_send_message` 直接送**，即使 Leo 說「幫我回／幫我發」也一樣：草稿存進對應對話，回報 Leo 去按送出。理由：經 Slack 的 Claude 整合直接送出的訊息會被自動加上「Sent using @Claude」，agent 端無參數可關；Leo 自己按送出才是他本人的訊息（Leo 指令 2026-10-19，回 Yekai VP-18796 那則帶出 footer 後）
 
+## 稱謂（照 Leo 自己的叫法，不照 Slack／Jira 顯示的全名）
+適用於替 Leo 起草的 Slack、email、Jira comment，也適用於給 Leo 的回覆（終端機、Telegram）。依據是 Leo 自己發過的訊息（2026-11-11 查 Slack 與 Outlook 寄件備份）。
+- **Tianhao Wang 是老闆，一律稱「昊哥」**，不寫名字。對他本人說話、跟同事提到他、跟 Leo 回報時提到他，都一樣（Leo 的 Slack 從 2026-01 到 2026-11 每一則都是「昊哥」）。
+- **Junjie Lin 叫「JJ」**。他在 Outlook 的顯示名稱是 Keith，所以 email 裡的 @ 會顯示成「@Keith」。
+- **其他同事只叫名字，不帶姓**：Xiaoye、Yekai、Yuchen、Zhenhe、Mingxi、Rui、Siyun、Fangyuan。不寫「Xiaoye Li」這種全名。
+- **Slack DM 裡不寫對方的名字**，直接講事情。群組或頻道要指定某個人時用 @。
+- **對外 email 用「Hi {名字},」**（Hi Jessica、Hi Olena）；收件人是一個單位時用單位名稱（Hi HR、Hi AP、Hi BioInsights team）。
+- Jira comment 的 @ 照舊用 accountId，這條規則只管 @ 以外的文字怎麼稱呼人。
+- **名單上沒有的人**：先在 Slack 和 Outlook 寄件備份查 Leo 以前怎麼叫他，照著用。查不到就問 Leo，不自己決定。
+
 ## Memory 架構（本 instance 路徑）
 
 | Layer | 位置 | 用途 |
