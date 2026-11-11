@@ -1,0 +1,69 @@
+From bf143be760696900d9863ad27f8db53ed8809a1a Mon Sep 17 00:00:00 2001
+From: Hung Fan Lin <leolin84200704@gmail.com>
+Date: Wed, 11 Nov 2026 12:07:36 -0800
+Subject: [PATCH] [VP-19298] Request consult availability from today so
+ same-day slots are offered
+
+The booking, lab-clinician and both reschedule dialogs asked the backend for
+slots starting tomorrow, so no same-day slot was ever returned. The backend
+already drops any slot earlier than now plus the clinician's Soonest Available
+Appointment (min_notice_minutes), so starting from today is safe.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/views/home/ScheduleMeeting/ScheduleMeetingDialogs.vue     | 2 +-
+ .../ScheduleMeeting/schedule-dialog/MultiClinicianDialog.vue  | 2 +-
+ .../schedule-dialog/ScheduleAMeetingDialog.vue                | 4 ++--
+ 3 files changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/src/views/home/ScheduleMeeting/ScheduleMeetingDialogs.vue b/src/views/home/ScheduleMeeting/ScheduleMeetingDialogs.vue
+index 6b1189142..f634e93c0 100644
+--- a/src/views/home/ScheduleMeeting/ScheduleMeetingDialogs.vue
++++ b/src/views/home/ScheduleMeeting/ScheduleMeetingDialogs.vue
+@@ -320,7 +320,7 @@ export default {
+           variables: {
+             input: {
+               scope: 'ALL_CLINICIANS',
+-              start_date: moment().add(1, 'days').format('YYYY-MM-DD'),
++              start_date: moment().format('YYYY-MM-DD'),
+               end_date: moment().add(30, 'days').format('YYYY-MM-DD'),
+               duration_minutes: FIRST_AVAILABLE_DEFAULT_DURATION_MINUTES,
+             }
+diff --git a/src/views/home/ScheduleMeeting/schedule-dialog/MultiClinicianDialog.vue b/src/views/home/ScheduleMeeting/schedule-dialog/MultiClinicianDialog.vue
+index 1ec357ca4..b27eecab5 100644
+--- a/src/views/home/ScheduleMeeting/schedule-dialog/MultiClinicianDialog.vue
++++ b/src/views/home/ScheduleMeeting/schedule-dialog/MultiClinicianDialog.vue
+@@ -140,7 +140,7 @@ export default {
+     async fetchAllClinicians() {
+       this.isLoading = true;
+       try {
+-        const startDate = moment().add(1, 'days').format('YYYY-MM-DD');
++        const startDate = moment().format('YYYY-MM-DD');
+         const endDate = moment().add(this.rolloutDays, 'days').format('YYYY-MM-DD');
+ 
+         const [rescheduleAvailabilityRes, firstAvailableRes, specialtiesRes] = await Promise.all([
+diff --git a/src/views/home/ScheduleMeeting/schedule-dialog/ScheduleAMeetingDialog.vue b/src/views/home/ScheduleMeeting/schedule-dialog/ScheduleAMeetingDialog.vue
+index e7de09eb9..55e2c2e03 100644
+--- a/src/views/home/ScheduleMeeting/schedule-dialog/ScheduleAMeetingDialog.vue
++++ b/src/views/home/ScheduleMeeting/schedule-dialog/ScheduleAMeetingDialog.vue
+@@ -448,7 +448,7 @@ export default {
+         clinician_calendar_id: this.activeClinicianCalendarId,
+         clinician_customer_id: this.activeClinicianCustomerId,
+         provider_id: this.$store.state.userInfo.customer_id,
+-        start_date: moment().add(1, 'days').format('YYYY-MM-DD'),
++        start_date: moment().format('YYYY-MM-DD'),
+         end_date: moment().add(this.rolloutDays, 'days').format('YYYY-MM-DD'),
+         duration_minutes: duration,
+       };
+@@ -526,7 +526,7 @@ export default {
+           input: {
+             event_id: this.rescheduleObj.id,
+             scope: 'SINGLE',
+-            start_date: moment().add(1, 'days').format('YYYY-MM-DD'),
++            start_date: moment().format('YYYY-MM-DD'),
+             end_date: moment().add(this.rolloutDays, 'days').format('YYYY-MM-DD'),
+             duration_minutes: duration,
+           }
+-- 
+2.39.2 (Apple Git-143)
+
