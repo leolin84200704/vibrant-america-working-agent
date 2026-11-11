@@ -38,3 +38,13 @@ MDHQ result uploads fail with "SFTP connection failed after 3 attempts: getConne
   (same family as INCIDENT-20260604). Not verified; needs on-prem logs.
 - Failed results to resend: sample 2649139 (client 11078), 2661089 (18832), 2618604 (4953 rcode); none retransmitted yet.
 - New reply-all draft on Scott's mail (id ...XwYQAA). Waiting Leo ok.
+
+### [2026-11-11 22:25] Repush done (Leo: "回覆並且把缺的報告重新傳")
+- Pre-check: all 3 integrations LIVE, result_enabled=1, pipeline_location=cloud, vendor 1.
+- In-pod gRPC localhost:5000 GenerateResultHl7 {send_result:true}, 8 s pacing, Bearer token from pod OAUTH2_* client_credentials
+  (metadata authorization + service-name=manual-repush-mdhq-20261111; without token -> 16 UNAUTHENTICATED missing_token).
+- All 3 success; same rtr rows flipped to TRANSMITTED 22:23:19 / 22:23:41 / 22:24:54Z.
+- SFTP stat on Cerbo: /bliemr/results/2610076569.hl7 600101 B, /drleveroneemr/results/2610286378.hl7 189366 B,
+  /rcode/results/2608186799.hl7 4426280 B; all equal to file_size_bytes. 3/3 verified.
+- Draft reply to Scott updated to "we have resent". Body replace dropped the quoted thread. Waiting Leo "ok".
+- Open: on-prem intake pod session leak (unverified, no on-prem access).
