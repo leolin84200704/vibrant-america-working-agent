@@ -197,3 +197,14 @@ reversal with Mingxi; BioInsights provider confirmation draft pending Leo; close
 - Slack draft Dr0CGGHJ0N3X in DM D0922NF9RPD (Chinese note + English mechanism / file-content paragraphs). Not sent; Leo attaches CSV and sends.
 - 11-10 14:13-15:08 PT Junjie: add the email and phone columns anyway ("provide everything we have"), JAG was promised delivery today; also describe the mechanism, because Francesco is writing an incident statement for JAG.
 - 11-10 15:53 PT Leo posted in D0922NF9RPD: an English "How it happened / What each file contained" write-up plus the file JAG-results-...-2026-10-13_with-contact.csv (Slack file F0CHG8CPWAC), and asked Junjie to review it. Checked the CSV: 200 rows matching the evidence accessions exactly (diff 0); email filled on 200 rows, all one value; phone on 3 rows (2 distinct numbers). Both match prod. Waiting on Junjie / Francesco.
+
+### [2026-11-10 16:15] Junjie: did the files carry patient address? Is the PDF address JAG's clinic? -> CORRECTS the 10-19 "PID-11 empty"
+- Checked all 204 TRANSMITTED rows (200 samples) in lis_emr.result_transmission_records, ehr_vendor_id=46, field generated_hl7_content (the PDF OBX is stored as [PDF_CONTENT_REMOVED_FOR_DB_STORAGE]):
+  PID-11 empty on 194 samples. Filled on 6: street + city + state + country, zip component empty.
+  2 are the JAG clinic address (25 W Cedar St, Pensacola): 2607236332, 2609236176.
+  4 are not the clinic: 2606046399 (North Palm Beach FL), 2607146364 (Cincinnati OH), 2609026522 (Cincinnati OH), 2609236267 (c/o guest at a San Francisco hotel; zip inside the street text). PID-13 (phone/email) empty on all 200.
+- PDFs: re-downloaded the 200 classic PDFs today from base-report-service pdf-cache, the same endpoint and style downloadPdfFromApi used. These are not guaranteed to be byte-identical to what was sent (for example, 2609236273 now shows the recoded name). Scratch copies are in /tmp/jagpdf (PHI, not in the repo).
+  Page 1: the provider block on all 200 shows JAG Holdings Group, LLC at 25 West Cedar Street, Pensacola FL 32502. The patient block shows NAME / DOB / GENDER / AGE / TELEPHONE / EMAIL and no address. EMAIL is the JAG office address on all 200; TELEPHONE is filled on 3.
+  9 PDFs have a second-format section with a patient "Street Address". It is filled on 3: 2607146364 and 2609026522 (Cincinnati OH, with zip) and 2607236332 (the JAG clinic).
+- So two lines of Leo's 15:53 write-up are wrong: "Patient email and phone were not included in the files" (the PDF prints them), and the write-up does not mention the address.
+- Slack draft Dr0CGL1UDHUN in D0922NF9RPD answers the address question and corrects the email/phone line. Not sent.
