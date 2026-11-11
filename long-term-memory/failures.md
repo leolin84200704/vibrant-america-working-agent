@@ -160,6 +160,7 @@ links:
 - VP-18824
 - VP-19078
 - VP-19131
+- VP-19290
 - VP-9299
 - business-model
 - business-model-deep
@@ -174,19 +175,19 @@ tags:
 - failures
 - root-cause
 - auto-generated
-summary: Auto-aggregated failure index from 136 entries across STM
+summary: Auto-aggregated failure index from 137 entries across STM
 ---
 
 # Failure Index
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-11-10 — total 136 entries
+> Last updated: 2026-11-10 — total 137 entries
 
 ## Themes
 
 - [Production side-effects (Kafka / email / SFTP)](#prod-side-effects) — 36 entries
-- [Other / uncategorized](#other) — 25 entries
+- [Other / uncategorized](#other) — 26 entries
 - [Build / TypeScript / Tooling](#build-tooling) — 21 entries
 - [Deploy / commit / push coordination](#deploy-coordination) — 14 entries
 - [DB / migration / backfill](#db-migration) — 9 entries
@@ -717,6 +718,10 @@ Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`
 ### **[[VP-19131]]**
 
 - vibrant MCP disconnected and Atlassian MCP tools not loaded in this session -> could not read current sprint ids / write fields; DB read done via .env lis_emr creds (SELECT only).
+
+### **[[VP-19290]]**
+
+- First practice request DTO reused ClinicInfoDto (customerNpi required) -> fixed in #536 via HTTP check.
 
 ### **[[VP-17827]]** — **
 
