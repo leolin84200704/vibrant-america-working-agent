@@ -11,7 +11,7 @@ unblock_when: 'BioInsights grants account perms (test: sftp key-auth to sftp.bio
   then ls / — currently auth OK but ls/stat/put all fail); waiting on Thomas reply
   to 2026-07-21 email'
 created: 2026-07-21
-updated: 2026-11-06
+updated: 2026-11-11
 links:
 - BIOINSIGHTS-SFTP-KEY
 - NEXTECH-onboarding
@@ -513,3 +513,7 @@ Prevention proposed to Leo (pending approval, automation -> PR):
   (ship to patient = SHIP_TO_PATIENT; office pick up + BioInsights shipped = SUPPLIED_BY_OFFICE); payment rule; requisition not needed.
 - Open for Leo: "BioInsights shipped" mapped to SUPPLIED_BY_OFFICE assumes BioInsights stocks Vibrant kits — kit supply to BioInsights is Mingxi's/business, not stated in draft.
 - /Summaries still waiting on Olena (not re-checked today).
+
+### [2026-11-11 20:17] Leo merged both replies himself
+- Leo (Telegram): he combined the 11-09 three answers and the 11-10 three answers into one reply and saved it in his Outlook Drafts himself. The agent's 11-09 draft (...ABmFeBmgAA) and 11-10 draft (...ABmFfZrwAA) are in Deleted Items. Do NOT send or update either old draft; no pending send_request on this thread.
+- Still external: Olena to create /Summaries/ with write access; then SFTP ls, probe, gated UPDATE ehr_vendors 46 sftp_order_forms_path.
