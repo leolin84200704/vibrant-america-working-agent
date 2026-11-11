@@ -6,7 +6,7 @@
 | Score | ID | Summary | Tags | Status | Category | Updated |
 |-------|-----|---------|------|--------|----------|---------|
 | 0.32 | emr-integration | EMR/HL7/SFTP integration rules, identity mapping, MSH values, bundle config, hl7_file_input triage | emr hl7 integration provider practice hl7_file_input triage order-api payment | active | emr_integration | 2026-11-01 |
-| 0.26 | failures | Auto-aggregated failure index from 136 entries across STM | failures root-cause auto-generated | active | technical | 2026-11-09 |
+| 0.26 | failures | Auto-aggregated failure index from 136 entries across STM | failures root-cause auto-generated | active | technical | 2026-11-10 |
 | 0.20 | repos | Active repo reference: tech stack, ports, key areas, setup | repos nestjs prisma grpc | active | technical | 2026-10-26 |
 | 0.19 | fhir-api | HL7 v2 vs FHIR deep reference + feasibility of a FHIR inbound order API for lis-backend-emr-v2 (no report), reuse map, difficulty ranking, and Epic/Story/Ticket breakdown for future creation | fhir hl7 emr integration order-api smart-on-fhir api-versioning | active | emr_integration | 2026-06-06 |
 | 0.16 | leo-working-rules | Leo's working rules for this instance — reporting, ticket handling, Jira mechanics, and repo hygiene. The job-specific residue of the native auto-memory store; universal engineering discipline lives in factory ENGINEERING-LESSONS. |  | active | process | 2026-11-01 |

@@ -2608,3 +2608,21 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 - **split=1 的 integration 手動 repush：gRPC / REST `GenerateResultHl7` 會靜默跳過**——它們不傳 `event_name`，split 路徑的 `findDeliveredReportMessage` 看到該 REPORT / REPORT_GROUP 已 TRANSMITTED 就「not sending it again」。可用配方：在 **pipeline_location 擁有者的 pod** 裡（Redis 是 per-pod sidecar，`REDIS_HOST=localhost`）用 bullmq 對 `result-generation` queue 加 `generate-result` job，`event_name: redraw_report_finished`（與 orphan-requeue 對 TRANSMITTED 列的做法相同）、`event_id` 帶票號、`attempts 1`；on-prem 要 `ssh leo@192.168.60.5`（只有密碼）。驗證 = 新 parent rtr + 子列 REPORT_GROUP TRANSMITTED + vendor SFTP 上檔名與大小吻合（2608206436_TTB.hl7 classic 670,828 B → modern 771,792 B）。候選修法（未開票，Leo 決定不做）：讓 GenerateResultHl7 接受 force/redraw flag。
 - **VP-19132（ORC-5 = F on every ORC）**：release #516 其實在 2026-11-03 18:46Z 就 merge 進 main（c94d6b9）；Leo 11-09 以 559 則 prod 訊息、0 則 ORC-5 = C 結案（VP 200220 / QH-8238 200212）。STM 裡「#516 還開著」的 FLAG 是過時的。殘餘：resend 不標 ORC-5 = C。
 - **VP-19128（Adobe credential 輪替）11-09 正式 Done**：10-30 那次轉 Done 被 Automation 彈回 Dev Complete（QH 還沒關）——「轉 Done」之後要再讀一次狀態。live 證據：4 個 AKS CM + on-prem CM 都是新 id，`QUOTA_EXCEEDED|PDF_COMPRESSION_FAILED` 10-31 起 0（之前 3 天 627）。
+
+## 【蒸餾 2026-11-11】Practice-wide EHR integration（VP-19290）與 migration 殘留集的教訓、「檔案裡有什麼」要看送出的檔本身（INCIDENT-20261013）、MDHQ 開 ORC.17（VP-19079）
+- **VP-19290 模型**：practice integration = 每個 (clinic, vendor) 一列 `customer_id='-1'`；provider 自己的列保留、且永遠優先。
+  - Order：provider 沒有可用的自有列（null / PracticeMismatch / VendorMismatch）才 fallback；practice 取 order 上指定的，否則 `getClinicIDsByNPINumber`；vendor 過濾後 >1 個 practice → null；roster 檢查 fail-closed。實作在 `customer-detail-fetcher.resolvePracticeOrderingIntegration`。
+  - Result：`'-1'` 列只用在該 sample 所屬 practice（`practiceRowClinicIds`）；practice 不明且 customer 有多個 clinic → 不用 practice 列。同 clinic+vendor 的自有列覆蓋 practice 列。舊版會讀 customer 全部 clinic 的 `'-1'` 列——`'-1'` 列變多後會跨 practice 洩漏，這是這次一起修掉的。
+  - MSH-6 token `{PROVIDER_CUSTOMER_ID}` 在 `prepareResultGenerationData` 解析。
+  - Suspend practice integration = REJECT practice 列 + 該 clinic+vendor 所有 active 列。
+  - Prod：release #537（main 022f66b，11-11 00:56Z）；backfill `scripts/vp19290-practice-integration-backfill.ts`（scripts/ 被 gitignore，force-add）建 502 列，practice LIVE 列 37 → 539，provider LIVE 1056 不變；readback 100%。
+  - **Backfill 的殘留集**：vendor 或 clinic 為 NULL 的 LIVE provider 列（prod 179 列 vendor NULL；dry-run 207 個 ungroupable）不會被分組 → 這些 practice 沒有 practice 列。#538（staging 7d16d61）：`integrationId` 永遠是某一列的 id + `practiceLevel` flag；無 active practice 列時 suspend/withdraw 接受舊列 id、作用於該 clinic+vendor 所有 active 列（含 vendor NULL）；有 LIVE sibling 時拒絕 withdraw。release #539 截至 11-11 05:54Z 還開著等 Leo。
+  - 未處理：backfill 選 template 沒排除測試用 integration（prod clinic 10136 的 practice 列複製了 VP-17344 E2E「test folder only」那列）——template 選擇也是面向使用者的決定，留給 Leo。
+- **教訓（VP-19290 被 FE 發現 integrationId null）**：
+  - migration 會跳過的列（殘留集）在宣告完成前，要逐一走過每個面向使用者的讀取／動作：「這列 API 回什麼？使用者能對它操作嗎？」這次 inventory、dry-run、結案報告都點名了這些列，卻只寫成「migration 不碰」。
+  - UI 必須拿來操作的 id 欄位，要有「永不為 null」的測試；原本的 unit test 斷言 `integrationId` 為 null，等於把壞掉的狀態寫成正確。
+  - staging 驗證至少要涵蓋 data inventory 裡每一類邊界列各一筆，不能只跑 happy-path practice（這次只跑了每列都有 vendor 的 124546）。
+  - 對外 plan 裡的警語，刪之前要重新驗證它描述的狀況真的消失了（FE plan 原本寫「migration 前 null」，prod migration 後被當過時刪掉，正好那時它變成永久的）。
+- **INCIDENT-20261013（BioInsights 收到 JAG 結果）11-10 後續**：回答「送出去的檔案裡有什麼」要讀送出的檔案本身、而且全部讀。`lis_emr.result_transmission_records.generated_hl7_content` 的 PDF 被剝掉（`[PDF_CONTENT_REMOVED_FOR_DB_STORAGE]`）；完整送出檔還在 emr-v2 prod pod `/EMR_storage/HL7Result_prod/<id>/<accession>.hl7`。10-19 用 2 個檔抽查下的「PID-11 為空」是錯的（204 檔中 6 檔有地址），PDF 病患區塊也印出 email（全是 JAG 辦公室）與電話（3 筆）。Junjie 11-10 16:36 確認資料齊全，Francesco 寫給 JAG 的事件說明。/tmp/jagpdf 的 PHI 暫存可刪。
+- **VP-19079（journal 2026-11-10）：MDHQ（Cerbo）prod 開 ORC.17 讀取、required 0**：2026-11-10 21:05:19Z 單列 UPDATE（綁 code+id+`order_practice_id_field IS NULL`，affectedRows 1），write 連線與唯讀 MCP 各讀回一次；較寬條件（field 有值或 required<>0）= MDHQ/THM/FTP/NEXTECH 共 32 列。11-16 沒有任何 vendor 被擋；required=1 要等該 vendor 首批 live 單驗過才逐一開。沒有 code / PR：config 是 DB 列，經 60 秒 cache 的 policy service 讀。consumer 層驗證要等 21:05Z 後第一張真的 MDHQ 單（寫 journal 時還沒來，已設 watch）。
+  - 教訓：「vendor 開始送之前都是 no-op」的 config 開關仍是 prod 變更；「下一張單照樣下得進來」的檢查屬於變更本身，不是 follow-up——放進 watch，不在報告裡寫成已完成。
