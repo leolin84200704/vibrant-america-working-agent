@@ -2,7 +2,7 @@
 id: INCIDENT-20261111-mdhq-sftp-login
 type: stm
 category: emr_integration
-status: waiting_vendor
+status: in_progress
 created: 2026-11-11
 updated: 2026-11-11
 links: [INCIDENT-20260529]
@@ -27,3 +27,14 @@ MDHQ result uploads fail with "SFTP connection failed after 3 attempts: getConne
 ## Progress
 ### [2026-11-11 22:00]
 - Reply-all draft saved in Leo's Outlook (asks Cerbo to check the vibrantamerica account, gives IP and time window). Waiting Leo ok.
+
+### [2026-11-11 22:30] Cerbo answer + correction
+- Scott (Cerbo, 22:11Z): resolved; our connections stayed open and the account hit its 20 concurrent-session limit. Asked us to close sessions after each upload.
+- My earlier read (account locked) was wrong: the immediate close after login was the session cap. First draft (id ...XsXgAA) is obsolete, Leo should discard it.
+- Pod login with vibrantamerica now READY (657 ms).
+- AKS prod pod opened only 2 MDHQ sessions today (07:00, 07:10Z), both SFTP_CLOSE graceful -> not the leak source. Staging pod: 0 MDHQ connects.
+- MDHQ order intake (hl7_file_input emr_service=MDHQ): 2 at 02:xx, then nothing until 22:15:51Z (right after Cerbo cleared sessions).
+  Normal is 7-10/day. MDHQ order fetch runs on the on-prem intake pod (no kubectl context here). Suspect: on-prem fetch leaks sessions
+  (same family as INCIDENT-20260604). Not verified; needs on-prem logs.
+- Failed results to resend: sample 2649139 (client 11078), 2661089 (18832), 2618604 (4953 rcode); none retransmitted yet.
+- New reply-all draft on Scott's mail (id ...XwYQAA). Waiting Leo ok.
