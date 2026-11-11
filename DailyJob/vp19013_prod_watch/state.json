@@ -21,12 +21,13 @@
     7540,
     7541,
     7542,
-    7545
-  ],
-  "verified_order": null,
-  "pending_unplaced": [
     7543,
     7544,
+    7545,
     7546
-  ]
+  ],
+  "verified_order": null,
+  "pending_unplaced": [],
+  "last_run_utc": "2026-11-11T21:14:00Z",
+  "last_run_result": "REPORT-ONLY: no new hl7_file_input rows after 2026-11-11T02:16Z; possible intake stall"
 }
