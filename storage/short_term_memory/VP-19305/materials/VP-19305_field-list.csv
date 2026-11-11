@@ -1,0 +1,31 @@
+direction,segment_field,required,content,notes
+order (inbound),file name / folder,yes,.hl7 or .HL7 file in the vendor's order folder,The vendor is identified by the folder the file came from (sftp_folder_mapping); MSH values are not used to pick the vendor
+order (inbound),MSH-10,yes,Message control id,
+order (inbound),PID-2.1,optional,EMR patient id,Stored per order and echoed back in result PID-2 (Nextech); not used for patient matching
+order (inbound),PID-5,yes,Patient name LAST^FIRST^MIDDLE,Order fails if name/DOB/sex is missing
+order (inbound),PID-7,yes,Patient DOB YYYYMMDD,
+order (inbound),PID-8,yes,Sex F or M,F/female = Female; anything else = Male
+order (inbound),PID-11,optional,Patient address street^^city^state^zip,Used as this order's shipping address only; does not update the patient record
+order (inbound),PID-13.1,optional,Patient phone,Updates the patient's phone if different
+order (inbound),PID-20.1,optional,Patient email (non-standard position),Updates the patient's email if different
+order (inbound),IN1-2.1,optional,Billing option,C = charge the practice card on file; anything else or no IN1 = patient pays later by email link
+order (inbound),ZKD-2 / ZKD-3,optional,Kit delivery per order (blood / non-blood),SHIP_TO_PATIENT or SUPPLIED_BY_OFFICE; empty = practice default
+order (inbound),ORC-12.1,yes,Ordering provider NPI,Picks the provider's integration. Falls back to OBR-16. FOLLOWTHATPATIENT sends the Vibrant customer id here instead
+order (inbound),ORC-17.1,per vendor,Vibrant practice (clinic) id,Read for MDHQ / FOLLOWTHATPATIENT / THM; Nextech's practice id is read from MSH-4 instead. Configured in ehr_vendors.order_practice_id_field
+order (inbound),OBR-2,optional,Placer order number,Echoed back in result ORC-2 / OBR-2
+order (inbound),OBR-4.1,yes,Test code,See test code list (VAREQUISTIONn / VATESTn / discountpanelN / VACPn custom panel)
+order (inbound),OBR-7,optional,Collection date-time,Defaults to now if empty
+order (inbound),OBR-16,fallback,Ordering provider,Used only when ORC-12 is empty
+result (outbound),MSH-6,yes,Receiving facility,Per integration (msh06_receiving_facility)
+result (outbound),MSH-12,yes,HL7 version,Default 2.3
+result (outbound),PID-2,per vendor,EMR patient id from the order,
+result (outbound),PID-3,yes,Vibrant patient id,
+result (outbound),PID-5 / PID-7 / PID-8 / PID-11,yes,Patient name / DOB / sex / address,
+result (outbound),PV1-7 / ORC-12 / OBR-16,yes,Ordering provider NPI^LAST^FIRST,
+result (outbound),ORC-2 / OBR-2,yes,Placer order number from the order,
+result (outbound),ORC-3 / OBR-3,yes,Vibrant accession (barcode),
+result (outbound),ORC-5 / OBR-25,yes,F (final),Corrected reports are also sent as F
+result (outbound),ORC-17,yes,Practice id,
+result (outbound),OBR-4,yes,Test code^name of the report,
+result (outbound),OBX (NM/ST rows),yes,One row per result: code^name / value / unit / range / flag / F,
+result (outbound),OBX last row,yes,PDF: OBX-2=ED; OBX-3=PDF^PDF; OBX-5=^AP^^Base64^<data>,

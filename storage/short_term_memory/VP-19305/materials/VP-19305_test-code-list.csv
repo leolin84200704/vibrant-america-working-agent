@@ -1,0 +1,270 @@
+code_in_OBR-4.1,name,type
+VAREQUISTION10002,Hormone Zoomer,Test group
+VAREQUISTION101,LDL Direct,Test group
+VAREQUISTION102,Cardiac Health Panel (all),Test group
+VAREQUISTION103,Lipids,Test group
+VAREQUISTION106,Thyroid (all),Test group
+VAREQUISTION108,ANA IFA Panel,Test group
+VAREQUISTION118,Food Sensitivity Profile 1 -  IgA and IgG,Test group
+VAREQUISTION126,HLA-DQ2††,Test group
+VAREQUISTION127,HLA-DQ8††,Test group
+VAREQUISTION180,CBC,Test group
+VAREQUISTION195,Food Allergy Panel,Test group
+VAREQUISTION214,Total IgE,Test group
+VAREQUISTION218,Corn Zoomer,Test group
+VAREQUISTION224,Egg Zoomer,Test group
+VAREQUISTION225,Dairy Zoomer,Test group
+VAREQUISTION226,Peanut Zoomer,Test group
+VAREQUISTION233,Total Immunoglobulins (Free Add-On),Test group
+VAREQUISTION2341,Lectin Zoomer,Test group
+VAREQUISTION250,Soy Zoomer,Test group
+VAREQUISTION254,Intestinal Permeability Panel,Test group
+VAREQUISTION257,ApoE (Add-On),Test group
+VAREQUISTION259,Heavy Metals - Urine,Test group
+VAREQUISTION279,Gut Zoomer,Test group
+VAREQUISTION280,Gut Zoomer Pathogens,Test group
+VAREQUISTION287,Candida + IBS Profile,Test group
+VAREQUISTION292,Food Sensitivity Complete - IgA and IgG,Test group
+VAREQUISTION298,Environmental Toxins,Test group
+VAREQUISTION299,Mycotoxins,Test group
+VAREQUISTION30001,NutriProZ - Starter Plan,Test group
+VAREQUISTION30002,NutriProZ - Starter Plan,Test group
+VAREQUISTION30010,NutriProZ - Maintenance Plan,Test group
+VAREQUISTION30014,NutriproZ - Refill,Test group
+VAREQUISTION311,Wheat Zoomer,Test group
+VAREQUISTION325,Tickborne Diseases 2.0,Test group
+VAREQUISTION330,Neural Zoomer Plus,Test group
+VAREQUISTION331,Viral Infections,Test group
+VAREQUISTION34,Celiac & Nutrition (all),Test group
+VAREQUISTION35,Celiac & Gluten Sensitivity,Test group
+VAREQUISTION36,Iron Panel (Prev. Anemia),Test group
+VAREQUISTION37,Nutrition,Test group
+VAREQUISTION39001,"Testo, Free [Incl. Total, Albumin, SHBG]",Test group
+VAREQUISTION39002,LDL Calculation,Test group
+VAREQUISTION39003,TIBC [Incl. UIBC and Iron],Test group
+VAREQUISTION39005,Tickborne Antibodies,Test group
+VAREQUISTION420,Wheat Zoomer,Test group
+VAREQUISTION44,Apolipoproteins,Test group
+VAREQUISTION45,Inflammation,Test group
+VAREQUISTION458,Cortisol Awakening Response,Test group
+VAREQUISTION46,Myocardial Stress,Test group
+VAREQUISTION460,Cardio Zoomer,Test group
+VAREQUISTION461,Cardio Genetics,Test group
+VAREQUISTION462,Toxin Zoomer,Test group
+VAREQUISTION463,Gut Zoomer,Test group
+VAREQUISTION464,Hormone Zoomer,Test group
+VAREQUISTION466,Nutrient Intracellular,Test group
+VAREQUISTION467,Nutrient Zoomer,Test group
+VAREQUISTION468,Nutrient Zoomer,Test group
+VAREQUISTION469,Methylation Genetics,Test group
+VAREQUISTION47,LipoProtein Markers,Test group
+VAREQUISTION470,Gut Brain - Neurotransmitters,Test group
+VAREQUISTION472,Cellular Zoomer,Test group
+VAREQUISTION473,Celiac Genetics,Test group
+VAREQUISTION474,Nutrient Genetics,Test group
+VAREQUISTION475,Food Bundle,Test group
+VAREQUISTION476,Food Bundle,Test group
+VAREQUISTION477,Food Zoomer,Test group
+VAREQUISTION478,Food Zoomer,Test group
+VAREQUISTION479,ApoE,Test group
+VAREQUISTION480,ApoE,Test group
+VAREQUISTION481,MTHFR,Test group
+VAREQUISTION482,MTHFR,Test group
+VAREQUISTION483,FACTOR II-V,Test group
+VAREQUISTION484,FACTOR II-V,Test group
+VAREQUISTION485,Gut Zoomer New York,Test group
+VAREQUISTION486,Foundation Zoomer,Test group
+VAREQUISTION487,Foundation Baseline,Test group
+VAREQUISTION488,Gut Baseline,Test group
+VAREQUISTION489,Hormone Baseline,Test group
+VAREQUISTION49,Glycemic Control,Test group
+VAREQUISTION490,Nutrient Baseline,Test group
+VAREQUISTION491,Gut Baseline Pathogens,Test group
+VAREQUISTION492,Foundation Zoomer,Test group
+VAREQUISTION493,Foundation Baseline,Test group
+VAREQUISTION51,Beta Cell Function,Test group
+VAREQUISTION52,Basic Metabolic Panel,Test group
+VAREQUISTION54,Hepatic Function Panel,Test group
+VAREQUISTION57,Hormones (all),Test group
+VAREQUISTION58,Hematology (all),Test group
+VAREQUISTION59,CBC w/ differential and Platelets (all),Test group
+VAREQUISTION6109,Reticulocytes,Test group
+VAREQUISTION69,Insulin Resistance,Test group
+VAREQUISTION70,Diabetes (all),Test group
+VAREQUISTION74,Fatty Acids: Omega-3 & 6†,Test group
+VAREQUISTION75,Genetic Markers,Test group
+VAREQUISTION76,Factor II-V - Saliva,Test group
+VAREQUISTION76,FACTOR II-V,Test group
+VAREQUISTION89,Vibrant ™ Celiac Genetics,Test group
+VAREQUISTION92,Renal Function Panel,Test group
+VAREQUISTION93,Electrolytes,Test group
+VAREQUISTION97,Comprehensive Metabolic Panel,Test group
+VARequisition300,Organic Acids,Test group
+VARequisition326,Lyme + TBRF ,Test group
+VARequisition327,Coinfections 1,Test group
+VARequisition328,Coinfections 2,Test group
+VARequisition329,Opportunistic Infections,Test group
+VARequisition332,Tickborne Diseases 1.0,Test group
+VARequisition370,Corn Zoomer,Test group
+VARequisition371,Dairy Zoomer,Test group
+VARequisition372,Egg Zoomer,Test group
+VARequisition378,Lectin Zoomer,Test group
+VARequisition382,Peanut Zoomer,Test group
+VARequisition384,Soy Zoomer,Test group
+VARequisition387,Intestinal Permeability Panel,Test group
+VARequisition406,Food Sensitivity Complete - IgA and IgG,Test group
+VARequisition407,Food Sensitivity Profile 1 -  IgA and IgG,Test group
+VARequisition417,Tickborne Diseases 2.0,Test group
+VARequisition418,Tickborne Diseases 1.0,Test group
+VARequisition422,Neural Zoomer Plus,Test group
+VARequisition423,Viral Infections,Test group
+VARequisition426,PFAS Chemicals,Test group
+VARequisition438,Toxin Genetics - Saliva,Test group
+VARequisition444,Tumor Markers (all),Test group
+VARequisition446,Antioxidant Genetics Panel,Test group
+VARequisition447,Oxidative Damage Markers,Test group
+VARequisition451,Autoimmune Zoomer,Test group
+VATEST10,HDL Direct,Single test
+VATEST10078,TNF alpha,Single test
+VATEST10079,Il-6,Single test
+VATEST107,UIBC,Single test
+VATEST11,Triglyceride,Single test
+VATEST112,IPF (Immature Platelet Fraction),Single test
+VATEST115,RF IgM,Single test
+VATEST12,Apo A-1,Single test
+VATEST13,Apo B,Single test
+VATEST139,Adiponectin,Single test
+VATEST14,Lp(a),Single test
+VATEST140,Leptin,Single test
+VATEST142,Anti-CCP3 IgG and IgA,Single test
+VATEST144,Free PSA,Single test
+VATEST147,Anti-TPO,Single test
+VATEST149,sdLDL,Single test
+VATEST15,hs-CRP,Single test
+VATEST150,GGT,Single test
+VATEST151,Glycated Serum Protein,Single test
+VATEST152,DHEA-S,Single test
+VATEST156,ox-LDL,Single test
+VATEST16,Homocysteine,Single test
+VATEST160,MPO,Single test
+VATEST1612,PLAC,Single test
+VATEST1613,Prolactin,Single test
+VATEST167,MTHFR,Single test
+VATEST171,ApoE,Single test
+VATEST1715,Dihydrotestosterone,Single test
+VATEST1716,Pregnenolone,Single test
+VATEST18,Chloride,Single test
+VATEST19,Carbon Dioxide,Single test
+VATEST20,Potassium,Single test
+VATEST21,Sodium,Single test
+VATEST22,"Phosphate, Inorganic",Single test
+VATEST23,Glucose(Renal),Single test
+VATEST24,Creatinine,Single test
+VATEST25,BUN,Single test
+VATEST26,Cystatin C,Single test
+VATEST27,Magnesium,Single test
+VATEST28,Folate,Single test
+VATEST29,Calcium,Single test
+VATEST3,Anti-tTG IgG,Single test
+VATEST31,ALT,Single test
+VATEST32,AST,Single test
+VATEST33,"Bili, Total",Single test
+VATEST34,"Bili, Direct",Single test
+VATEST344,COQ10-TOT,Single test
+VATEST35,"Protein, Total",Single test
+VATEST36,Albumin,Single test
+VATEST37,Alkaline Phosphatase,Single test
+VATEST38,Ferritin,Single test
+VATEST3992,Potassium RBC,Single test
+VATEST3993,Iodine,Single test
+VATEST4,Anti-tTG IgA,Single test
+VATEST40,Cortisol,Single test
+VATEST41,Estradiol,Single test
+VATEST42,FSH,Single test
+VATEST43,LH,Single test
+VATEST44,Progesterone,Single test
+VATEST45,"Testosterone, Total",Single test
+VATEST46,SHBG,Single test
+VATEST48,Insulin,Single test
+VATEST49,Hemoglobin A1c,Single test
+VATEST5,Anti-DGP IgG,Single test
+VATEST51,T4 - Thyroxine,Single test
+VATEST517,Human IGF-1,Single test
+VATEST52,Free T4,Single test
+VATEST53,Free T3,Single test
+VATEST54,T3 - Triiodothyronine,Single test
+VATEST547,Reverse T3,Single test
+VATEST55,TSH,Single test
+VATEST552,Anti-TG,Single test
+VATEST56,Iron,Single test
+VATEST58,Transferrin,Single test
+VATEST59,Total IgA,Single test
+VATEST6,Anti-DGP IgA,Single test
+VATEST60,Total IgG,Single test
+VATEST61,Total IgM,Single test
+VATEST62,LDH,Single test
+VATEST63,Urine Microalbumin,Single test
+VATEST64,NT-proBNP,Single test
+VATEST65,Parathyroid Hormone,Single test
+VATEST66,PSA (Total),Single test
+VATEST67,Total CK,Single test
+VATEST68,Uric Acid,Single test
+VATEST69,Vitamin B12,Single test
+VATEST70,"Vitamin D, 25-OH",Single test
+VATEST71,Glucose(Diabetes),Single test
+VATEST7183,ApoE - Saliva,Single test
+VATEST7184,MTHFR - Saliva,Single test
+VATEST7305,Alphafetoprotein,Single test
+VATEST7306,Cancer Antigen 125,Single test
+VATEST7307,Cancer Antigen 15-3,Single test
+VATEST7308,Cancer Antigen 19-9,Single test
+VATEST7309,Carcinoembryonic Antigen,Single test
+VATEST7310,Human Epididymal Protein 4,Single test
+VATEST8,"Cholesterol, Total",Single test
+VATEST80,ESR (Erythrocyte Sedimentation Rate),Single test
+VATEST983,Estriol,Single test
+VATEST984,Estrone,Single test
+discountpanel1,Vibrant Anti-Aging,Official bundle
+discountpanel113,Wheat Zoomer + Food Sensitivity1 + Food Sensitivity2,Official bundle
+discountpanel114,Wheat Zoomer + Food Sensitivity1,Official bundle
+discountpanel115,Food Sensitivity1 + Food Sensitivity2,Official bundle
+discountpanel26,FACTOR II & V + MTHFR,Official bundle
+discountpanel290,Organic Acids + Neurotransmitter,Official bundle
+discountpanel292,Organic Acids + Micronutrient,Official bundle
+discountpanel294,"Organic Acids + Total Tox-burden (Environmental, Mycotoxins, Heavy Metals)",Official bundle
+discountpanel295,Organic Acids + Mycotoxin,Official bundle
+discountpanel297,Micronutrient + Food Sensitivity Profile 1,Official bundle
+discountpanel298,Micronutrient + Wheat Zoomer,Official bundle
+discountpanel299,Micronutrient+ Food Sensitivity Profile 1+ Wheat Zoomer,Official bundle
+discountpanel304,Virus Infections Panel + Tickborne Complete 1.0,Official bundle
+discountpanel305,Tickborne Complete 1.0 + Mycotoxins,Official bundle
+discountpanel326,Tickborne 2.0 + Mycotoxins,Official bundle
+discountpanel365,Wheat Zoomer DBS + Food Sensitivity1 DBS + Food Sensitivity2 DBS,Official bundle
+discountpanel366,Wheat Zoomer DBS + Food Sensitivity1 DBS,Official bundle
+discountpanel367,Food Sensitivity1 DBS + Food Sensitivity2 DBS,Official bundle
+discountpanel376,Total tox+ PFAS Chemicals,Official bundle
+discountpanel401,Wheat Zoomer + Gut Zoomer,Official bundle
+discountpanel402,Organic Acids + Gut Zoomer Complete,Official bundle
+discountpanel403,Gut Zoomer + Tickborne 2.0,Official bundle
+discountpanel404,Wheat Zoomer DBS + Gut Zoomer,Official bundle
+discountpanel405,Neurotransmitters Advanced + Saliva Hormones,Official bundle
+discountpanel406,Cardio Zoomer + Cardio Genetics,Official bundle
+discountpanel407,Gut Zoomer + Neurotransmitters,Official bundle
+discountpanel408,All VW Package,Official bundle
+discountpanel409,All VW Package,Official bundle
+discountpanel410,Total Tox Burden,Official bundle
+discountpanel411,Toxin Zoomer + Toxin Genetics,Official bundle
+discountpanel412,Oxidative Stress + Anti-oxidant Genetics,Official bundle
+discountpanel413,Cellular Zoomer + Anti-oxidant Genetics,Official bundle
+discountpanel414,Nutrient Zoomer + Nutrient Genetics,Official bundle
+discountpanel415,Foundation Zoomer + Methylation Genetics,Official bundle
+discountpanel416,All VW Package,Official bundle
+discountpanel417,All VW Package,Official bundle
+discountpanel418,Organic Acids + Total Tox Burden,Official bundle
+discountpanel419,Organic Acids + Gut Zoomer,Official bundle
+discountpanel420,Wheat + Food Sensitivity 96,Official bundle
+discountpanel421,Wheat + Food Sensitivity 96,Official bundle
+discountpanel422,Wheat + Food Sensitivity Complete,Official bundle
+discountpanel423,Wheat + Food Sensitivity Complete,Official bundle
+discountpanel424,Organic Acids + Gut Zoomer New York,Official bundle
+discountpanel7,Vibrant Hashimoto's,Official bundle

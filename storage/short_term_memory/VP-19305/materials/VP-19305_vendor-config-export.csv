@@ -1,0 +1,33 @@
+vendor_id,code,name,is_active,shown_to_customers,sftp_host,sftp_port,login,order_folder,result_folder,order_summary_folder,split_pdf_by_report_default,result_folder_hl7_only,practice_id_field,practice_id_required,live_integration_rows,live_practices,order_folders_polled,special_handling
+1,MDHQ,MDHQ(Cerbo),1,1,34.199.194.51,2210,password,/orders,/results,,0,1,ORC.17,0,549,196,181,Result folder must hold only .hl7 (no PDF next to it). Total Tox combined message _TTB.hl7. One order folder per practice (181). Practice id ORC-17.
+2,ZYMEBALANZ,ZymeBalanz,1,0,45.24.217.155,22,password,/orders,/results,,0,0,,0,3,1,1,
+3,PF,Practice Fusion,1,1,45.24.217.150,2222,password,/Prod/Order/,/Prod/Input/,,0,0,,0,169,65,1,
+4,POWER2PRACTICE,POWER2PRACTICE,1,1,labftp.power2practice.net,22,password,/orders,/results,,0,0,,0,134,57,0,No order folder mapped: results only.
+5,ElationEMR,ElationEMR,1,1,labs.elationemr.com,22,password,/orders,/results,,0,0,,0,90,40,1,
+6,ATHENA,ATHENA,1,1,external.sftp.athena.io,22,password,/outboundfromathena,/inboundintoathena,,0,0,,0,105,26,1,
+7,ChARM_EHR,CharmEHR,1,1,45.24.217.155,22,password,/Prod/Order/,/Prod/Input/,,0,0,,0,67,29,1,Results also sent by HTTP POST to ChARM in addition to SFTP (the only vendor with a response/ack). Order folder mapped under emrName CHARMEHR.
+8,OptimalDX,OptimalDX,1,0,sftp.optimaldx.com,22,password,,/,,0,0,,0,77,37,0,No order folder mapped: results only.
+9,OPTIMANTRA,OptiMantra,1,1,45.24.217.155,22,password,/Prod/Orders/,/Prod/Input/,,0,0,,0,90,39,1,
+10,ECW,eClinicalWorks,1,1,45.24.217.155,22,password,/Prod/Order/,/Prod/Input/,,0,0,,0,34,14,1,
+11,GREENWAY,Greenway Health,1,1,mftgateway.emdeon.com,22,password,,/,,0,0,,0,2,1,0,
+12,HARRIS,Harris CareTracker,1,1,hub.caretracker.com,22,password,,/ORU,,0,0,,0,2,1,0,
+13,HealthMatters,HealthMatters,1,0,45.24.217.155,22,password,,/Prod/Input/,,0,0,,0,5,1,1,
+14,HF,HF,1,1,sftp.healthfusionclaims.com,22,password,/fromHF/,/toHF/,,0,0,,0,2,1,1,
+15,PRAXISEMR,PraxisEMR,1,1,45.24.217.155,22,password,,/Prod/Input/,,0,0,,0,6,3,1,
+16,Unprescribed,Unprescribed,1,0,45.24.217.155,22,password,,/Results/,,0,0,,0,2,1,1,
+19,YHL,YHL,1,0,45.24.217.155,22,password,/Order/,/Input/,,0,0,,0,2,1,1,
+32,APRIMA,Aprima,1,1,45.24.217.155,22,password,,,,0,0,,0,0,0,1,
+33,BREATHERMAE,Breathermae,1,0,64.124.9.100,2222,password,,,,0,0,,0,2,1,1,
+34,CASCADES,Cascades,1,1,72.52.68.244,22,password,,,,0,0,,0,2,1,0,
+35,EPRO,EPRO,1,1,74.62.7.238,22,password,,,,0,0,,0,0,0,0,
+36,GLO,GLO,1,0,45.24.217.155,22,password,,,,0,0,,0,3,1,1,
+37,INSYNC,INSYNC,1,0,ftp4labs.insynchcs.com,22,password,,,,0,0,,0,2,1,1,
+38,MARQIMEDICAL,Marqimedical,1,0,sftp.marqimedical.io,22,password,,,,0,0,,0,2,1,0,
+39,MDHQTEST,MDHQTEST,0,0,34.199.194.51,2210,password,,,,0,0,,0,0,0,0,Inactive test vendor.
+40,MEDITAB,Meditab,1,1,45.24.217.155,22,password,,,,0,0,,0,0,0,1,
+41,NICHOLS,NICHOLS,1,0,45.24.217.155,22,password,,,,0,0,,0,0,0,1,
+42,THM,THM,1,0,45.24.217.155,22,password,,,,0,0,ORC.17,0,17,1,1,Practice id ORC-17 (Gundry).
+44,FOLLOWTHATPATIENT,FOLLOWTHATPATIENT,1,1,64.124.9.100,2224,password,/Prod/FollowThatPatient/Order/,/Prod/FollowThatPatient/Results/,/Prod/FollowThatPatient/Order/Forms/,0,0,ORC.17,0,42,18,1,"Order Summary PDF written to Forms/ when the order arrives. ORC-12 carries Vibrant customer id, not NPI. Practice id ORC-17."
+45,DOCVILLA,DocVilla,1,1,64.124.9.100,2225,password,,/Prod/DocVilla/Results/,,0,0,,0,4,1,0,
+46,BIOINSIGHTS,BioInsights,1,0,sftp.bioinsights.com,2022,key,/outgoing/,/incoming/,,0,0,,0,0,0,1,SSH key login. 0 live integrations since the JAG incident (INCIDENT-20261013).
+47,NEXTECH,Nextech,1,1,interface02.nextechapp.com,22,password,/965721.Vibrant/Export/,/965721.Vibrant/Import/,,0,0,MSH.4,0,2,1,1,Practice id read from MSH-4. PID-2 EMR patient id echoed on results; per-test OBR-2 echo.
