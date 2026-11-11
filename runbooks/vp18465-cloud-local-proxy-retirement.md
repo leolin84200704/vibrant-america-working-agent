@@ -1,6 +1,6 @@
 # VP-18465 — cloud-local-proxy: scale to zero, delete, archive (runbook)
 
-> Prepared 2026-10-25 (pre-flight). Status: **nothing executed yet.** Ticket start 2026-11-09, due 11-13.
+> Prepared 2026-10-25 (pre-flight). Status: **Phase 1 done 2026-11-11 20:11Z (both clusters 0/0, probes 503). Phase 2 on or after 2026-11-18.** Ticket start 2026-11-09, due 11-13.
 > Companion STM: `storage/short_term_memory/VP-18465.md`. Mechanics inherited from VP-18464 / VP-18730.
 
 ## 0. Gate — all three must hold on the day, re-checked live, not from memory
