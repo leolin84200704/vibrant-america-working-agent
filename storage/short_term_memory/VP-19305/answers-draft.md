@@ -126,12 +126,12 @@ Before go-live:
 - Practice: practice ID, provider names and NPIs, report option (Classic or Personalized, split or not), kit delivery, billing preference.
 
 ### B2 [Leo]
-The customer creates it on the Website (practice/provider settings > EHR integration). Our side reviews and approves in the integration admin. Data: `lis_emr.ehr_integrations`, with vendor settings in `ehr_vendors`. Screenshot: [Leo to add].
+The customer creates it on the Website (practice/provider settings > EHR integration). The Sales director reviews and approves it in the Unimod panel (EHR Auto Integration page). Data: `lis_emr.ehr_integrations`, with vendor settings in `ehr_vendors`. Screenshot: [Leo to add].
 
 ### B3 [Leo]
 1. Vendor setup (once per vendor): engineering adds the vendor and SFTP.
 2. The practice requests the integration on the Website (customer).
-3. Support/TPM reviews and approves.
+3. The Sales director reviews and approves it in the Unimod panel.
 4. Validation order and result test (vendor + engineering).
 5. Go live.
 
@@ -174,7 +174,7 @@ Look up the file in `hl7_file_input` by file name or vendor/date: status, last_e
 Support could self-check B9 and B10 (order received and why it failed; result delivered) and B11 #1 and #3 with read access to an order-intake and result-delivery view.
 
 ### B13
-- Add a provider: the clinic admin adds the provider to the practice's integration on the Website. This creates a pending row that we approve.
+- Add a provider: the clinic admin adds the provider to the practice's integration on the Website. This creates a pending row that the Sales director approves in the Unimod panel.
 - Remove a provider: suspend that provider's integration. Removing a provider from the clinic also deactivates their EMR integration automatically.
 Where: auto-integrate/services/integration-request.service.ts:1514-1619 (deactivateOne); practice integration API
 
