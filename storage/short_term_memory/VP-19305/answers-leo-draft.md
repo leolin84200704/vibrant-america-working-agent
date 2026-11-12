@@ -1,7 +1,7 @@
 # VP-19305 - Leo questions (DRAFT v2, 2026-11-11)
 
 Checked against prod lis_emr (lisportalprod2), emr-v2 origin/main 69b55d0, ehr-frontend / va-portal / vibrant-wellness-portal origin/main, core-v2 patient service.
-Lines marked [ASK LEO] still need Leo's input. Everything else is verified.
+All open items answered (Leo, Mingxi, Zhenhe, 2026-11-11).
 Materials are in ./materials/.
 
 ## Leo questions
@@ -46,16 +46,16 @@ From the practice: Vibrant practice id, providers' names and NPIs, report option
 
 ### B2
 - The practice requests it: https://intelligence.vibrant-wellness.com/my-practice/practice-setting/third-party-integrations (the same page is embedded in the va-portal provider portal at https://www.vibrant-america.com/lis/patientpage/#/setting/third-party-integrations ). The card is shown only to accounts in the auto-EMR-integration beta.
-- We review and approve it: vibrant-wellness-portal, VA Portal > EHR Auto Integration (route /Portal/EHRAutoIntegration). [ASK LEO: confirm the domain of vibrant-wellness-portal; the code suggests https://vibrant-wellness-portal.pages.dev/Portal/EHRAutoIntegration ]
+- We review and approve it: the Sales director does this in the Unimod panel, page VA Portal > EHR Auto Integration (route /Portal/EHRAutoIntegration). Accounts with the UNIMOD-EMR-ONLY permission see only this page.
 - Data: `lis_emr.ehr_integrations` (one row per provider per practice per vendor). Vendor settings: `lis_emr.ehr_vendors`. Order folders: `lis_emr.sftp_folder_mapping`.
 - No screen exists for vendor settings, order folders, or suspend. Those are database or API changes by engineering.
 Screenshot of the practice page attached: `VP-19305_B2_customer-ehr-integrations-page.png` (test account 999997). Each integration shows its request id, its status, and a Disconnect link.
-[PENDING: screenshot of the internal EHR Auto Integration page; Leo has no access. Ask the Sales manager once Mingxi confirms who approves.]
+No screenshot of the approval page: engineering has no access to it. The Sales director can provide one.
 
 ### B3
 1. New vendor only: engineering adds the vendor row and the order folder.
 2. Practice: requests the integration on the Website.
-3. Review and approve in EHR Auto Integration. [PENDING: asked Mingxi whether the Sales manager approves]
+3. Sales director: reviews and approves the request in the Unimod panel (EHR Auto Integration).
 4. Vendor sends a test order; we confirm it landed under the right practice; we send a test result.
 5. Go live.
 
@@ -74,9 +74,13 @@ Attached:
 - `VP-19305_vendor-practices-live.csv`: one row per vendor and practice with report option, push level, kit delivery and overrides.
 
 ### B8
-We have no contact list on file. `ehr_vendors.support_email` and `support_phone` are empty for every vendor. Vendor threads run through Support's Zendesk (support@vibrant-wellness.com).
-Known from recent threads: Nextech (Jessica Marshall), devcom for BioInsights (Olena), THM/Gundry (Rob).
-[PENDING: asked Zhenhe to pull each vendor's contact from Zendesk]
+Not sure. We have no contact list. `ehr_vendors.support_email` and `support_phone` are empty for every vendor, and Support does not receive vendor email directly: CAMs forward it. Some vendors only take requests as a ticket on their own website.
+Found in past email threads:
+- Cerbo / MDHQ: support@cer.bo (their support desk; replies come as Zendesk tickets)
+- Nextech: Jessica Marshall, j.marshall@nextech.com
+- BioInsights: through their integrator devcom, Olena Momotko, olena.momotko@devcom.com
+- ChARM (MedicalMine): lab-requests@medicalmine.com
+For the other vendors someone else will need to be asked, for example the CAMs, or Kristine Legaspi, who collected each vendor's IP addresses for the SFTP allow list in 2025 (Confluence page "Whitelist IPs").
 
 ### B9
 Look up the file in `lis_emr.hl7_file_input` by file name, or by vendor (`emr_service`) and date.
