@@ -49,7 +49,8 @@ From the practice: Vibrant practice id, providers' names and NPIs, report option
 - We review and approve it: vibrant-wellness-portal, VA Portal > EHR Auto Integration (route /Portal/EHRAutoIntegration). [ASK LEO: confirm the domain of vibrant-wellness-portal; the code suggests https://vibrant-wellness-portal.pages.dev/Portal/EHRAutoIntegration ]
 - Data: `lis_emr.ehr_integrations` (one row per provider per practice per vendor). Vendor settings: `lis_emr.ehr_vendors`. Order folders: `lis_emr.sftp_folder_mapping`.
 - No screen exists for vendor settings, order folders, or suspend. Those are database or API changes by engineering.
-[Screenshots: Leo to take from the URLs above]
+Screenshot of the practice page attached: `VP-19305_B2_customer-ehr-integrations-page.png` (test account 999997). Each integration shows its request id, its status, and a Disconnect link.
+[PENDING: screenshot of the internal EHR Auto Integration page; Leo has no access. Ask the Sales manager once Mingxi confirms who approves.]
 
 ### B3
 1. New vendor only: engineering adds the vendor row and the order folder.
@@ -134,3 +135,4 @@ Re-checked today: with BioInsights (46) and 2026-07-29 to 2026-10-13 it returns 
 - A19 (old): TEST^ZZZTEST is a patient name, not a test code.
 - B7: one PDF per report is set only for Maristany Medical (Cerbo). Resilience Code (Cerbo) gets results per report group and holds GUT5 back. Order Summary PDF is written on order arrival for FOLLOWTHATPATIENT only; no vendor has the "with result" Order Summary turned on. Add ChARM's HTTP POST.
 - B13 / B16 / B17: practice-wide create, suspend and withdraw exist in the API but have no screen. Integration statuses in use are LIVE, PENDING and REJECTED.
+- B14 / B16: the practice can stop an integration itself with the Disconnect link on the Website page (B2 screenshot). It sets the row to REJECTED, so results stop. The order folder is still polled (B19 #8).
