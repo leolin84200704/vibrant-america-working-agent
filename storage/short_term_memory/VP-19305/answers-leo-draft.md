@@ -74,13 +74,7 @@ Attached:
 - `VP-19305_vendor-practices-live.csv`: one row per vendor and practice with report option, push level, kit delivery and overrides.
 
 ### B8
-Not sure. We have no contact list. `ehr_vendors.support_email` and `support_phone` are empty for every vendor, and Support does not receive vendor email directly: CAMs forward it. Some vendors only take requests as a ticket on their own website.
-Found in past email threads:
-- Cerbo / MDHQ: support@cer.bo (their support desk; replies come as Zendesk tickets)
-- Nextech: Jessica Marshall, j.marshall@nextech.com
-- BioInsights: through their integrator devcom, Olena Momotko, olena.momotko@devcom.com
-- ChARM (MedicalMine): lab-requests@medicalmine.com
-For the other vendors someone else will need to be asked, for example the CAMs, or Kristine Legaspi, who collected each vendor's IP addresses for the SFTP allow list in 2025 (Confluence page "Whitelist IPs").
+Not sure. Engineering has no vendor contact list, and `ehr_vendors.support_email` / `support_phone` are empty for every vendor. Someone else will need to be asked.
 
 ### B9
 Look up the file in `lis_emr.hl7_file_input` by file name, or by vendor (`emr_service`) and date.
