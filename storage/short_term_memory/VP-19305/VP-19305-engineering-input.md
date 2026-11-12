@@ -19,7 +19,9 @@ No patient data in this file or in the attachments. Sample messages use placehol
 
 There is no ACK sample because we do not send or read ACKs.
 
-## Part A: External integration spec
+## AI questions (21)
+
+Answered from the EMR service code; each has a "Where:" line.
 
 ### A1
 - Results: HL7 v2 ORU^R01. MSH-12 comes from the integration's `hl7_version`. The default for integrations created on the Website is "2.3".
@@ -27,10 +29,6 @@ There is no ACK sample because we do not send or read ACKs.
 - ACK: none. We do not send or expect an ACK/MSA in either direction. Delivery is a plain SFTP file drop.
 
 Where: src/modules/hl7/services/hl7-encoder.service.ts (encode, buildMSH); integration-request.service.ts:303 (hl7_version default)
-
-### A2
-Attached: `VP-19305_sample-order-ORM.hl7` and `VP-19305_sample-result-ORU.hl7`. Both use placeholder data and follow the field positions the code reads and writes. The PDF in the result is truncated.
-There is no ACK sample. We do not send ACKs and do not read them.
 
 ### A3
 See the attached field list. In short:
@@ -65,14 +63,6 @@ Where: hl7-order-processing/services/patient-detail-parser.service.ts; grpc/serv
 
 Where: parser.service.ts:799 (chargeMethodFromIn1)
 
-### A7
-Both. Many vendors put files on an SFTP server we host:
-- Our server 45.24.217.155: ChARM, eClinicalWorks, OptiMantra, PraxisEMR, HealthMatters, THM (Gundry), YHL, GLO, Unprescribed, Aprima, Meditab, NICHOLS, ZymeBalanz.
-- Our server 45.24.217.150 (port 2222): Practice Fusion.
-- Vendor-hosted: 64.124.9.100 (Breathermae, FollowThatPatient, DocVilla on separate ports), Cerbo/MDHQ, Power2Practice, Athena, Elation, OptimalDX, Nextech, BioInsights, Greenway, Harris, Health Fusion, INSYNC, Marqi, Cascades.
-
-See the `sftp_host` column in `VP-19305_vendor-config-export.csv`.
-
 ### A8
 - Each vendor has an order folder and a result folder. Result folders are on the vendor row. The order folders we poll are listed in `sftp_folder_mapping`. Cerbo has one order folder per practice; other vendors have one.
 - Orders: we read only files ending in .hl7 / .HL7. A file is read once per path and file name, so a resend needs a new file name.
@@ -86,12 +76,6 @@ Where: hl7-order-fetch.service.ts:95 (HL7_FILE_EXTENSIONS); result-generation.se
 - Result files: we write them and never delete them. The partner removes them after pickup.
 
 Where: hl7-order-fetch.service.ts:117 (cron '0 */15 * * * *'), :26-30, :103-109
-
-### A10
-We need from the partner: host, port, username, and either a password or an SSH private key; the order folder and the result folder.
-Where it is stored: `lis_emr.ehr_vendors`, one row per vendor (host, port, user, password or private key, folders). Credentials sit in that table as plain text. A practice-level override exists on `ehr_integrations` but is rarely used.
-The order folders we poll are in a separate table, `lis_emr.sftp_folder_mapping`.
-There is no screen for vendor or folder setup. Engineering edits the database.
 
 ### A11
 1. The cron picks up the file, saves it in `hl7_file_input`, and queues it.
@@ -157,6 +141,72 @@ Where: hl7-encoder.service.ts:676-691; result/services/file-size-validation.serv
 
 Where: kafka-report-finished-listener.service.ts:436 (findEligibleResultIntegrations); customer-detail-fetcher.service.ts:548
 
+### B7
+- One PDF per report: only Maristany Medical (Cerbo). Resilience Code (Cerbo) gets results per report group and holds GUT5 back. Set by `result_push_level` and the split flag on `ehr_integrations`.
+- Total Tox combined message: Cerbo only.
+- Order Summary PDF on order arrival: FOLLOWTHATPATIENT only. No vendor has the "with result" Order Summary turned on.
+- Classic or Personalized: `report_option` on the integration.
+- Result folder must contain only .hl7 files: Cerbo/MDHQ.
+- PID-2 and per-test OBR-2 echo: Nextech only.
+- Results also sent by HTTP POST: ChARM only.
+
+All of these are set on the integration or vendor row; see the B6 export.
+
+Where: result-attachment.service.ts; result-generation.service.ts; hl7-encoder.service.ts
+
+### B13
+- Add a provider: the clinic admin adds the provider to the practice's integration on the Website. This creates a pending row that the Sales director approves in the Unimod panel.
+- Remove a provider: suspend that provider's integration. Removing a provider from the clinic also deactivates their EMR integration automatically.
+- Practice-wide create, suspend and withdraw exist in the API but have no screen. Integration statuses in use are LIVE, PENDING and REJECTED.
+
+Where: auto-integrate/services/integration-request.service.ts:1514-1619 (deactivateOne); practice integration API
+
+### B14
+- The practice can stop the old integration itself with the Disconnect link on the Website page (B2 screenshot). Engineering can do the same by deactivating the old vendor's integration rows for that practice. Either way the rows become REJECTED, and result delivery only uses LIVE rows, so results stop.
+- The old vendor's order folder is still polled. Polling is controlled only by `sftp_folder_mapping`, so turning off integrations or the vendor row does not stop it.
+
+Where: integration-request.service.ts:1619 (deactivateOne); hl7-order-fetch.service.ts:204 (folders from sftp_folder_mapping where use_v2_pipeline = true)
+
+### B15
+Use the manual resend: `POST /result/generate/:sampleId`, or the batch endpoint. Every resend produces a new delivery. There is no duplicate check, so resend only when needed.
+
+Where: result/controllers/result.controller.ts:133,159
+
+### B16
+- One practice leaves: the practice clicks Disconnect on the Website, or engineering suspends or withdraws the integration through the API (practice-wide suspend covers every active row for that practice and vendor). Results stop.
+- A vendor leaves: suspend all its integration rows so results stop. To stop picking up its orders, engineering sets `use_v2_pipeline` to false on its `sftp_folder_mapping` rows. Deactivating the vendor row alone does not stop polling.
+
+Where: integration-request.service.ts:1586,1619; hl7-order-fetch.service.ts:204
+
+### B17
+- One practice: suspend that practice's integration for the vendor. It takes effect on the next delivery, with no restart.
+- The whole connection: suspend all integration rows for the vendor to stop results, and turn off its `sftp_folder_mapping` rows to stop order pickup.
+- Neither has a screen. Both are API or database changes by engineering.
+
+Where: integration-request.service.ts; hl7-order-fetch.service.ts:204
+
+## Leo questions (18)
+
+Answered from how things work in practice, checked against prod data where possible.
+
+### A2
+Attached: `VP-19305_sample-order-ORM.hl7` and `VP-19305_sample-result-ORU.hl7`. Both use placeholder data and follow the field positions the code reads and writes. The PDF in the result is truncated.
+There is no ACK sample. We do not send ACKs and do not read them.
+
+### A7
+Both. Many vendors put files on an SFTP server we host:
+- Our server 45.24.217.155: ChARM, eClinicalWorks, OptiMantra, PraxisEMR, HealthMatters, THM (Gundry), YHL, GLO, Unprescribed, Aprima, Meditab, NICHOLS, ZymeBalanz.
+- Our server 45.24.217.150 (port 2222): Practice Fusion.
+- Vendor-hosted: 64.124.9.100 (Breathermae, FollowThatPatient, DocVilla on separate ports), Cerbo/MDHQ, Power2Practice, Athena, Elation, OptimalDX, Nextech, BioInsights, Greenway, Harris, Health Fusion, INSYNC, Marqi, Cascades.
+
+See the `sftp_host` column in `VP-19305_vendor-config-export.csv`.
+
+### A10
+We need from the partner: host, port, username, and either a password or an SSH private key; the order folder and the result folder.
+Where it is stored: `lis_emr.ehr_vendors`, one row per vendor (host, port, user, password or private key, folders). Credentials sit in that table as plain text. A practice-level override exists on `ehr_integrations` but is rarely used.
+The order folders we poll are in a separate table, `lis_emr.sftp_folder_mapping`.
+There is no screen for vendor or folder setup. Engineering edits the database.
+
 ### A19
 - There is no staging SFTP for partners. Our staging service points at our production SFTP server, so it cannot be used for partner tests either.
 - Partners test in production. The test order goes under the integration's own provider account.
@@ -173,8 +223,6 @@ Before go-live:
 3. A test order (A19) showed up under the right practice and provider.
 4. A test result reached the vendor's result folder, and the vendor confirmed they can match it to the order.
 5. Report option (Classic or Personalized), kit delivery and billing match what the practice wants.
-
-## Part B: Internal SOP
 
 ### B1
 From the vendor: SFTP host, port, user, password or key, the order and result folders, a sample order file, and which field carries the practice id (if any).
@@ -207,19 +255,6 @@ See A19: use the integration's own provider account (or test provider 999997), p
 Attached:
 - `VP-19305_vendor-config-export.csv`: one row per vendor (host, port, login type, folders, special settings, number of live practices and polled order folders). No credentials.
 - `VP-19305_vendor-practices-live.csv`: one row per vendor and practice, with report option, push level, kit delivery and overrides.
-
-### B7
-- One PDF per report: only Maristany Medical (Cerbo). Resilience Code (Cerbo) gets results per report group and holds GUT5 back. Set by `result_push_level` and the split flag on `ehr_integrations`.
-- Total Tox combined message: Cerbo only.
-- Order Summary PDF on order arrival: FOLLOWTHATPATIENT only. No vendor has the "with result" Order Summary turned on.
-- Classic or Personalized: `report_option` on the integration.
-- Result folder must contain only .hl7 files: Cerbo/MDHQ.
-- PID-2 and per-test OBR-2 echo: Nextech only.
-- Results also sent by HTTP POST: ChARM only.
-
-All of these are set on the integration or vendor row; see the B6 export.
-
-Where: result-attachment.service.ts; result-generation.service.ts; hl7-encoder.service.ts
 
 ### B8
 Not sure. Engineering has no vendor contact list, and `ehr_vendors.support_email` / `support_phone` are empty for every vendor. Support does not receive vendor emails either; the CAMs forward them.
@@ -265,37 +300,6 @@ Support could check these alone with read access to `hl7_file_input` and `result
 - B11 #3, #4, #5: they can tell the practice what to fix on the Website without engineering.
 
 Code problems (#1) and service errors (#2) still need engineering.
-
-### B13
-- Add a provider: the clinic admin adds the provider to the practice's integration on the Website. This creates a pending row that the Sales director approves in the Unimod panel.
-- Remove a provider: suspend that provider's integration. Removing a provider from the clinic also deactivates their EMR integration automatically.
-- Practice-wide create, suspend and withdraw exist in the API but have no screen. Integration statuses in use are LIVE, PENDING and REJECTED.
-
-Where: auto-integrate/services/integration-request.service.ts:1514-1619 (deactivateOne); practice integration API
-
-### B14
-- The practice can stop the old integration itself with the Disconnect link on the Website page (B2 screenshot). Engineering can do the same by deactivating the old vendor's integration rows for that practice. Either way the rows become REJECTED, and result delivery only uses LIVE rows, so results stop.
-- The old vendor's order folder is still polled. Polling is controlled only by `sftp_folder_mapping`, so turning off integrations or the vendor row does not stop it.
-
-Where: integration-request.service.ts:1619 (deactivateOne); hl7-order-fetch.service.ts:204 (folders from sftp_folder_mapping where use_v2_pipeline = true)
-
-### B15
-Use the manual resend: `POST /result/generate/:sampleId`, or the batch endpoint. Every resend produces a new delivery. There is no duplicate check, so resend only when needed.
-
-Where: result/controllers/result.controller.ts:133,159
-
-### B16
-- One practice leaves: the practice clicks Disconnect on the Website, or engineering suspends or withdraws the integration through the API (practice-wide suspend covers every active row for that practice and vendor). Results stop.
-- A vendor leaves: suspend all its integration rows so results stop. To stop picking up its orders, engineering sets `use_v2_pipeline` to false on its `sftp_folder_mapping` rows. Deactivating the vendor row alone does not stop polling.
-
-Where: integration-request.service.ts:1586,1619; hl7-order-fetch.service.ts:204
-
-### B17
-- One practice: suspend that practice's integration for the vendor. It takes effect on the next delivery, with no restart.
-- The whole connection: suspend all integration rows for the vendor to stop results, and turn off its `sftp_folder_mapping` rows to stop order pickup.
-- Neither has a screen. Both are API or database changes by engineering.
-
-Where: integration-request.service.ts; hl7-order-fetch.service.ts:204
 
 ### B18
 Attached: `VP-19305_B18_files-sent-to-connection.sql`. Inputs are vendor id and a date range. Run it on lis_emr.
