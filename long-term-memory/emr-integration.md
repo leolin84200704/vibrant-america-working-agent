@@ -3,7 +3,7 @@ id: emr-integration
 type: ltm
 category: emr_integration
 status: active
-score: 0.3217
+score: 0.3465
 base_weight: 1.0
 created: 2026-04-22
 updated: 2026-11-01
@@ -158,6 +158,8 @@ links:
 - VP-19079
 - VP-19110
 - VP-19159
+- VP-19305
+- VP-19310
 - fhir-api
 tags:
 - emr
@@ -2626,3 +2628,22 @@ new-vendor spec / PM 能力詢問，以下列為準（2026-08-19 對 origin/main
 - **INCIDENT-20261013（BioInsights 收到 JAG 結果）11-10 後續**：回答「送出去的檔案裡有什麼」要讀送出的檔案本身、而且全部讀。`lis_emr.result_transmission_records.generated_hl7_content` 的 PDF 被剝掉（`[PDF_CONTENT_REMOVED_FOR_DB_STORAGE]`）；完整送出檔還在 emr-v2 prod pod `/EMR_storage/HL7Result_prod/<id>/<accession>.hl7`。10-19 用 2 個檔抽查下的「PID-11 為空」是錯的（204 檔中 6 檔有地址），PDF 病患區塊也印出 email（全是 JAG 辦公室）與電話（3 筆）。Junjie 11-10 16:36 確認資料齊全，Francesco 寫給 JAG 的事件說明。/tmp/jagpdf 的 PHI 暫存可刪。
 - **VP-19079（journal 2026-11-10）：MDHQ（Cerbo）prod 開 ORC.17 讀取、required 0**：2026-11-10 21:05:19Z 單列 UPDATE（綁 code+id+`order_practice_id_field IS NULL`，affectedRows 1），write 連線與唯讀 MCP 各讀回一次；較寬條件（field 有值或 required<>0）= MDHQ/THM/FTP/NEXTECH 共 32 列。11-16 沒有任何 vendor 被擋；required=1 要等該 vendor 首批 live 單驗過才逐一開。沒有 code / PR：config 是 DB 列，經 60 秒 cache 的 policy service 讀。consumer 層驗證要等 21:05Z 後第一張真的 MDHQ 單（寫 journal 時還沒來，已設 watch）。
   - 教訓：「vendor 開始送之前都是 no-op」的 config 開關仍是 prod 變更；「下一張單照樣下得進來」的檢查屬於變更本身，不是 follow-up——放進 watch，不在報告裡寫成已完成。
+
+## 【蒸餾 2026-11-12】MDHQ SFTP 的 20 session 上限、Cerberus（我們自己的 SFTP host）停機與重推、Cerbo TTB PDF 改用 AllReport（VP-19310）、MDHQ ORC.17 扣住 5 張 Cerbo 單（VP-19079）、EMR SOP 的事實（VP-19305）、BioInsights Summaries 資料夾（VP-19029）
+- **INCIDENT-20261111（MDHQ result 上傳 "Unexpected end event"）**：Cerbo 帳號 `vibrantamerica` 有 **20 個同時 session 的上限**；滿了之後 handshake 正常、登入後約 640 ms 被關、沒有 auth 回覆。這個症狀和 INCIDENT-20260529 的「帳號被鎖」長得一樣，第一次判讀錯成帳號被鎖，Cerbo（Scott）回覆才確認是 session 上限並清掉。分辨方法要問對方，或看 session 數，不能只看「假帳號回 auth failed、真帳號被關」。
+  - AKS prod pod 當天只開 2 個 MDHQ session 且都正常關閉，不是漏 session 的來源。懷疑 on-prem intake pod 的 order fetch 沒關 session（同 INCIDENT-20260604 一族），未驗證（這台 Mac 沒有 on-prem kube context）。Cerbo 清 session 後 MDHQ order intake 立刻恢復（當天 02:xx 之後到 22:15Z 都沒進單，平常一天 7–10 張）。
+  - 重推：AKS pod 內 gRPC `localhost:5000 GenerateResultHl7 {send_result:true}`，要帶 pod 的 OAUTH2 client_credentials token（metadata `authorization` + `service-name`），沒帶回 16 UNAUTHENTICATED；8 秒間隔；rtr 原列翻成 TRANSMITTED；Cerbo SFTP `stat` 檔案大小 = `file_size_bytes`，3/3 驗過。
+- **MAIL-1227266978：45.24.217.155 是我們自己的 Cerberus SFTP server，不是 vendor 的**（Leo 11-11：我們自己的 SFTP 是 45.24.217.155 和 45.24.217.150；64.124.9.100 是 vendor 端的共用 host：Breathermae 2222、FollowThatPatient 2224、DocVilla 2225）。11-10 到 11-12 01:25Z 握手逾時，IT 重啟 Cerberus 服務後恢復（信件串指向 license 到期）。VP-19290 結案時把這段逾時寫成 vendor 端問題，是錯的，已更正。
+  - 教訓：把逾時標成「vendor 端」之前先查這台 host 是誰的；這個標籤決定了我方沒有人再往下查。
+  - 重推前先查每個 sample 有沒有更晚的 TRANSMITTED 列，避免重複送。`GenerateResultHl7` 沒有 integration 選擇參數，同 sample 的其他 integration（這次 MDHQ 2 筆）也會再收到一次——先講清楚再跑。
+  - 經 on-prem NodePort `192.168.60.6:31317` 打的重推在 Datadog 沒有 log（只有 AKS pod 送 Datadog），證據只能看 DB readback。plan 的驗證步驟要寫跟實際呼叫端點相符的證據來源。重用的舊 rtr 列 error_message 仍留著舊的 PERMANENT FAILURE 文字。
+- **VP-19310（Maristany Cerbo 的 TTB PDF 缺 Total Toxins 總覽、頁碼每段重來）**：不是 LBS-1884 的 Classic/Modern 問題。split integration 的 REPORT_GROUP:TTB 由 `mergePdfs()` 串 ET2+HM2+MY2，各自保留封面和頁碼，TTS 摘要從來沒抓。VP-19008 結案時就把這個寫成 STM 殘項，沒開票，結果變成客訴。
+  - 修法（#540 → staging 28ab077，release #541 等 Leo）：`groupUsesAccessionPdf`——訂單上每個 TESTGROUP（含 bundle 子項）都屬 TTB [181,196,719]、成員都 final、沒有成員+TTS 以外的完成報告 → 用 pdf-cache AllReport（style 依 report_option），下載失敗或不是 PDF 就退回 merge。混合訂單在 merge 前面加 TTS（`companionPdfsForGroup`，不看完成清單，抓不到就略過）。
+  - 條件看**訂單 line items**而不是完成報告：OAT+TTB bundle 在 OAT 還沒出時只有 TTB 三份 final，只看完成報告會送出缺 OAT 的 AllReport、之後又重送 OAT。
+  - prod 的 rtr 從來沒有 `REPORT:TTS` 列 → TTS 從不出現在 getReportStatusListV2 的 Final 清單裡；如果用完成清單當條件，unit test 全綠、prod 永遠不跑。教訓：code 以「報告已完成」為條件之前，先在 prod 查那份報告到底會不會出現在清單裡；fixture 用 `finishedExtra` 加進去不代表 prod 會有。
+  - 驗證：staging 跑不了這張單（order-staging 沒有、dev report service 401），改在 staging pod 用 prod 唯讀 env 跑部署好的 dist：2608206436 Modern = 22 頁、一個封面、p2 目錄、Pg n/22，和 Maristany 描述的 portal 文件每一點相符。殘項：混合訂單 TTS p2 是沒有目錄的封面；CLASSIC 下的 TTS 樣式未驗。後續：#541 merge 後在 on-prem pod 用 `redraw_report_finished` 重推 2608206436（LBS-1884 配方）。
+  - 教訓：客戶看得到的殘項，結案時要開自己的票，不能只寫在 STM。
+- **VP-19079 後續：MDHQ ORC.17（required 0）扣住 Cerbo 單**：11-10 21:05Z 之後 9 張 MDHQ 單，4 張下單成功、5 張 `practice_not_found` 且 retry_num 已歸 0（7543/7544 /rcode、7546、7547、7548）。Cerbo 在 ORC-17 送的是它自己的 practice id，不是我們的 clinic id（4953→5492、32650→138167、9161→13658、9889→93796；9161 剛好是另一家真實 clinic Bellissimo Medical）。**required=0 不救這種情況**：有值但對不上就扣單（parser.service.ts）。提案：MDHQ 回滾到 NULL、5 列 reset retry_num、請 JJ 讓 Cerbo 改送 Vibrant clinic id（mapping 表的 Slack 草稿在 JJ DM）。截至 11-12 02:17Z 等 Leo 決定。
+- **VP-19305（JJ 的 EMR SOP，39 題）查證過的事實**：vendor 由 order 資料夾（`sftp_folder_mapping.emrName`）判定，不是 MSH-5；Nextech practice id 在 MSH.4；`ehr_vendors` 裡的 credential 是明文（不在 Key Vault）；`TEST^ZZZTEST` 是病人名；split PDF 只有 Maristany；到單即送 Order Summary 只有 FOLLOWTHATPATIENT；ChARM 另外收 HTTP POST（只有 ack）；179 筆 LIVE 列沒有 vendor；test-sftp 只支援密碼。病人比對（core-v2）：first/last/sex 完全一致 + DOB，限下單 customer 的 clinic 同儕，只更新非空且不同的 phone/email。測試帳號 customer 999997 / clinic 10136 / NPI 1234567893。integration 由 Sales director 在 vibrant-wellness-portal（unimod panel）核准。**emr-v2 repo 根目錄有一份真實病人 HL7 檔（`2601086695_20260202044208.hl7`，commit 52b347e）**，已報給 Leo，未處理。
+- **VP-19029 / BIOINSIGHTS**：Olena 回「Summaries.」只是意圖，不是路徑；SFTP 上只看得到 /incoming、/outgoing。先驗對方端的存在與寫入權限再改 `ehr_vendors 46 sftp_order_forms_path`，否則之後每張單的 PDF 上傳都會失敗。PEM 在 `~/.ssh/bioinsights_vibrant-wellness.pem`；macOS 沒有 `timeout`，用 `perl -e 'alarm N; exec @ARGV'`。11-11 Leo 自己合併兩次回覆並送出，等 Olena 建 /Summaries/、Mingxi 回第 5 點。
+- **VP-18842 後續（journal 11-05）**：comment 寫「下游服務會 flag」是對別的 repo 的宣稱，要讀那個 repo（order_helper.go）；扣款身分錯誤要查下游從哪個帳號推身分，不是查我們送的 token；staging 只有 999997@10136 一組有 clinic 卡的 provider/clinic。

@@ -2,6 +2,7 @@
 date: 2026-11-05
 tickets: [VP-18842, VP-17411]
 tags: [emr-v2, charging, customerPay, place-order-api, regression, plessen]
+distilled: true
 ---
 # VP-18842 follow-up: customerPay charge account + unpaid-order fallback
 

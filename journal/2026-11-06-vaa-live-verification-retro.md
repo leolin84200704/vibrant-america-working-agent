@@ -2,6 +2,7 @@
 date: 2026-11-06
 tickets: [VP-17466, VP-17756, VP-19013, VP-19142]
 tags: [vibrant-america-auto, daemon, verification, retrospective, process, headless, mcp]
+distilled: true
 ---
 # Retro: why daemon changes kept shipping green and not working (2026-11-03..06)
 

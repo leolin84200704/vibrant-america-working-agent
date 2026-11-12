@@ -4,6 +4,7 @@ type: journal
 date: 2026-11-05
 tickets: [VP-19029]
 tags: [bioinsights, sftp, order-summary-pdf]
+distilled: true
 ---
 # VP-19029: verify before enabling PDF delivery
 

@@ -4,7 +4,7 @@ type: journal
 date: 2026-11-11
 tickets: [VP-19310, LBS-1884, VP-19008]
 tags: [emr-v2, cerbo, maristany, ttb, report-group, pdf]
-distilled: false
+distilled: true
 ---
 # VP-19310: Total Tox message now carries the portal's combined PDF for TTB-only orders
 

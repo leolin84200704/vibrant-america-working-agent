@@ -5,8 +5,9 @@ category: emr_integration
 status: in_progress
 created: 2026-11-11
 updated: 2026-11-11
-links: [INCIDENT-20260529]
+links: []
 tags: mdhq cerbo sftp unexpected-end-event result-push zendesk-785091 resilience-code
+score: 0.1125
 ---
 
 ## Context

@@ -734,3 +734,11 @@ pattern 的 config/integration 票」，任何「票面已給修法」的 code �
 - **Tianhao Wang 是老闆：一律稱「昊哥」，不寫名字；找他要東西走 Slack、不寫 Jira comment；問句只寫要什麼，不解釋為什麼**（Leo 11-06，VP-17756）。Leo 自己寫的定稿樣式：「昊哥，請幫忙建一個 service principal，給它 vibrant-app-secret 這個 Key Vault 的 secret get 權限（可以的話只開個別 secret）。建好再把 tenant ID、client ID、client secret 給我，謝謝」。
 - **Leo 會自己帶著 residual 結案**：VP-17466（4 個自家 SFTP 資料夾仍缺 archive/）、VP-19159（還沒有 live TB1+VA 交付）都是 Leo 直接轉 Done，QH comment 的 Residual 段寫清楚未完成項。agent 不要把「residual 未清」當成重開的理由；要做的是在 STM 記下 residual 現在掛在哪（例：VP-17466 的資料夾請求在已 Done 票的 comment 199856，沒有獨立 tracker），之後有人問起才知道去哪追。
 - **QA twin 結案時 QH 的「QA verification passed」comment 不能省**：QH-8363（VP-19159）11-06 轉 Done 時沒有這則 comment（STM 草稿停在等 Leo review），QH-6474（VP-17466）有。dream closeout audit 會把缺 comment 的 QH 標 FLAG。
+
+## 【蒸餾 2026-11-12】給同事的 Jira comment 要 casual、@ 要先查 accountId、「改成 block 但不要再追蹤」、「不用回 Slack，直接做」（VP-19298 / VP-17466 / MAIL-1227266978 / VP-19305）
+- **給同事的 comment／訊息用 casual 白話（Leo 11-11「ok,以後要這樣回訊息」，常設）**：以核准的 VP-19298 comment 為範本——口語英文、不用正式字眼（honor、requested 之類）、不列檔案、3–5 短句：是哪一邊的事、發生什麼、對方要做什麼。第一版太正式被退回。
+- **@ 一定要是 mention node（11-02 規則再犯，Leo 11-11「請你把這個教訓記起來」）**：VP-19298 comment 寫成純文字 "@Xiaoye Li"，Xiaoye 沒收到通知，Leo 手動修。起草任何 @ 之前先讀本檔的 @ 段落、先查 accountId（Xiaoye = 712020:4d1e81dc-51fc-47c4-8ec5-b630883b8d93），貼出後讀回確認有 mention node。
+- **「不是，改成 block 但是不要再追蹤」（VP-17466，11-06）**：「暫時 done」不是 Done 狀態；把 Leo 的話讀成 Done 而關掉 QH-6474 是誤讀（他還沒決定要不要重開）。Leo 說不追蹤就不要設 watch。
+- **「不用回 slack，直接做」（VP-19298）**：先存的 Slack 草稿要丟掉，不要送。
+- **「不要回信，把報告重推」（MAIL-1227266978）／「回覆並且把缺的報告重新傳」（INCIDENT-20261111）**：重推前查重複、跑完逐筆 readback。
+- **Leo 的事實答案（VP-19305）**：外部 SOP 裡不知道的事就寫不知道，回報給 JJ；integration 核准者是 Sales（director）。

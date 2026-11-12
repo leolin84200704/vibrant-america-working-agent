@@ -4,7 +4,7 @@ type: journal
 date: 2026-11-11
 tickets: [VP-18465]
 tags: [cloud-local-proxy, scale-to-zero, aks, on-prem, retirement, prod-change]
-distilled: false
+distilled: true
 ---
 # VP-18465: cloud-local-proxy scaled to zero on both clusters
 

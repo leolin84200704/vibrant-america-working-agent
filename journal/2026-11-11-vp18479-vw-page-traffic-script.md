@@ -4,7 +4,7 @@ type: journal
 date: 2026-11-11
 tickets: [VP-18479, VP-19198, VP-18465]
 tags: [vw-page, web-homepage-api, on-prem, traffic, trans-opt]
-distilled: false
+distilled: true
 ---
 # VP-18479: the traffic count for vw-page has to be run by Leo on the on-prem host
 

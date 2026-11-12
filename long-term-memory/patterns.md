@@ -3146,3 +3146,17 @@ Atlassian MCP 斷線時的 fallback：`~/src/credential/atlassian-api-token.md`�
   - 結案的形狀已穩定：每張都在關之前當場重驗 live（pod image、ConfigMap、Datadog 錯誤數、DB 列），QH twin comment 帶 Implementation / Verification / Residual。
   - 反覆出現的落差是**記錄比世界慢**：VP-19132 的 daemon state 到 11-10 仍寫「Merge release PR #516」，但 #516 11-03 就 merge 了；VP-19128 10-30「轉 Done」被 Automation 彈回卻記成 Done；VP-18802 frontmatter `jira_status` 停在 Dev Complete。讀 STM 的「待辦／for Leo to decide」前先對 GitHub / Jira 驗。
   - worktree 的 node_modules 問題（symlink 到另一個 worktree → TS2742、或依賴集不同）11 月又出現兩次（VP-19265、VP-18478），LTM 已記至少 6 次——光靠記憶沒擋住，適合變成 worktree 建立腳本（`npm ci` + `prisma generate`），交 Leo 決定。
+
+## 【蒸餾 2026-11-12】daemon 改動一直「綠燈但沒用」的 retro、cloud-local-proxy scale 0、vw-page 流量盤點、沒有 push 權限的 repo（VP-17466/17756/19013/19142 retro、VP-18465、VP-18479、VP-19298）
+- **vibrant-america-auto 五個 PR 四天都綠燈卻沒用（retro 11-06）**：#46 Slack 工具名照互動 session 寫，但 `claude -p` 會把同步來的 plugin 當成 claude.ai connector 的重複而去掉（"Lazy dedup"），實際是 `mcp__claude_ai_Slack__*`；#40 疊在未 merge PR 上的 PR，base merge 後落進 feature branch；#44 `install.sh` 重啟殺掉了正在處理 Leo「ok」的 run；#39 handoff 用輪替時間當時間戳，蓋過較新的 STM；Telegram sendMessage DNS 失敗沒重試。根因：行為在環境裡（headless 工具面、GitHub、launchd、Telegram），卻用自己寫的 fake 驗證，再把「tests pass」報成「daemon 會做」。
+  - 改法（PR #48）：PR 前做 live check 並把輸出貼進 PR body；環境事實從環境取得（`python -m vibrant_america_auto probe`，約 $0.3 印出 headless profile 真正看得到的工具、`claude -p --debug=mcp`、`gh pr view --json baseRefName`）；不疊 PR；只在 idle 時 reinstall；報告寫清楚驗了什麼。
+  - 「Done」在報告裡就是「live 驗過」，否則要明講；風險是「我假設環境怎麼運作」時，驗證就是在那個環境跑一次。
+- **VP-18465 Phase 1（11-11 20:11Z）**：AKS cloud-local 與 on-prem lis 的 `cloud-local-proxy-deployment` / `-st` 全部 scale 0；動手前重跑 gate（probe 出現在 AKS pod log、Datadog、on-prem capture 與 pod log）、證據存 `~/src/credential/vp18465-cloud-local-backup/phase1-20261111T2010Z/`。四個前端 200→503。AKS `-st` 約 10-25 07:19Z 起就被不明人士縮成 0。Phase 2（刪除）在 11-18 之後。
+  - Datadog 在 probe 後沒看到那一行，先看 pod log 再判定 logger 死了；Datadog ingestion 落後約 2 分鐘。
+  - 共用 ingress 的鄰居（vw-page）要在 scale 前後各 probe 一次；這次沒有事前 baseline。
+- **VP-18479（vw-page / web-homepage-api）**：Yekai 11-11 決定不併進 trans。on-prem 3 pod log 涵蓋 118 天（07-16 → 11-11）：CMS / forms / Education Center / short URL 0 次，`/orders` 1 次（401），`createReportActions` POST 6 次、最後 09-16 → 走 VP-19198 子票退役。
+  - `logging_middleware.py` 會把非 GET 的 request body 寫進 log（含 /subscribe、/patientsignup、/contactus 的 PII）→ 在 host 上算數字，raw log 不離開 host（`runbooks/vp18479-vw-page-route-counts.sh`）。先讀服務再寫計數器，因為讀了才知道計數器可以做什麼。
+  - ssh 192.168.60.5 只收密碼；用 `/usr/bin/expect` + env 傳密碼（不落檔）。這台 Mac 只有 lisportalprod（AKS）和 minikube context。
+  - web-homepage-api 的 Jenkins job（60.9:9602 `web-homepage-api/main`）已經不在，PR #69 merge 後不會 build；vw-page 要退役，不建議重建。
+- **VP-19298（va-portal 不給當天的 consult 時段）**：FE 四處 `start_date = moment().add(1,'days')`；backend 正確用各 clinician 的 `v2_calendar.min_notice_minutes`。agent 帳號 leolin84200704 對 Vibrant-America/va-portal 只有 pull，且 repo 禁止 fork → agent 開不了 PR，patch 存在 STM 資料夾給 Leo。動 va-portal 前先查 `gh api repos/Vibrant-America/va-portal --jq .permissions`。
+- **daemon 的 Jira @ 沒生效的真因（VP-19298）**：`resolve_mention` 要求剛好一個 prefix 符合；"Xiaoye Li" 也符合 "Xiaoye Li(Bot)" → 回 None → 靜默以純文字貼出。修正 PR vibrant-america-auto #55（完全相同名稱優先、解析不了的 @ 擋下不貼）。

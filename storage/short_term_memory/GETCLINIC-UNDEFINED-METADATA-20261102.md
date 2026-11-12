@@ -3,7 +3,7 @@ id: GETCLINIC-UNDEFINED-METADATA-20261102
 type: stm
 category: technical
 status: done
-score: 0.0891
+score: 0.0862
 base_weight: 0.9
 created: 2026-11-02
 updated: 2026-11-03
