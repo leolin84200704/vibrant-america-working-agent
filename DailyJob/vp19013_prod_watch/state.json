@@ -1,7 +1,7 @@
 {
   "status": "watching",
   "twins_seen_in_prod": "2026-11-09T18:15:00Z",
-  "checked_through_utc": "2026-11-11T05:38:00Z",
+  "checked_through_utc": "2026-11-12T02:14:00Z",
   "orders_checked": [
     7525,
     7526,
@@ -24,10 +24,14 @@
     7543,
     7544,
     7545,
-    7546
+    7546,
+    7547,
+    7548,
+    7549,
+    7550
   ],
   "verified_order": null,
   "pending_unplaced": [],
-  "last_run_utc": "2026-11-11T21:14:00Z",
-  "last_run_result": "REPORT-ONLY: no new hl7_file_input rows after 2026-11-11T02:16Z; possible intake stall"
+  "last_run_utc": "2026-11-12T02:14:00Z",
+  "last_run_result": "no candidates: intake resumed (7547-7550), none contain 868/869/876/877"
 }
