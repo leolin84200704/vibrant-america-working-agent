@@ -23,3 +23,13 @@ before drafting a new one.
 
 Lesson: a known residual written only into STM ("classic TTB merge lacks the summary") comes back as a
 customer complaint. When a residual is visible to the customer, it needs its own ticket at close.
+
+## Addendum 2026-11-11 17:10 PT: the mixed-order half
+The first commit shipped only half of the approved plan; the "prepend TTS on mixed orders" half was missing.
+Before writing it, I checked whether TTS ever shows up as a finished report in prod. It does not: rtr has
+never had a REPORT:TTS row, and if TTS were listed as Final the per-report splitter would have sent it alone
+or fallen back to whole-order. So the prepend fetches TTS without checking the finished list and skips it on
+error. A gate on the finished list would have passed every unit test and done nothing in prod.
+
+Lesson: when code gates on a report being "finished", first check in prod that the report ever appears in
+that list. A fixture that adds it with `finishedExtra` proves nothing about prod.
