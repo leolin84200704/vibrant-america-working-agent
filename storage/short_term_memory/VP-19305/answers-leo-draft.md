@@ -13,9 +13,8 @@ There is no ACK sample. We do not send ACKs and do not read them.
 ### A7
 Both. Many vendors put files on an SFTP server we host:
 - Our server 45.24.217.155: ChARM, eClinicalWorks, OptiMantra, PraxisEMR, HealthMatters, THM (Gundry), YHL, GLO, Unprescribed, Aprima, Meditab, NICHOLS, ZymeBalanz.
-- 45.24.217.150:2222: Practice Fusion. [ASK LEO: confirm this one is ours too]
-- 64.124.9.100 (ports 2222/2224/2225): Breathermae, FollowThatPatient, DocVilla. [ASK LEO: ours or a third party's]
-- Vendor-hosted: Cerbo/MDHQ, Power2Practice, Athena, Elation, OptimalDX, Nextech, BioInsights, Greenway, Harris, Health Fusion, INSYNC, Marqi, Cascades.
+- Our server 45.24.217.150 (port 2222): Practice Fusion.
+- Vendor-hosted: 64.124.9.100 (Breathermae, FollowThatPatient, DocVilla on separate ports), Cerbo/MDHQ, Power2Practice, Athena, Elation, OptimalDX, Nextech, BioInsights, Greenway, Harris, Health Fusion, INSYNC, Marqi, Cascades.
 See the `sftp_host` column in `VP-19305_vendor-config-export.csv`.
 
 ### A10
@@ -26,7 +25,8 @@ There is no screen for vendor or folder setup. Engineering edits the database.
 
 ### A19
 - No staging SFTP for partners. Our staging service points at our production SFTP server, so it cannot be used for partner tests either.
-- Partners test in production. The test order goes under the integration's own provider account. If the practice has no account we can use, use the ZZZTEST account. [ASK LEO: is "ZZZTEST" a test provider account, or the test patient name TEST^ZZZTEST? Please give the account id if it is an account.]
+- Partners test in production. The test order goes under the integration's own provider account.
+- If there is no provider account to test with, use our test provider: customer 999997 at practice 10136 ("Vibrant IT3 Practice 1233"), NPI 1234567893. It exists on staging and in production.
 - Test patient name: TEST^ZZZTEST.
 - To avoid a charge, leave IN1 out (or send anything other than "C"). Then no card is charged and the patient gets a pay-later email. A test patient with no email gets nothing.
 - A test order has no physical sample. To send a test result back, ops have to receive the sample manually and release a result.
@@ -45,7 +45,7 @@ From the vendor: SFTP host, port, user, password or key, the order and result fo
 From the practice: Vibrant practice id, providers' names and NPIs, report option (Classic or Personalized, one PDF or one per report), kit delivery default, billing (card on file or patient pays).
 
 ### B2
-- The practice requests it: https://intelligence.vibrant-wellness.com/my-practice/practice-setting/third-party-integrations (the same page is embedded in https://www.vibrant-america.com/lis/patientpage/#/setting/third-party-integrations ). The card is shown only to accounts in the auto-EMR-integration beta.
+- The practice requests it: https://intelligence.vibrant-wellness.com/my-practice/practice-setting/third-party-integrations (the same page is embedded in the va-portal provider portal at https://www.vibrant-america.com/lis/patientpage/#/setting/third-party-integrations ). The card is shown only to accounts in the auto-EMR-integration beta.
 - We review and approve it: vibrant-wellness-portal, VA Portal > EHR Auto Integration (route /Portal/EHRAutoIntegration). [ASK LEO: confirm the domain of vibrant-wellness-portal; the code suggests https://vibrant-wellness-portal.pages.dev/Portal/EHRAutoIntegration ]
 - Data: `lis_emr.ehr_integrations` (one row per provider per practice per vendor). Vendor settings: `lis_emr.ehr_vendors`. Order folders: `lis_emr.sftp_folder_mapping`.
 - No screen exists for vendor settings, order folders, or suspend. Those are database or API changes by engineering.
@@ -54,7 +54,7 @@ From the practice: Vibrant practice id, providers' names and NPIs, report option
 ### B3
 1. New vendor only: engineering adds the vendor row and the order folder.
 2. Practice: requests the integration on the Website.
-3. Review and approve in EHR Auto Integration. [ASK LEO: who approves today: Support, TPM, or engineering?]
+3. Review and approve in EHR Auto Integration. [PENDING: asked Mingxi whether the Sales manager approves]
 4. Vendor sends a test order; we confirm it landed under the right practice; we send a test result.
 5. Go live.
 
@@ -65,7 +65,7 @@ Before the first real order:
 - Since Oct 21, an order is rejected if the provider has not connected that vendor (vendor_mismatch). For vendors that send a practice id, an order for a practice the provider is not set up at is held (practice_not_found).
 
 ### B5
-See A19: the integration's own provider account (or the test account), patient TEST^ZZZTEST, no IN1 "C", and ops release the result manually.
+See A19: the integration's own provider account (or test provider 999997), patient TEST^ZZZTEST, no IN1 "C", and ops release the result manually.
 
 ### B6
 Attached:
@@ -75,7 +75,7 @@ Attached:
 ### B8
 We have no contact list on file. `ehr_vendors.support_email` and `support_phone` are empty for every vendor. Vendor threads run through Support's Zendesk (support@vibrant-wellness.com).
 Known from recent threads: Nextech (Jessica Marshall), devcom for BioInsights (Olena), THM/Gundry (Rob).
-[ASK LEO: OK to ask Zhenhe / Support to pull the contact for each vendor from Zendesk?]
+[PENDING: asked Zhenhe to pull each vendor's contact from Zendesk]
 
 ### B9
 Look up the file in `lis_emr.hl7_file_input` by file name, or by vendor (`emr_service`) and date.
@@ -122,7 +122,6 @@ Re-checked today: with BioInsights (46) and 2026-07-29 to 2026-10-13 it returns 
 7. A practice can overwrite a patient's phone and email when it sends its own office contact in PID-13 / PID-20.
 8. Turning off an integration does not stop polling the vendor's order folder. That is a separate table.
 9. Suspend has no screen; it is an API call only.
-10. A real patient HL7 result file is committed to the emr-v2 repo root (`2601086695_20260202044208.hl7`, since 2026-03-02). [ASK LEO: list this in the doc, or report it separately and just remove it?]
 
 ## Corrections to the AI answers (draft v1)
 
