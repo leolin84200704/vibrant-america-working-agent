@@ -1,7 +1,7 @@
 {
   "status": "watching",
   "twins_seen_in_prod": "2026-11-09T18:15:00Z",
-  "checked_through_utc": "2026-11-12T02:14:00Z",
+  "checked_through_utc": "2026-11-12T22:36:00Z",
   "orders_checked": [
     7525,
     7526,
@@ -28,10 +28,26 @@
     7547,
     7548,
     7549,
-    7550
+    7550,
+    7551,
+    7552,
+    7553,
+    7554,
+    7555,
+    7556,
+    7557,
+    7558,
+    7559,
+    7560,
+    7561,
+    7562,
+    7563,
+    7564,
+    7565,
+    7566
   ],
   "verified_order": null,
   "pending_unplaced": [],
-  "last_run_utc": "2026-11-12T02:14:00Z",
-  "last_run_result": "no candidates: intake resumed (7547-7550), none contain 868/869/876/877"
+  "last_run_utc": "2026-11-12T22:36:00Z",
+  "last_run_result": "no candidates: 7551-7566 (16 files), none contain 868/869/876/877; prod redeployed (779cff9f4) ~22:00Z, swap code unchanged on origin/main 3c7849e"
 }
