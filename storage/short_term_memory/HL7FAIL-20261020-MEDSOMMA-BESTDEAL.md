@@ -2,7 +2,7 @@
 id: HL7FAIL-20261020-MEDSOMMA-BESTDEAL
 type: stm
 category: emr_integration
-status: blocked
+status: resolved
 score: 0.0562
 base_weight: 1.0
 created: 2026-10-20
@@ -32,3 +32,4 @@ unblock_when: BestDeal returns 200 for test_id_list ["337"] (and 338/381/382/383
 - HL7 MSH-4 / PID-18 = 139134, provider Lauren Doyle NPI 1508438136 -> patient 3296212 on 139134 is what Cerbo sent; 152050 (Shannon Ceglinsky) is the clinic's portal account, a separate support matter.
 - lis_ordermanage.orders for patient 3296212: 0 rows (no manual re-order).
 - Slack draft to Zhenhe saved (D09KWNBDA8Z). Proposed: UPDATE lis_emr.hl7_file_input SET retry_num=3 WHERE id=7375 AND parse_finished=0 AND retry_num=0; verify parse_finished=1 + sample_id. Fallback if on-prem file gone: manual re-drive from quarantine raw_hl7_message.
+- [2026-11-13] BestDeal now 200 for all 7 ids; retry_num bumped to 3 under VP-19350 (see that STM).
