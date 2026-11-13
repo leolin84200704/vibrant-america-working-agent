@@ -83,6 +83,63 @@ Reading every STM+LTM file each night does not scale past ~50 files and is why t
 
 ---
 
+## Phase 1.5: Reply diff (what Leo changed in the daemon's drafts)
+
+> Leo, 2026-11-12: "記錄推薦我的回覆跟我實際上的回覆的差異，並且比較這兩者差異的原因以及要怎麼樣更貼近我的回覆，
+> 不論是從字面上還是事情處理的方式上。每天跑一次就可以了。"
+
+The Telegram daemon (`vibrant-america-auto`) keeps every draft that reached Leo next to what he
+actually sent (Jira comment posted, Slack message sent, Outlook mail sent) and his words in between,
+plus the handling pairs (what it proposed, what he decided). This phase reads them once a night and
+turns the durable part into rules every daemon thread then follows. Skip the phase, with a note in
+the log, when the daemon is not on this machine.
+
+```bash
+DAEMON=~/src/vibrant-america-auto
+test -x "$DAEMON/.venv/bin/python" || echo "no daemon here"
+# 1. find what Leo sent for the open Slack / Outlook drafts (one small model call each; at most 12)
+"$DAEMON/.venv/bin/python" -m vibrant_america_auto learn collect
+# 2. the pairs since the last successful run (LAST_SUCCESSFUL_RUN from the Run context; 24h when absent)
+"$DAEMON/.venv/bin/python" -m vibrant_america_auto learn export --since "<LAST_SUCCESSFUL_RUN>" > /tmp/vaa-pairs.jsonl
+# 3. the rules already learned, so nothing is added twice
+"$DAEMON/.venv/bin/python" -m vibrant_america_auto rules list
+```
+
+For every line of `/tmp/vaa-pairs.jsonl` (run from the daemon's directory so `python -m` resolves):
+
+- `comment` / `slack` / `email`: `draft` is the agent's first version, `final` what Leo sent,
+  `feedback` his Telegram words in between, `draft_breaks` / `final_breaks` what the voice lint
+  (`voice.py`) already flags. Write down, in one or two lines each: what changed (wording: tone,
+  names, length, what was cut, what was added; handling: a different ask, a different person, a
+  different channel) and why, taking the reason from his words when he gave one and from the diff
+  when he did not.
+- `handling`: `proposed` is what the thread held for him (draft, plan or proposal), `leo` his reply,
+  `then` what happened next. Write what he chose instead and why.
+
+Then the rules. A rule is one English sentence a prompt can follow ("Ask the boss on Slack, not on
+the ticket", "No file lists in a comment to a colleague"), and it is added only when it rests on at
+least two pairs, or on one pair where Leo stated the rule himself ("以後都要這樣", "請記住"). Kinds:
+`wording` (how a text is written) and `handling` (what to do, whom to ask, when to skip). A rule that
+`rules list` already holds, in other words, is the same rule: add its pair ids as evidence instead
+(`rules add` with the same text merges them). Things the lint already enforces (formal words, full
+names, DM names, arrows, colon density) are not rules to add; a lint miss is a note for the daemon's
+`voice.py`, written in the log.
+
+```bash
+"$DAEMON/.venv/bin/python" -m vibrant_america_auto rules add --kind wording --text "<rule>" --evidence p12 p15 --note "<why, one line>"
+```
+
+Do not touch the daemon's code, its database tables or its STM state blocks; do not write Jira.
+The daemon's first digest of the day shows Leo the rules added in the last 24 hours, and his
+"rules remove <id>" drops one, so a wrong rule costs one night. Rules that belong to this repo's
+own working style (how the interactive agent should act) still go through Phase 3 into
+`leo-working-rules.md` as before; this phase is only about the daemon's drafts.
+
+Log section (Phase 5): `## Reply diff`: pairs read (by kind), what changed and why per pair (short),
+rules added with ids and evidence, lint misses noted, "no daemon here" or "no pairs" when so.
+
+---
+
 ## Phase 2: Gather Signal
 
 For each file in the working set, classify into one signal type:
@@ -160,6 +217,8 @@ Write a dream log to `logs/dream-YYYY-MM-DD.md`:
 - Jira reconcile: N flipped to completed / skipped (no credentials) / M need manual review
 
 ## Closeout audit (window: <CLOSEOUT_SINCE> → now, N nights)
+
+## Reply diff
 - VP-XXXXX: PASS / FLAG: <reason>  (one line per audited ticket; "none due" if empty)
 
 ## Signals
