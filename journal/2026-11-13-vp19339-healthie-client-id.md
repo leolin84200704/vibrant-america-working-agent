@@ -4,7 +4,8 @@ type: journal
 date: 2026-11-13
 tickets: [VP-19339, VP-19337, VP-19338, VP-19341]
 tags: [healthie, jag, patient-mapping, emr-v2, lis_emr, prisma, grpc]
-distilled: false
+distilled: true
+distilled_on: 2026-11-13
 ---
 # VP-19339: practice-scoped Healthie client id, draft PR #545
 

@@ -4,6 +4,8 @@ type: journal
 date: 2026-11-12
 tickets: [VP-19162, VP-19168, VP-19169, VP-19163, VP-19164]
 tags: [sandbox, simulator, partner-api, issue-system, emr-v2, get-orders]
+distilled: true
+distilled_on: 2026-11-13
 ---
 # VP-19162: sandbox simulator partial build, draft PR #542
 

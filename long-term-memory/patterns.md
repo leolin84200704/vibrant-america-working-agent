@@ -3160,3 +3160,9 @@ Atlassian MCP 斷線時的 fallback：`~/src/credential/atlassian-api-token.md`�
   - web-homepage-api 的 Jenkins job（60.9:9602 `web-homepage-api/main`）已經不在，PR #69 merge 後不會 build；vw-page 要退役，不建議重建。
 - **VP-19298（va-portal 不給當天的 consult 時段）**：FE 四處 `start_date = moment().add(1,'days')`；backend 正確用各 clinician 的 `v2_calendar.min_notice_minutes`。agent 帳號 leolin84200704 對 Vibrant-America/va-portal 只有 pull，且 repo 禁止 fork → agent 開不了 PR，patch 存在 STM 資料夾給 Leo。動 va-portal 前先查 `gh api repos/Vibrant-America/va-portal --jq .permissions`。
 - **daemon 的 Jira @ 沒生效的真因（VP-19298）**：`resolve_mention` 要求剛好一個 prefix 符合；"Xiaoye Li" 也符合 "Xiaoye Li(Bot)" → 回 None → 靜默以純文字貼出。修正 PR vibrant-america-auto #55（完全相同名稱優先、解析不了的 @ 擋下不貼）。
+
+## 【蒸餾 2026-11-13】Prisma 複合 unique 的 `name:`、on-prem vw-page 的 Mongo 沒有認證、Jenkins credential 只改描述（VP-19339 / VP-19311 / VP-18479）
+- **Prisma `@@unique` 要用 `name:` 才能在 `findUnique` 裡用那個複合 key 名稱**；`map:` 只決定 DB 裡 index 的名字。寫 in-memory Prisma 替身時也要執行 unique 檢查，VP-19339 因此抓到一個順序錯誤：舊的 id 要在 update 之前讀，不能從 update 後的 row 物件拿。
+- **on-prem Mongo 192.168.60.7:27017（`vw_homepage_db`）接上 VPN 就能連，不需要認證**。裡面有 PII（contact_us 1917、patient_sign_up 8110、user_subscribe 2301 筆）。只做唯讀計數，不讀文件內容。退役前要先匯出（VP-19311 等 Yekai 決定放哪裡）。
+- **Jenkins（192.168.60.9:9602）改 credential 描述**：用 script console 的 `updateCredentials`，id、scope、username、password 都不變，並在腳本裡比對 `user_same`/`pass_same`，引用這個 id 的 job 不受影響。`registry-60-10` 其實是 Docker Hub 帳號 4693646，因為 docker login 沒帶 registry host。ssh 用的帳密登不了 Jenkins（401）。
+- **agent 對 Vibrant-America/ehr-frontend 只有讀取權限**（push 403），跟 va-portal 一樣。動手前先 `gh api repos/Vibrant-America/<repo> --jq .permissions`。

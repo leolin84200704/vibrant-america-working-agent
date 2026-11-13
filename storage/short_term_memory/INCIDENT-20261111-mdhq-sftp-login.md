@@ -7,7 +7,7 @@ created: 2026-11-11
 updated: 2026-11-11
 links: []
 tags: mdhq cerbo sftp unexpected-end-event result-push zendesk-785091 resilience-code
-score: 0.1125
+score: 0.1052
 ---
 
 ## Context

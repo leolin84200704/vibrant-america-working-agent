@@ -4,6 +4,8 @@ type: journal
 date: 2026-11-12
 tickets: [VP-19079, MAIL-298885716]
 tags: [practice-id, orc-17, mdhq, cerbo, ehr-vendors, prod-db, retry-num]
+distilled: true
+distilled_on: 2026-11-13
 ---
 # VP-19079: roll MDHQ back to provider-only matching, release 5 held Cerbo orders
 

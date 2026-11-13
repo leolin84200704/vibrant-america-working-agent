@@ -4,6 +4,8 @@ type: journal
 date: 2026-11-12
 tickets: [VP-17466]
 tags: [emr-v2, hl7-order-fetch, sftp, cerberus, archive, orderarchive]
+distilled: true
+distilled_on: 2026-11-13
 ---
 # VP-17466: OrderArchive fallback and copy-then-delete, draft PR #543
 
