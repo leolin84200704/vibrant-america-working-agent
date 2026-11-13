@@ -533,3 +533,4 @@ Prevention proposed to Leo (pending approval, automation -> PR):
 - No reply needed from Leo. Nothing on /Summaries/ or point 5; no reply from Mingxi yet (Outlook search after 11-11 shows none).
 - Still waiting: Olena creates /Summaries/; Mingxi answers point 5.
 
+- 2026-11-13 23:30Z Zhenhe replied-all to Olena: received both signed attestations, will forward internally for review and recordkeeping. Nothing for Leo. Still waiting on /Summaries/ (Olena) and point 5 (Mingxi).
