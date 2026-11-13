@@ -1,7 +1,7 @@
 {
   "status": "watching",
   "twins_seen_in_prod": "2026-11-09T18:15:00Z",
-  "checked_through_utc": "2026-11-12T22:36:00Z",
+  "checked_through_utc": "2026-11-13T18:26:00Z",
   "orders_checked": [
     7525,
     7526,
@@ -44,10 +44,12 @@
     7563,
     7564,
     7565,
-    7566
+    7566,
+    7567,
+    7568
   ],
   "verified_order": null,
   "pending_unplaced": [],
-  "last_run_utc": "2026-11-12T22:36:00Z",
-  "last_run_result": "no candidates: 7551-7566 (16 files), none contain 868/869/876/877; prod redeployed (779cff9f4) ~22:00Z, swap code unchanged on origin/main 3c7849e"
+  "last_run_utc": "2026-11-13T18:26:00Z",
+  "last_run_result": "no candidates: 7567-7568 (2 files), none contain 868/869/876/877; prod pod unchanged (779cff9f4), origin/main 3c7849e"
 }
