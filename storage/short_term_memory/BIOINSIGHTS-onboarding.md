@@ -11,7 +11,7 @@ unblock_when: 'BioInsights grants account perms (test: sftp key-auth to sftp.bio
   then ls / — currently auth OK but ls/stat/put all fail); waiting on Thomas reply
   to 2026-07-21 email'
 created: 2026-07-21
-updated: 2026-11-11
+updated: 2026-11-12
 links:
 - BIOINSIGHTS-SFTP-KEY
 - NEXTECH-onboarding
@@ -521,3 +521,8 @@ Prevention proposed to Leo (pending approval, automation -> PR):
 ### [2026-11-11 20:33] Leo sent the merged reply
 - Per Leo: merged reply-all sent 2026-11-11 20:32:59Z (Sent Items, "RE: [Vibrant Wellness] Integration with Vibrant Wellness", 10 recipients), covering the 11-09 and 11-10 questions. Point 5 (BioInsights shipped) @Mingxi to confirm whether BioInsights holds Vibrant kits.
 - Waiting on two things: (1) Olena creates /Summaries/ with write access; (2) Mingxi answers point 5.
+
+### [2026-11-12] Status check after Leo asked "VP-19029 is in progress, isn't it?"
+- Jira VP-19029: Dev Blocked (updated 2026-11-11 10:44 PT). SFTP read-only ls: root = failed, incoming, outgoing; /outgoing = archive only. /Summaries still absent.
+- Outlook search returned Graph 502 twice; mail after Leo's 11-11 20:32Z send not checked.
+- The 11-06 follow-up draft proposal is obsolete (Leo sent the merged reply 11-11). Still waiting on Olena (/Summaries/) and Mingxi (point 5).
