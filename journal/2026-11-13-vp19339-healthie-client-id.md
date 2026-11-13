@@ -51,3 +51,9 @@ there is no new branch or PR in this step.
 
 Lesson: an approved plan that contains "show Leo X first" still needs X shown. The approval covers the
 order of steps, not the step that asks him to look.
+
+## 21:15 UTC — prod DDL approved, blocked
+Leo approved the prod CREATE TABLE. The table was still absent at 21:12Z. The kubectl exec into the
+prod emr-v2 pod was auto-denied by the non-interactive session, so nothing ran on prod. I stopped
+there and did not try another path to prod, because a denied prod write is a stop signal, not a
+routing problem. Release PR #544 must not be merged until the table exists.
