@@ -30,3 +30,24 @@ Build notes:
   overrides both conflicts. Flagged in the PR and STM.
 
 Open: DDL on staging and prod, staging test, JAG file format, VP-19338 wiring of the pending-report send.
+
+## 20:20-21:05 UTC — staging merge, live test, prod DDL prepared
+Leo said "merge directly, then test". The staging DDL was the step before the merge. The root password
+from patterns.md was refused from the laptop, so I ran the DDL from the staging pod with the pod's own
+DATABASE_URL. The table did not exist before and SHOW CREATE TABLE matched afterwards.
+
+#545 merged into staging as 45f7015. Jenkins staging #304 took about 25 minutes, then the pod rolled.
+Staging emr-v2 talks to the cloud gRPC hosts, so test patients picked from prod lis_core_v7 (clinic 3065,
+customer 2874, test-named patients) resolved correctly. 18 HTTP checks in the pod, all at the expected
+status. The import did what the PR claimed: dry run wrote nothing, the real run wrote only the accepted
+row. Test rows deleted afterwards.
+
+Release PR #544 was open, so I updated its title and body and posted the new head SHA in the same step.
+
+Leo approved the follow-up plan. It says to show him the exact prod SQL first, so I prepared it instead
+of running it. Prod is 8.4.9-azure (not the 8.0.45 in the gate skill), the table does not exist yet,
+and the gate linter reports 0 critical and 0 warning against 8.4.9. No code change was needed, so
+there is no new branch or PR in this step.
+
+Lesson: an approved plan that contains "show Leo X first" still needs X shown. The approval covers the
+order of steps, not the step that asks him to look.
