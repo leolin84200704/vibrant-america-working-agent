@@ -6,8 +6,8 @@ status: blocked
 score: 0.0562
 base_weight: 1.0
 created: 2026-10-20
-updated: '2026-10-20'
-links: []
+updated: '2026-11-13'
+links: [VP-19350]
 unblock_when: BestDeal returns 200 for test_id_list ["337"] (and 338/381/382/383/384/91);
   then bump retry_num on hl7_file_input 7375
 ---
@@ -24,3 +24,11 @@ unblock_when: BestDeal returns 200 for test_id_list ["337"] (and 338/381/382/383
 ## Next
 - [2026-10-20] Slack draft to Jiafan Qian (DM D08P4PE9JPP) saved; Leo sends.
 - After fix: re-probe, check no manual re-order for the patient, then SET retry_num=3 WHERE id=7375 AND parse_finished=0 AND retry_num=0 (needs write path; MCP MySQL is read-only).
+
+### [2026-11-13 15:10] Zendesk 785982 -> VP-19350 (Zhenhe)
+- 10-20 Jiafan: items sit under the "Other Markers" package that was being taken down; BestDeal pulled data with package 97's token, needed Ray to restore 97. Leo never bumped after that.
+- Re-probe 2026-11-13 from AKS prod pod (node fetch, VIBRANT_API_TOKEN): [337], [91], full 7-id set -> 200, non_existing_test_ids []. Unblocked.
+- Row 7375: parse_finished=0, retry_num=0, sample_id null, owner pod on-prem jtkp8. quarantined_orders 25 EXPIRED (expiry only flips status, deletes nothing); raw_hl7_message kept in quarantine row.
+- HL7 MSH-4 / PID-18 = 139134, provider Lauren Doyle NPI 1508438136 -> patient 3296212 on 139134 is what Cerbo sent; 152050 (Shannon Ceglinsky) is the clinic's portal account, a separate support matter.
+- lis_ordermanage.orders for patient 3296212: 0 rows (no manual re-order).
+- Slack draft to Zhenhe saved (D09KWNBDA8Z). Proposed: UPDATE lis_emr.hl7_file_input SET retry_num=3 WHERE id=7375 AND parse_finished=0 AND retry_num=0; verify parse_finished=1 + sample_id. Fallback if on-prem file gone: manual re-drive from quarantine raw_hl7_message.
