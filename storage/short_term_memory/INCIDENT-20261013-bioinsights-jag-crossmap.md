@@ -6,7 +6,7 @@ status: active
 base_weight: 1.0
 urgency: 5
 created: 2026-10-13
-updated: 2026-11-10
+updated: 2026-11-13
 links:
 - INCIDENT-20260817-onprem-stale-deploy
 - INCIDENT-2604156666
@@ -220,3 +220,9 @@ reversal with Mingxi; BioInsights provider confirmation draft pending Leo; close
 - ~/Downloads/JAG-...-2026-10-13_v2.csv (16:15, made in Leo's session) has columns patient_email_in_file (200), patient_phone_in_file (3), patient_address_in_file (6). The 6 address rows match my HL7 PID-11 extraction exactly (2606046399, 2607146364, 2609026522, 2609236267, plus 2607236332 and 2609236176 tagged as the JAG office). The 3 PDF Street Address rows are a subset of these 6. Not yet posted to Junjie as of 16:09.
 - Slack draft saved (no draft id returned) in D0922NF9RPD: confirms the 6 address rows are in the table and asks for the "not included" email/phone line to be fixed. Not sent.
 - 16:31 PT Leo posted his own message instead of the draft: the 6 address rows, the PDF provider-block clarification, email on 200 files (JAG office), phone on 3 (2 are JAG's office number, 1 belongs to 2609236273), a corrected "What each file contained" section, and v2.csv (Slack file F0CGGS25USZ). 16:36 Junjie: "那就齊全了，感謝". Closed on Junjie's side; Francesco is writing the incident statement for JAG. The 16:2x agent draft is obsolete. Scratch PDFs in /tmp/jagpdf (PHI) can be deleted.
+
+### [2026-11-13 23:40] BioInsights signed attestations received
+- Olena (devcom) 11-12 09:17Z replied on "[Vibrant Wellness] Integration with Vibrant Wellness" with 2 signed copies of Francesco's form "Attestation of Return or Destruction of Misdirected PHI" (sent by Francesco 10-21 19:14Z, "Vibrant Wellness / BioInsights - Unauthorized Disclosure of PHI"). To Leo + Zhenhe; cc Mingxi, Britney, JJ, Kristina, Lisa/Travis/Paola/Serdar. Francesco NOT on it.
+- Form text: SFTP, 29 Jul - 13 Oct 2026, 195 patients (matches our 195 distinct patient_id). Text extraction shows only the template; signer names/titles/date are not machine-readable, not verified. Zhenhe (Slack 11-13 15:31 PT) says two engineers signed, deletion date 11-03.
+- Open point for Francesco: JAG asked for a letter by an authorized BioInsights representative; Olena says "everyone on our side" signed, i.e. possibly devcom engineers, not a BioInsights officer.
+- Zhenhe 23:30Z mailed Olena "will forward to our internal team". Slack draft Dr0CHM0GD2A2 in C0BFUMJ75ND: forward to Francesco. Not sent.
