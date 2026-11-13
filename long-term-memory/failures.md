@@ -7,7 +7,7 @@ score: 0.2606
 base_weight: 0.9
 urgency: 3
 created: 2026-08-16
-updated: 2026-11-11
+updated: 2026-11-13
 links:
 - INCIDENT-20260518
 - INCIDENT-20260528
@@ -182,7 +182,7 @@ summary: Auto-aggregated failure index from 137 entries across STM
 
 > 自動生成自 `storage/short_term_memory/*.md` 的 `## Failures` 區段。
 > 由 `scripts/extract-failures.py` 維護，手動編輯會被下次 run 覆蓋。
-> Last updated: 2026-11-11 — total 137 entries
+> Last updated: 2026-11-13 — total 137 entries
 
 ## Themes
 
@@ -705,10 +705,6 @@ Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`
 
 
 
-### **[[VP-18782]]**
-
-- `git cherry-pick -q` is not a flag (usage error) -> the -dev branch was first pushed without the commit; re-ran the cherry-pick and pushed again before opening the PR.
-
 ### **[[VP-19078]]**
 
 - 2026-10-28: Miscounted Rob's sample ORC by hand (`||||32351` after ORC-12 = ORC-16, I wrote ORC-17) and confirmed the format to Junjie on that basis; Junjie's AI caught it. Fix going forward: never count HL7 fields by eye — split the line and print the index, or run extractPracticeId on the exact sample before saying "format confirmed". The tool was one command away and I had already used it for Nextech.
@@ -722,6 +718,10 @@ Leo 授權「(1) restart + (2) code fix」、我直接 `kubectl rollout restart`
 ### **[[VP-19290]]**
 
 - First practice request DTO reused ClinicInfoDto (customerNpi required) -> fixed in #536 via HTTP check.
+
+### **[[VP-18782]]** — **
+
+- `git cherry-pick -q` is not a flag (usage error) -> the -dev branch was first pushed without the commit; re-ran the cherry-pick and pushed again before opening the PR.
 
 ### **[[VP-17827]]** — **
 
