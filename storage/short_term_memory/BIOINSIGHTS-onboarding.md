@@ -11,7 +11,7 @@ unblock_when: 'BioInsights grants account perms (test: sftp key-auth to sftp.bio
   then ls / — currently auth OK but ls/stat/put all fail); waiting on Thomas reply
   to 2026-07-21 email'
 created: 2026-07-21
-updated: 2026-11-12
+updated: 2026-11-13
 links:
 - BIOINSIGHTS-SFTP-KEY
 - NEXTECH-onboarding
@@ -526,3 +526,10 @@ Prevention proposed to Leo (pending approval, automation -> PR):
 - Jira VP-19029: Dev Blocked (updated 2026-11-11 10:44 PT). SFTP read-only ls: root = failed, incoming, outgoing; /outgoing = archive only. /Summaries still absent.
 - Outlook search returned Graph 502 twice; mail after Leo's 11-11 20:32Z send not checked.
 - The 11-06 follow-up draft proposal is obsolete (Leo sent the merged reply 11-11). Still waiting on Olena (/Summaries/) and Mingxi (point 5).
+
+### [2026-11-13] Olena 11-12 09:17Z: signed PHI attestations sent to Zhenhe (not for Leo)
+- Olena replied on the integration thread to Zhenhe: everyone at BioInsights who handled the misdirected file signed the attestation; attached "Attestation of Return-Destruction of Misdirected Protected Health Information (2).pdf" and "(3).pdf".
+- Background: Francesco (Privacy Officer) sent the attestation form to Lisa Bond on 2026-10-21 ("Vibrant Wellness / BioInsights - Unauthorized Disclosure of PHI"), after the 10-13 JAG misrouting incident. Francesco is not on the integration thread.
+- No reply needed from Leo. Nothing on /Summaries/ or point 5; no reply from Mingxi yet (Outlook search after 11-11 shows none).
+- Still waiting: Olena creates /Summaries/; Mingxi answers point 5.
+
